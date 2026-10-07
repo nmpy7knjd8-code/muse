@@ -156,6 +156,14 @@ svg .mlabel.sel { font-size: 12px; }
 .jchip small { display: block; font-weight: 500; font-size: 11px; }
 .lorecard { border-left: 4px solid #FFD54F; padding: 6px 10px; margin: 8px 0; background: #201e18; border-radius: 8px; }
 .lorebadge { font-size: 10.5px; background: #FFD54F; color: #111; border-radius: 6px; padding: 1px 6px; font-weight: 800; }
-.hum { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-.hum .live { font-size: 13px; color: var(--muted); }
+.listen { display: flex; gap: 10px; align-items: center; margin: 10px 0 4px; flex-wrap: wrap; min-height: 40px; }
+.listen .live { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; flex: 1; min-width: 0; }
+.listen .live b { font-size: 18px; }
+.listen .conf { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.listen .holdbar, .listen .level { display: inline-block; height: 6px; border-radius: 3px; background: #2c2a36; overflow: hidden; }
+.listen .holdbar { width: 54px; }
+.listen .holdbar i { display: block; height: 100%; background: #7cd992; transition: width 80ms linear; }
+.listen .level { width: 40px; }
+.listen .level i { display: block; height: 100%; background: #8FA8C8; }
+.listen .added { font-size: 12px; color: #7cd992; }
 button.rec { background: #c62828; border-color: #c62828; color: #fff; }

@@ -41,7 +41,15 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
   - Tonnetz with the P/L/R path
 - Mood journey: pick a start and end mood and get a generated 4–8 chord progression.
 - Lore mode, clearly labelled "LORE, NOT SCIENCE": Schubart key characters, the Scriabin mystic chord, etc.
-- Hum it in: microphone pitch detection (YIN) to enter melody notes.
+- 👂 Listen (live mic): the mic stays open while it's on.
+  - Melody mode: a stable sung or played note (held ≥250 ms, passes an RMS gate) is added and the
+    suggestions refresh. Pitch detection is monophonic YIN.
+  - Chords mode: polyphonic recognition (FFT → peak-picked chroma → harmonic-aware template match over
+    maj/min/7/maj7/m7/sus2/sus4/dim/aug, using a confidence threshold and a bass-root tiebreak).
+    Each chord must be held ≥350 ms. A lone single note is reported as a note, not added as a chord.
+  - A sustained note or chord is added only once. Repeating it needs a short silence.
+  - Listening pauses while Muse itself is playing, so its own audio can't feed back.
+  - A live indicator shows what it hears, the confidence, a hold-progress bar and the input level.
 
 ## Data (loaded at runtime from `public/`; drop in new versions, no code change)
 | file | purpose |
@@ -62,9 +70,9 @@ data live here:
 - suggest, journey: ranking and the mood-journey beam search
 - voicing, guitar, relations, mapLayout: piano voicing/fingering, voice leading, guitar shapes,
   fifths/Tonnetz/P-L-R, mood-map layout
-- export, lore, pitch: MIDI/text export, lore lookup, YIN pitch tracker
+- export, lore, pitch, chroma: MIDI/text export, lore lookup, YIN pitch tracker, FFT/chroma chord matcher + HoldTracker debounce
 
-`src/ui/` is the React UI, the Web Audio synth, and the mic. Tests live in `tests/`.
+`src/ui/` is the React UI, the Web Audio synth, and `listen.ts` (the live mic loop). Tests live in `tests/`.
 
 ### LLM interpreter (off)
 `src/core/llm.ts` holds a JSON schema, a prompt, a validator, and an OpenAI-compatible adapter.

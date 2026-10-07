@@ -9,7 +9,7 @@ import {
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
-import { startHumming, type MicSession } from './mic';
+import { startListening, type ListenSession, type ListenStatus } from './listen';
 
 type Tab = 'chords' | 'melody';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
@@ -59,9 +59,10 @@ function Composer({ data }: { data: LoadedData }) {
   const [jLen, setJLen] = useState(6);
   const [journey, setJourney] = useState<JourneyStep[] | null>(null);
   const [loreOn, setLoreOn] = useState(false);
-  const [mic, setMic] = useState<MicSession | null>(null);
-  const [livePitch, setLivePitch] = useState<number | null>(null);
-  useEffect(() => () => mic?.stop(), [mic]);
+  const [listen, setListen] = useState<ListenSession | null>(null);
+  const [listenStatus, setListenStatus] = useState<ListenStatus | null>(null);
+  const [lastHeard, setLastHeard] = useState<string | null>(null);
+  useEffect(() => () => listen?.stop(), [listen]);
 
   const chords = slots.map((s) => s.chord);
   const picked: Key = { tonic: parseNote(tonic)!, mode };
@@ -218,14 +219,39 @@ function Composer({ data }: { data: LoadedData }) {
     flash('Journey loaded — undo to go back');
   };
 
-  // ---- hum it in ----
-  const toggleMic = async () => {
+  // ---- Listen (live mic: melody notes via YIN, chords via chroma templates) ----
+  // callbacks run outside React's render cycle, so they read the latest state through refs
+  const live = useRef({ tab, k, slots, melody });
+  live.current = { tab, k, slots, melody };
+  const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots, melody: live.current.melody }]);
+  const heardChord = (root: number, quality: string): Chord => ({ root: spellInKey(live.current.k, root), quality: quality as Chord['quality'] });
+  const toggleListen = async () => {
     synth.unlock();
-    if (mic) { mic.stop(); setMic(null); setLivePitch(null); return; }
+    if (listen) { listen.stop(); setListen(null); setListenStatus(null); return; }
     try {
-      const session = await startHumming((m) => { setMelody((x) => [...x, m]); setSelectedId(null); }, setLivePitch);
-      snapshot();
-      setMic(session);
+      const session = await startListening({
+        target: () => live.current.tab,
+        isPaused: () => synth.isPlaying(),
+        onNote: (m) => {
+          snapshotLive();
+          setMelody((x) => [...x, m]);
+          setSelectedId(null);
+          setLastHeard(midiName(m, spellInKey(live.current.k, m)));
+        },
+        onChord: (cm) => {
+          const c = heardChord(cm.root, cm.quality);
+          snapshotLive();
+          setSlots((x) => [...x, { chord: c, locked: false }]);
+          setSelectedId(null);
+          setLastHeard(chordSymbol(c, true));
+        },
+        onStatus: setListenStatus,
+        noteName: (m) => midiName(m, spellInKey(live.current.k, m)),
+        chordName: (cm) => chordSymbol(heardChord(cm.root, cm.quality), true),
+      });
+      setListen(session);
+      setLastHeard(null);
+      flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — sing or play one at a time');
     } catch (e) {
       flash((e as Error).message || 'Microphone unavailable');
     }
@@ -389,6 +415,30 @@ function Composer({ data }: { data: LoadedData }) {
           <button className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); }}>Chords</button>
           <button className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); }}>Melody</button>
         </div>
+        <div className={'listen' + (listen ? ' on' : '')}>
+          <button className={listen ? 'rec' : ''} onClick={() => void toggleListen()} aria-pressed={!!listen}>
+            {listen ? '■ Stop listening' : '👂 Listen'}
+          </button>
+          {listen ? (
+            <div className="live" aria-live="polite">
+              {listenStatus?.state === 'paused' ? (
+                <span className="muted">paused while Muse plays…</span>
+              ) : listenStatus?.label ? (
+                <>
+                  <b>{listenStatus.label}</b>
+                  <span className="conf">{Math.round(listenStatus.confidence * 100)}%</span>
+                  <span className="holdbar"><i style={{ width: `${Math.round(listenStatus.hold * 100)}%` }} /></span>
+                </>
+              ) : (
+                <span className="muted">{tab === 'chords' ? 'play a chord…' : 'sing or play a note…'}</span>
+              )}
+              <span className="level"><i style={{ width: `${Math.min(100, Math.round((listenStatus?.level ?? 0) * 600))}%` }} /></span>
+              {lastHeard && <span className="added">added {lastHeard}</span>}
+            </div>
+          ) : (
+            <span className="small muted">{tab === 'chords' ? 'hear chords from your instrument' : 'hear notes you sing or play'}</span>
+          )}
+        </div>
         {tab === 'chords' ? (
           <>
             <div className="palette">
@@ -410,11 +460,7 @@ function Composer({ data }: { data: LoadedData }) {
         ) : (
           <div className="melody-input">
             <PianoViz scalePcs={scale} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" />
-            <div className="hum">
-              <button className={mic ? 'rec' : ''} onClick={() => void toggleMic()}>{mic ? '■ Stop' : '🎤 Hum it in'}</button>
-              {mic && <span className="live">{livePitch !== null ? `hearing ${spellMidi(livePitch)}` : 'listening…'}</span>}
-            </div>
-            <p className="small muted">Tap keys (or hum) to add melody notes; the {keyName(k)} scale is tinted. With Auto on, the key is detected from your notes too.</p>
+            <p className="small muted">Tap keys (or use 👂 Listen and sing/play) to add melody notes; the {keyName(k)} scale is tinted. With Auto on, the key is detected from your notes too.</p>
           </div>
         )}
       </section>

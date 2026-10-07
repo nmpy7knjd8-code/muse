@@ -6,6 +6,17 @@ export class Synth {
   private ctx: AudioContext | null = null;
   private out: GainNode | null = null;
   private active: Array<{ osc: OscillatorNode[]; gain: GainNode }> = [];
+  /** performance.now() (ms) until which our own output may still be audible — Listen mode pauses until then. */
+  private busyUntil = 0;
+  /** True while the app's own playback (plus a short room tail) could reach the microphone. */
+  isPlaying(): boolean {
+    return performance.now() < this.busyUntil;
+  }
+  private markBusy(endCtxTime: number) {
+    if (!this.ctx) return;
+    const ms = (endCtxTime - this.ctx.currentTime) * 1000 + 350;
+    this.busyUntil = Math.max(this.busyUntil, performance.now() + ms);
+  }
   unlocked = false;
 
   /** Call synchronously inside a tap/click handler. */
@@ -52,6 +63,7 @@ export class Synth {
       v.osc.forEach((o) => o.stop(t + 0.2));
     }
     this.active = [];
+    this.busyUntil = Math.min(this.busyUntil, performance.now() + 350);
   }
 
   private voice(midi: number, start: number, dur: number, vel = 0.8) {
@@ -78,6 +90,7 @@ export class Synth {
     o1.start(start);
     o2.start(start);
     o1.stop(start + dur + 0.5);
+    this.markBusy(start + dur + 0.5);
     o2.stop(start + dur + 0.5);
     const v = { osc: [o1, o2], gain: g };
     this.active.push(v);

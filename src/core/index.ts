@@ -18,3 +18,4 @@ export * from './journey';
 export * from './lore';
 export * from './pitch';
 export * from './mapLayout';
+export * from './chroma';
