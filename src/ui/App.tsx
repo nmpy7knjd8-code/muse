@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Chord, ChordSuggestion, MoodProfile, ModeId, MODES, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
-  analyzeRoman, bassNote, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
+  analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, progressionText, romanOf, scalePcs,
   spellInKey, toMidiFile, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
+  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
-import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
+import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { startListening, type ListenSession, type ListenStatus } from './listen';
 
 type Tab = 'chords' | 'melody';
@@ -101,7 +102,35 @@ function Composer({ data }: { data: LoadedData }) {
     setMelody(last.melody);
     setHistory((h) => h.slice(0, -1));
   };
-  const withBass = (c: Chord, v: number[]) => [bassNote(c), ...v];
+  // instrument + sample loading state (external store → re-render on progress)
+  const audioKey = useSyncExternalStore((f) => synth.subscribe(f), () => `${synth.instrument}|${synth.loadState().state}|${Math.round(synth.loadState().progress * 10)}`);
+  const instrument = audioKey.split('|')[0] as InstrumentId;
+  const loadState = synth.loadState(instrument);
+  const chooseInstrument = (id: InstrumentId) => {
+    synth.unlock();
+    synth.setInstrument(id);
+    const demo = cur ?? diatonicChords(k)[0];
+    void synth.ensureLoaded(id).then(() => { synth.stopAll(); synth.playNotes(chordMidis(demo, pianoVoicing(demo), INSTRUMENTS[id]), { dur: 1.2 }); });
+  };
+  // chords are voiced per instrument: voice-led keyboard voicing with a warm bass, or a real guitar shape
+  const withBass = (c: Chord, v: number[]) => chordMidis(c, v, INSTRUMENTS[instrument]);
+  // iOS: the ring/silent switch can mute Web Audio — hint once, and whenever audio is not running after a tap
+  useEffect(() => {
+    const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const onUp = () => {
+      window.setTimeout(() => {
+        if (!synth.unlocked) return;
+        if (!synth.isRunning()) flash('No sound? Check the silent switch and volume, then tap again.');
+        else if (ios && !localStorage.getItem('muse.soundTip')) {
+          localStorage.setItem('muse.soundTip', '1');
+          flash('Tip: if you hear nothing, flip off Silent mode (side switch) and turn the volume up.');
+        }
+      }, 900);
+    };
+    window.addEventListener('pointerup', onUp, { once: true });
+    return () => window.removeEventListener('pointerup', onUp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---- audio actions (all called from tap handlers) ----
   const playChord = (c: Chord, prev?: number[]) => { synth.unlock(); synth.stopAll(); const v = pianoVoicing(c, prev); synth.playNotes(withBass(c, v)); };
@@ -279,7 +308,12 @@ function Composer({ data }: { data: LoadedData }) {
     if (tab === 'melody') {
       return (
         <div className="vis-body">
-          <PianoViz scalePcs={scale} current={cur ? prevVoicing : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" />
+          <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={cur ? prevVoicing : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" />
+          <div className="legend">
+            {cur && <span><i style={{ background: CURRENT_COLOR }} />now: {chordSymbol(cur, true)}</span>}
+            {selNote && <span><i style={{ background: selColor }} />next: {spellMidi(selNote.midi)}</span>}
+            <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
+          </div>
           <Contour melody={melody.slice(-10)} next={selNote?.midi} color={selColor} spell={spellMidi} />
         </div>
       );
@@ -289,12 +323,12 @@ function Composer({ data }: { data: LoadedData }) {
     const piano = (
       <div className="vis-section" key="piano">
         {all && <h4>Piano · right hand</h4>}
-        <PianoViz scalePcs={scale} current={cur ? prevVoicing : []} suggested={selChord.voicing} fingers={fingers} melody={melody.slice(-6)} color={selColor} spell={spell} minLow={53} minHigh={79} label={`Piano: ${selChord.symbol}`} />
+        <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={cur ? prevVoicing : []} suggested={selChord.voicing} fingers={fingers} melody={melody.slice(-6)} color={selColor} spell={spell} minLow={53} minHigh={79} label={`Piano: ${selChord.symbol}`} />
         <div className="legend">
           {cur && <span><i style={{ background: CURRENT_COLOR }} />now: {chordSymbol(cur, true)}</span>}
           <span><i style={{ background: selColor }} />next: {selChord.symbol}</span>
           <span><i className="ring" />common tone</span>
-          <span><i style={{ background: '#ECE8F7' }} />{keyName(k)} scale</span>
+          <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
         </div>
       </div>
     );
@@ -407,6 +441,20 @@ function Composer({ data }: { data: LoadedData }) {
           <button onClick={copyText} disabled={!chords.length && !melody.length}>Copy</button>
           <button onClick={downloadMidi} disabled={!chords.length && !melody.length}>MIDI</button>
         </div>
+        <div className="instr" role="radiogroup" aria-label="Instrument">
+          {INSTRUMENT_IDS.map((id) => (
+            <button key={id} role="radio" aria-checked={instrument === id} className={'pill' + (instrument === id ? ' on' : '')} onClick={() => chooseInstrument(id)}>
+              {INSTRUMENTS[id].label.replace(' guitar', '').replace('Nylon', 'Guitar').replace('Soft pad', 'Pad')}
+            </button>
+          ))}
+        </div>
+        {/* status line always reserves its height, so loading never shifts the layout under a finger */}
+        <div className="instr-status small" aria-live="polite">
+          {loadState.state === 'loading' ? <span className="loading">⏳ loading {INSTRUMENTS[instrument].label.toLowerCase()} {Math.round(loadState.progress * 100)}% · synth meanwhile</span>
+            : loadState.state === 'error' ? <span className="warn">samples unavailable — using synth</span>
+            : loadState.state === 'ready' ? <span className="muted">♪ {INSTRUMENTS[instrument].label} ready</span>
+            : <span className="muted">Tap anything to start sound</span>}
+        </div>
       </section>
 
       {/* Input */}
@@ -459,8 +507,9 @@ function Composer({ data }: { data: LoadedData }) {
           </>
         ) : (
           <div className="melody-input">
-            <PianoViz scalePcs={scale} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" />
-            <p className="small muted">Tap keys (or use 👂 Listen and sing/play) to add melody notes; the {keyName(k)} scale is tinted. With Auto on, the key is detected from your notes too.</p>
+            <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" />
+            <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
+            <p className="small muted">Tap keys (or use 👂 Listen and sing/play) to add melody notes. With Auto on, the key is detected from your notes too.</p>
           </div>
         )}
       </section>
@@ -613,6 +662,15 @@ function Composer({ data }: { data: LoadedData }) {
       <div className="center" style={{ marginTop: 14 }}>
         <button className={'pill' + (loreOn ? ' on' : '')} onClick={() => setLoreOn((x) => !x)}>Lore mode {loreOn ? 'on' : 'off'}</button>
       </div>
+      <details className="about">
+        <summary>About &amp; credits</summary>
+        <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.</p>
+        <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
+          Nylon &amp; steel guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
+          Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>
+        <p><b>No sound on iPhone?</b> Flip off Silent mode (the switch on the side), turn the volume up, and tap again — Safari only starts audio after a tap.</p>
+        <p><b>Theory &amp; moods.</b> Mood labels come from the bundled research knowledge base and mood lexicon (sources listed inside the data files). Lore mode notes are folklore, not science.</p>
+      </details>
       <footer className="foot small muted">
         Works offline · no account · theory: {data.kbFile} v{data.kb.meta.version}{data.featureMapping ? ` · feature map (${data.featureMapping.applied} rules)` : ''} · lexicon {textLex.size} terms{data.moodLexicon ? ' (+ research lexicon)' : ''}
       </footer>

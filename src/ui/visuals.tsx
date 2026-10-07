@@ -22,9 +22,15 @@ export interface PianoVizProps {
   minHigh?: number;
   height?: number;
   label?: string;
+  /** pitch class of the key's tonic (marked distinctly) */
+  tonicPc?: number;
 }
 
-export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers = [], melody = [], color = '#9C7CF4', spell, onKey, minLow, minHigh, height = 120, label }: PianoVizProps) {
+/** Scale marking colours: deliberately quieter than the full-key chord/melody highlights. */
+export const SCALE_COLOR = '#A693F5';
+export const TONIC_COLOR = '#3FC9B4';
+
+export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers = [], melody = [], color = '#9C7CF4', spell, onKey, minLow, minHigh, height = 120, label, tonicPc }: PianoVizProps) {
   const all = [...current, ...suggested, ...melody];
   let lo = Math.min(minLow ?? 60, ...all);
   let hi = Math.max(minHigh ?? 83, ...all);
@@ -39,36 +45,69 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
   [...suggested].sort((a, b) => a - b).forEach((m, i) => fingers[i] !== undefined && fingerOf.set(m, fingers[i]));
   const cur = new Set(current), sug = new Set(suggested), mel = new Set(melody);
   const scale = new Set(scalePcs);
+  const hasScale = scale.size > 0;
+  const inScale = (m: number) => !hasScale || scale.has(mod(m, 12));
+  const isTonic = (m: number) => tonicPc !== undefined && mod(m, 12) === mod(tonicPc, 12);
+  const lit = (m: number) => sug.has(m) || cur.has(m);
+  // in-scale keys: bright (white) / lifted purple-grey (black) + a coloured bar; out-of-scale keys are dimmed
   const keyFill = (m: number) => {
     if (sug.has(m)) return color;
     if (cur.has(m)) return CURRENT_COLOR;
-    if (isBlack(m)) return scale.has(mod(m, 12)) ? '#4B4560' : '#1C1B22';
-    return scale.has(mod(m, 12)) ? '#ECE8F7' : '#FAFAFC';
+    if (isBlack(m)) return inScale(m) ? '#4A4366' : '#0E0D12';
+    return inScale(m) ? '#FFFFFF' : '#C2BFCD';
+  };
+  const bar = (m: number, x: number, w: number, bottom: number, black: boolean) => {
+    if (!hasScale || !inScale(m)) return null;
+    const tonic = isTonic(m);
+    const h = tonic ? (black ? 7 : 9) : black ? 5 : 6;
+    const inset = black ? 2 : 3;
+    return (
+      <rect className={tonic ? 'scalebar tonic' : 'scalebar'} x={x + inset} y={bottom - h - (black ? 3 : 4)} width={w - inset * 2} height={h} rx={h / 2}
+        fill={tonic ? TONIC_COLOR : SCALE_COLOR} opacity={lit(m) ? 0.95 : 1} stroke={lit(m) ? '#111' : 'none'} strokeWidth={lit(m) ? 1 : 0} />
+    );
   };
   const press = (m: number) => onKey?.(m);
-  const keyProps = (m: number) => (onKey ? { onPointerDown: (e: RPointerEvent) => { e.preventDefault(); press(m); }, style: { cursor: 'pointer' } } : {});
+  const keyProps = (m: number) => ({
+    'data-midi': m,
+    'data-scale': inScale(m) ? (isTonic(m) ? 'tonic' : 'in') : 'out',
+    ...(onKey ? { onPointerDown: (e: RPointerEvent) => { e.preventDefault(); press(m); }, style: { cursor: 'pointer' } } : {}),
+  });
   return (
     <svg className="piano" viewBox={`0 0 ${whites.length * W} ${H + 4}`} role="img" aria-label={label ?? 'Piano keyboard'}>
       {whites.map((m) => (
         <g key={m} {...keyProps(m)}>
           <rect x={xOf(m) + 0.5} y={0.5} width={W - 1} height={H} rx={3} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : '#2a2933'} strokeWidth={cur.has(m) && sug.has(m) ? 4 : 1} />
-          {mod(m, 12) === 0 && <text x={xOf(m) + W / 2} y={H - 6} className="kname">C{midiOctave(m)}</text>}
-          {(sug.has(m) || cur.has(m)) && <text x={xOf(m) + W / 2} y={H - 22} className="kname on">{spell(m)}</text>}
+          {bar(m, xOf(m), W, H, false)}
+          {mod(m, 12) === 0 && !lit(m) && <text x={xOf(m) + W / 2} y={H - 17} className="kname">C{midiOctave(m)}</text>}
+          {isTonic(m) && !lit(m) && mod(m, 12) !== 0 && <text x={xOf(m) + W / 2} y={H - 17} className="kname tonic">{spell(m)}</text>}
+          {lit(m) && <text x={xOf(m) + W / 2} y={H - 22} className="kname on">{spell(m)}</text>}
           {fingerOf.has(m) && <FingerBadge x={xOf(m) + W / 2} y={H - 42} n={fingerOf.get(m)!} />}
-          {mel.has(m) && <circle cx={xOf(m) + W / 2} cy={H * 0.7} r={5} className="meldot" />}
+          {mel.has(m) && <circle cx={xOf(m) + W / 2} cy={H * 0.7} r={5.5} className="meldot" />}
         </g>
       ))}
       {Array.from({ length: hi - lo + 1 }, (_, i) => lo + i).filter(isBlack).map((m) => {
         const x = xOf(m - 1) + W - BW / 2;
         return (
           <g key={m} {...keyProps(m)}>
-            <rect x={x} y={0} width={BW} height={BH} rx={2} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : '#000'} strokeWidth={cur.has(m) && sug.has(m) ? 3 : 1} />
-            {fingerOf.has(m) && <FingerBadge x={x + BW / 2} y={BH - 14} n={fingerOf.get(m)!} small />}
-            {mel.has(m) && <circle cx={x + BW / 2} cy={12} r={4} className="meldot" />}
+            <rect x={x} y={0} width={BW} height={BH} rx={2} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : inScale(m) && hasScale ? '#6E6590' : '#000'} strokeWidth={cur.has(m) && sug.has(m) ? 3 : 1} />
+            {bar(m, x, BW, BH, true)}
+            {fingerOf.has(m) && <FingerBadge x={x + BW / 2} y={BH - 18} n={fingerOf.get(m)!} small />}
+            {mel.has(m) && <circle cx={x + BW / 2} cy={12} r={4.5} className="meldot" />}
           </g>
         );
       })}
     </svg>
+  );
+}
+
+/** Legend for the scale marking (shared by every piano). */
+export function ScaleLegend({ keyLabel, tonic }: { keyLabel: string; tonic: string }) {
+  return (
+    <>
+      <span><i className="bar" style={{ background: SCALE_COLOR }} />in {keyLabel}</span>
+      <span><i className="bar" style={{ background: TONIC_COLOR }} />tonic {tonic}</span>
+      <span><i style={{ background: '#C2BFCD' }} />outside</span>
+    </>
   );
 }
 

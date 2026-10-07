@@ -19,3 +19,4 @@ export * from './lore';
 export * from './pitch';
 export * from './mapLayout';
 export * from './chroma';
+export * from './playback';

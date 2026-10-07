@@ -87,6 +87,7 @@ section { margin-top: 10px; }
 
 svg .kname { font-size: 9px; fill: #555; text-anchor: middle; }
 svg .kname.on { fill: #111; font-weight: 700; font-size: 10px; }
+svg .kname.tonic { fill: #1f8f80; font-weight: 700; }
 svg .finger circle { fill: #111; stroke: #fff; stroke-width: 1.2; }
 svg .finger text { fill: #fff; font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
 svg .meldot { fill: #FFD54F; stroke: #111; stroke-width: 1; }
@@ -167,3 +168,16 @@ svg .mlabel.sel { font-size: 12px; }
 .listen .level i { display: block; height: 100%; background: #8FA8C8; }
 .listen .added { font-size: 12px; color: #7cd992; }
 button.rec { background: #c62828; border-color: #c62828; color: #fff; }
+
+.instr { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.instr .pill { padding: 6px 11px; font-size: 13px; }
+.instr .loading { position: relative; color: var(--muted); padding-left: 2px; display: inline-flex; align-items: center; gap: 6px; }
+.about { margin: 18px 4px 0; font-size: 13px; color: var(--muted); }
+.about summary { cursor: pointer; color: #cfcfe0; }
+.about p { margin: 8px 0; line-height: 1.45; }
+.about a { color: #b9a7ff; }
+
+.legend i.bar { width: 14px; height: 5px; border-radius: 3px; vertical-align: 2px; }
+.legend i.dot { width: 10px; height: 10px; border-radius: 50%; background: #FFD54F; border: 1px solid #111; }
+.instr-status { min-height: 18px; line-height: 18px; margin-top: 6px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.instr-status .loading { color: #b9b4d6; }

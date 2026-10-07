@@ -10,3 +10,4 @@ coverage/
 *.key
 .DS_Store
 npm-debug.log*
+audio-previews/*.wav
