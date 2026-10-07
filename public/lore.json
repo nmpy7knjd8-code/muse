@@ -1,0 +1,240 @@
+{
+ "disclaimer": "LORE, NOT SCIENCE — historical opinions, composer beliefs and folklore. Fun context; not evidence about how music works.",
+ "entries": [
+  {
+   "id": "schubart_c_major",
+   "kind": "key",
+   "key": "C major",
+   "title": "Schubart on C major",
+   "text": "Pure and innocent: simplicity, naivety, children's talk.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_c_minor",
+   "kind": "key",
+   "key": "C minor",
+   "title": "Schubart on C minor",
+   "text": "A declaration of love and, at the same time, the lament of unhappy love.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_d_major",
+   "kind": "key",
+   "key": "D major",
+   "title": "Schubart on D major",
+   "text": "The key of triumph, of hallelujahs and victory-rejoicing.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_d_minor",
+   "kind": "key",
+   "key": "D minor",
+   "title": "Schubart on D minor",
+   "text": "Melancholy womanliness; brooding spleen and humours.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_eb_major",
+   "kind": "key",
+   "key": "Eb major",
+   "title": "Schubart on E♭ major",
+   "text": "The key of love and devotion, of intimate conversation with God.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_e_major",
+   "kind": "key",
+   "key": "E major",
+   "title": "Schubart on E major",
+   "text": "Noisy shouts of joy, laughing pleasure — delight not yet complete.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_e_minor",
+   "kind": "key",
+   "key": "E minor",
+   "title": "Schubart on E minor",
+   "text": "Naive, innocent declaration of love; lament without grumbling.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_f_major",
+   "kind": "key",
+   "key": "F major",
+   "title": "Schubart on F major",
+   "text": "Complaisance and calm.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_f_minor",
+   "kind": "key",
+   "key": "F minor",
+   "title": "Schubart on F minor",
+   "text": "Deep depression, funereal lament, groans of misery.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_f#_major",
+   "kind": "key",
+   "key": "F# major",
+   "title": "Schubart on F# major",
+   "text": "Triumph over difficulty; a free sigh of relief after hills have been climbed.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_g_major",
+   "kind": "key",
+   "key": "G major",
+   "title": "Schubart on G major",
+   "text": "Everything rustic, idyllic and lyrical; calm, satisfied passion.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_g_minor",
+   "kind": "key",
+   "key": "G minor",
+   "title": "Schubart on G minor",
+   "text": "Discontent and uneasiness; worry over a failed scheme.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_a_major",
+   "kind": "key",
+   "key": "A major",
+   "title": "Schubart on A major",
+   "text": "Declarations of innocent love; contentment; youthful cheerfulness.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_a_minor",
+   "kind": "key",
+   "key": "A minor",
+   "title": "Schubart on A minor",
+   "text": "Pious womanliness and tenderness of character.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_bb_major",
+   "kind": "key",
+   "key": "Bb major",
+   "title": "Schubart on B♭ major",
+   "text": "Cheerful love, clear conscience, hope and aspiration for a better world.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "schubart_b_minor",
+   "kind": "key",
+   "key": "B minor",
+   "title": "Schubart on B minor",
+   "text": "The key of patience, of calmly awaiting one's fate.",
+   "source": "C. F. D. Schubart, Ideen zu einer Ästhetik der Tonkunst (written c. 1784, publ. 1806); English after Rita Steblin, A History of Key Characteristics (1983). Paraphrased.",
+   "caution": "Key 'characters' come from unequal temperaments and period taste; in modern equal temperament every major (or minor) key has the same interval structure. Treat as poetry, not acoustics."
+  },
+  {
+   "id": "scriabin_mystic",
+   "kind": "chord",
+   "intervals": [
+    0,
+    6,
+    10,
+    4,
+    9,
+    2
+   ],
+   "title": "Scriabin's 'mystic' (Prometheus) chord",
+   "text": "C–F♯–B♭–E–A–D: a stack of fourths used by Scriabin around 1910 (Prometheus: The Poem of Fire), tied to his theosophical, mystical aims.",
+   "source": "Wikipedia: Mystic chord",
+   "caution": "Scriabin's spiritual meanings are his own; the sound is famously ambiguous, which is why it reads as 'mystical' to many listeners."
+  },
+  {
+   "id": "tristan",
+   "kind": "chord",
+   "intervals": [
+    0,
+    3,
+    6,
+    10
+   ],
+   "title": "The 'Tristan chord' sound",
+   "text": "A half-diminished sonority (F–B–D♯–G♯ in the opening of Wagner's Tristan und Isolde, 1859) became an emblem of unresolved longing.",
+   "source": "Wikipedia: Tristan chord",
+   "caution": "Matching here is by chord type only; Wagner's specific voicing and resolution are what made it famous."
+  },
+  {
+   "id": "diabolus",
+   "kind": "interval",
+   "intervals": [
+    0,
+    6
+   ],
+   "title": "'Diabolus in musica' (the tritone)",
+   "text": "Later theorists nicknamed the tritone 'the devil in music'. Popular stories of a church ban are largely myth; medieval theory simply treated it as an interval to avoid.",
+   "source": "Wikipedia: Tritone",
+   "caution": "The 'banned by the church' story is folklore."
+  },
+  {
+   "id": "dim7_villain",
+   "kind": "chord",
+   "intervals": [
+    0,
+    3,
+    6,
+    9
+   ],
+   "title": "Silent-film villain chord",
+   "text": "Tremolo diminished sevenths were stock 'danger!' cues in 19th-century melodrama and silent-film accompaniment.",
+   "source": "Wikipedia: Diminished seventh chord",
+   "caution": "A genre convention, not an intrinsic property."
+  },
+  {
+   "id": "scriabin_colours",
+   "kind": "general",
+   "title": "Scriabin's key colours",
+   "text": "Scriabin linked keys to colours (C red, G orange, D yellow, A green, E whitish-blue, F♯ bright blue…), and wrote a colour-organ part into Prometheus.",
+   "source": "Wikipedia: Clavier à lumières",
+   "caution": "Personal synaesthetic (or associative) mapping; other synaesthetes report different colours."
+  },
+  {
+   "id": "lydian_wonder",
+   "kind": "mode",
+   "mode": "lydian",
+   "title": "Lydian and film 'wonder'",
+   "text": "Film composers often reach for Lydian's raised 4th to suggest flight, magic and wonder.",
+   "source": "Common film-scoring convention",
+   "caution": "A learned genre association."
+  },
+  {
+   "id": "phrygian_spanish",
+   "kind": "mode",
+   "mode": "phrygian",
+   "title": "Phrygian and 'Spanish' colour",
+   "text": "The ♭2 above the tonic evokes flamenco to many Western listeners (via the Andalusian cadence and Phrygian-dominant scale).",
+   "source": "Wikipedia: Phrygian mode",
+   "caution": "Cultural association; the medieval church 'Phrygian' mode was described very differently."
+  },
+  {
+   "id": "dorian_doctrine",
+   "kind": "mode",
+   "mode": "dorian",
+   "title": "Plato & the 'Dorian' ethos",
+   "text": "Ancient Greek writers praised the Dorian harmonia as manly and steady — but the Greek 'Dorian' was a different scale from the modern Dorian mode.",
+   "source": "Wikipedia: Dorian mode",
+   "caution": "Same name, different scale; the doctrine of ethos is ancient philosophy, not modern psychology."
+  }
+ ]
+}

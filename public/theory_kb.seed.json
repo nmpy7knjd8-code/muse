@@ -1,0 +1,810 @@
+{
+ "meta": {
+  "title": "SEED theory KB (hand-written placeholder, well-established theory only)",
+  "version": "seed-0.1",
+  "seed": true,
+  "notes": [
+   "SEED DATA: replaced at runtime by theory_kb.json when present. Same schema as research/theory/theory_kb.json."
+  ]
+ },
+ "moodVocabulary": [
+  {
+   "id": "resolved",
+   "label": "Resolved / Home",
+   "valence": 0.5,
+   "arousal": 0.2,
+   "color": "#4CAF50",
+   "synonyms": []
+  },
+  {
+   "id": "bright",
+   "label": "Bright",
+   "valence": 0.8,
+   "arousal": 0.6,
+   "color": "#FFD54F",
+   "synonyms": []
+  },
+  {
+   "id": "triumphant",
+   "label": "Triumphant",
+   "valence": 0.9,
+   "arousal": 0.9,
+   "color": "#FF9800",
+   "synonyms": []
+  },
+  {
+   "id": "epic",
+   "label": "Epic / Heroic",
+   "valence": 0.5,
+   "arousal": 0.9,
+   "color": "#E65100",
+   "synonyms": []
+  },
+  {
+   "id": "hopeful",
+   "label": "Hopeful",
+   "valence": 0.7,
+   "arousal": 0.5,
+   "color": "#AED581",
+   "synonyms": []
+  },
+  {
+   "id": "warm",
+   "label": "Warm",
+   "valence": 0.7,
+   "arousal": 0.3,
+   "color": "#FFAB91",
+   "synonyms": []
+  },
+  {
+   "id": "nostalgic",
+   "label": "Nostalgic",
+   "valence": 0.2,
+   "arousal": 0.3,
+   "color": "#BCAAA4",
+   "synonyms": []
+  },
+  {
+   "id": "bittersweet",
+   "label": "Bittersweet",
+   "valence": 0.0,
+   "arousal": 0.3,
+   "color": "#CE93D8",
+   "synonyms": []
+  },
+  {
+   "id": "melancholy",
+   "label": "Melancholy",
+   "valence": -0.6,
+   "arousal": 0.2,
+   "color": "#5C6BC0",
+   "synonyms": []
+  },
+  {
+   "id": "yearning",
+   "label": "Yearning",
+   "valence": -0.1,
+   "arousal": 0.5,
+   "color": "#9575CD",
+   "synonyms": []
+  },
+  {
+   "id": "dark",
+   "label": "Dark",
+   "valence": -0.6,
+   "arousal": 0.5,
+   "color": "#37474F",
+   "synonyms": []
+  },
+  {
+   "id": "tense",
+   "label": "Tense",
+   "valence": -0.3,
+   "arousal": 0.8,
+   "color": "#F44336",
+   "synonyms": []
+  },
+  {
+   "id": "dramatic",
+   "label": "Dramatic",
+   "valence": -0.4,
+   "arousal": 0.9,
+   "color": "#AD1457",
+   "synonyms": []
+  },
+  {
+   "id": "mystical",
+   "label": "Mystical",
+   "valence": 0.1,
+   "arousal": 0.4,
+   "color": "#7E57C2",
+   "synonyms": []
+  },
+  {
+   "id": "dreamy",
+   "label": "Dreamy",
+   "valence": 0.4,
+   "arousal": 0.2,
+   "color": "#81D4FA",
+   "synonyms": []
+  },
+  {
+   "id": "wonder",
+   "label": "Wonder",
+   "valence": 0.7,
+   "arousal": 0.6,
+   "color": "#4FC3F7",
+   "synonyms": []
+  },
+  {
+   "id": "surprising",
+   "label": "Surprising",
+   "valence": 0.1,
+   "arousal": 0.7,
+   "color": "#FFEB3B",
+   "synonyms": []
+  },
+  {
+   "id": "bluesy",
+   "label": "Bluesy",
+   "valence": 0.1,
+   "arousal": 0.6,
+   "color": "#1565C0",
+   "synonyms": []
+  },
+  {
+   "id": "earthy",
+   "label": "Earthy",
+   "valence": 0.3,
+   "arousal": 0.5,
+   "color": "#8D6E63",
+   "synonyms": []
+  },
+  {
+   "id": "floating",
+   "label": "Floating",
+   "valence": 0.2,
+   "arousal": 0.2,
+   "color": "#B2EBF2",
+   "synonyms": []
+  }
+ ],
+ "chordMoves": [
+  {
+   "id": "seed_I_IV",
+   "name": "I → IV",
+   "category": "diatonic-major",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "IV",
+    "root": 5,
+    "quality": "maj"
+   },
+   "moods": [
+    "warm",
+    "hopeful"
+   ],
+   "description": "Departure from tonic to the subdominant; open and warm.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_I_V",
+   "name": "I → V",
+   "category": "diatonic-major",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "V",
+    "root": 7,
+    "quality": "maj"
+   },
+   "moods": [
+    "bright",
+    "tense"
+   ],
+   "description": "Move to the dominant; sets up the expectation of returning home.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_I_vi",
+   "name": "I → vi",
+   "category": "diatonic-major",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "vi",
+    "root": 9,
+    "quality": "min"
+   },
+   "moods": [
+    "bittersweet",
+    "melancholy"
+   ],
+   "description": "Relative minor: two common tones, darker colour.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_ii_V",
+   "name": "ii → V",
+   "category": "diatonic-major",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "ii",
+    "root": 2,
+    "quality": "min"
+   },
+   "to": {
+    "roman": "V",
+    "root": 7,
+    "quality": "maj"
+   },
+   "moods": [
+    "tense",
+    "hopeful"
+   ],
+   "description": "Predominant to dominant (root falls a fifth).",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_IV_V",
+   "name": "IV → V",
+   "category": "diatonic-major",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "IV",
+    "root": 5,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "V",
+    "root": 7,
+    "quality": "maj"
+   },
+   "moods": [
+    "hopeful",
+    "tense"
+   ],
+   "description": "Stepwise build from predominant to dominant.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_V_I",
+   "name": "V → I (authentic cadence)",
+   "category": "cadence",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "V",
+    "root": 7,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "moods": [
+    "resolved"
+   ],
+   "description": "Strongest resolution: leading tone rises to tonic.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_V_vi",
+   "name": "V → vi (deceptive cadence)",
+   "category": "cadence",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "V",
+    "root": 7,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "vi",
+    "root": 9,
+    "quality": "min"
+   },
+   "moods": [
+    "surprising",
+    "bittersweet"
+   ],
+   "description": "Expected I, got vi: a poignant twist.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_IV_I",
+   "name": "IV → I (plagal)",
+   "category": "cadence",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "IV",
+    "root": 5,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "moods": [
+    "resolved",
+    "warm"
+   ],
+   "description": "Soft 'Amen' close.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_I_bVI",
+   "name": "I → ♭VI (borrowed)",
+   "category": "modal-interchange",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "♭VI",
+    "root": 8,
+    "quality": "maj"
+   },
+   "moods": [
+    "epic",
+    "dramatic"
+   ],
+   "description": "Borrowed from the parallel minor; cinematic lift with a shadow.",
+   "consensus": "medium"
+  },
+  {
+   "id": "seed_IV_iv",
+   "name": "IV → iv (minor subdominant)",
+   "category": "modal-interchange",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "IV",
+    "root": 5,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "iv",
+    "root": 5,
+    "quality": "min"
+   },
+   "moods": [
+    "melancholy",
+    "nostalgic"
+   ],
+   "description": "Major IV turns minor: the classic wistful borrowed chord.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_I_bVII",
+   "name": "I → ♭VII (Mixolydian)",
+   "category": "modal-interchange",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "♭VII",
+    "root": 10,
+    "quality": "maj"
+   },
+   "moods": [
+    "earthy",
+    "triumphant"
+   ],
+   "description": "Mixolydian ♭7 colour; rock/anthem sound.",
+   "consensus": "medium"
+  },
+  {
+   "id": "seed_I_II",
+   "name": "I → II (Lydian)",
+   "category": "modal-color",
+   "keyMode": "major",
+   "relativeTo": "key",
+   "from": {
+    "roman": "I",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "II",
+    "root": 2,
+    "quality": "maj"
+   },
+   "moods": [
+    "dreamy",
+    "mystical"
+   ],
+   "description": "Major II brings the raised 4th: floating, magical.",
+   "consensus": "medium"
+  },
+  {
+   "id": "seed_i_iv",
+   "name": "i → iv",
+   "category": "diatonic-minor",
+   "keyMode": "minor",
+   "relativeTo": "key",
+   "from": {
+    "roman": "i",
+    "root": 0,
+    "quality": "min"
+   },
+   "to": {
+    "roman": "iv",
+    "root": 5,
+    "quality": "min"
+   },
+   "moods": [
+    "melancholy",
+    "dark"
+   ],
+   "description": "Minor tonic to minor subdominant: mournful.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_i_bVI",
+   "name": "i → ♭VI",
+   "category": "diatonic-minor",
+   "keyMode": "minor",
+   "relativeTo": "key",
+   "from": {
+    "roman": "i",
+    "root": 0,
+    "quality": "min"
+   },
+   "to": {
+    "roman": "♭VI",
+    "root": 8,
+    "quality": "maj"
+   },
+   "moods": [
+    "epic",
+    "yearning"
+   ],
+   "description": "Warm-but-sad swell; cinematic.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_i_bVII",
+   "name": "i → ♭VII",
+   "category": "diatonic-minor",
+   "keyMode": "minor",
+   "relativeTo": "key",
+   "from": {
+    "roman": "i",
+    "root": 0,
+    "quality": "min"
+   },
+   "to": {
+    "roman": "♭VII",
+    "root": 10,
+    "quality": "maj"
+   },
+   "moods": [
+    "earthy",
+    "epic"
+   ],
+   "description": "Aeolian whole-step down; rock/folk modal sound.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_V_i",
+   "name": "V → i",
+   "category": "cadence",
+   "keyMode": "minor",
+   "relativeTo": "key",
+   "from": {
+    "roman": "V",
+    "root": 7,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "i",
+    "root": 0,
+    "quality": "min"
+   },
+   "moods": [
+    "resolved",
+    "dark"
+   ],
+   "description": "Closure on a minor tonic.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_X_Xm",
+   "name": "Parallel (P): major → minor",
+   "category": "neo-riemannian",
+   "keyMode": "any",
+   "relativeTo": "currentChord",
+   "from": {
+    "roman": "X",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "x",
+    "root": 0,
+    "quality": "min"
+   },
+   "moods": [
+    "melancholy",
+    "dramatic"
+   ],
+   "description": "Same root, third drops a semitone.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_X_bVI_chrom",
+   "name": "Chromatic mediant down a major third",
+   "category": "chromatic-mediant",
+   "keyMode": "any",
+   "relativeTo": "currentChord",
+   "from": {
+    "roman": "X",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "♭VI",
+    "root": 8,
+    "quality": "maj"
+   },
+   "moods": [
+    "mystical",
+    "epic",
+    "wonder"
+   ],
+   "description": "Major chord a major third below: one common tone, film-score magic.",
+   "consensus": "medium"
+  },
+  {
+   "id": "seed_X_X7",
+   "name": "Add dominant seventh",
+   "category": "color-chord",
+   "keyMode": "any",
+   "relativeTo": "currentChord",
+   "from": {
+    "roman": "X",
+    "root": 0,
+    "quality": "maj"
+   },
+   "to": {
+    "roman": "X7",
+    "root": 0,
+    "quality": "7"
+   },
+   "moods": [
+    "tense",
+    "bluesy"
+   ],
+   "description": "The ♭7 adds a tritone pulling down a fifth.",
+   "consensus": "high"
+  }
+ ],
+ "melodicMoves": [
+  {
+   "id": "seed_sd_1",
+   "name": "Scale degree 1",
+   "category": "scale-degree",
+   "relativeTo": "key",
+   "scaleDegree": "1",
+   "semitonesFromTonic": 0,
+   "moods": [
+    "resolved"
+   ],
+   "description": "Home; maximum stability.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_sd_7",
+   "name": "Scale degree 7 (leading tone)",
+   "category": "scale-degree",
+   "relativeTo": "key",
+   "scaleDegree": "7",
+   "semitonesFromTonic": 11,
+   "moods": [
+    "tense",
+    "yearning"
+   ],
+   "description": "Pulls up to the tonic.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_sd_s4",
+   "name": "Scale degree ♯4 (Lydian)",
+   "category": "scale-degree",
+   "relativeTo": "key",
+   "scaleDegree": "♯4",
+   "semitonesFromTonic": 6,
+   "moods": [
+    "dreamy",
+    "mystical"
+   ],
+   "description": "Raised fourth: floating, magical.",
+   "consensus": "medium"
+  },
+  {
+   "id": "seed_sd_b6",
+   "name": "Scale degree ♭6",
+   "category": "scale-degree",
+   "relativeTo": "key",
+   "scaleDegree": "♭6",
+   "semitonesFromTonic": 8,
+   "moods": [
+    "melancholy",
+    "yearning"
+   ],
+   "description": "Minor sixth leans down to 5.",
+   "consensus": "medium"
+  },
+  {
+   "id": "seed_int_up_2",
+   "name": "Major 2nd up",
+   "category": "interval",
+   "relativeTo": "currentNote",
+   "intervalSemitones": 2,
+   "direction": "up",
+   "moods": [
+    "hopeful"
+   ],
+   "description": "Stepwise ascent.",
+   "consensus": "low"
+  },
+  {
+   "id": "seed_int_down_2",
+   "name": "Major 2nd down",
+   "category": "interval",
+   "relativeTo": "currentNote",
+   "intervalSemitones": -2,
+   "direction": "down",
+   "moods": [
+    "warm",
+    "resolved"
+   ],
+   "description": "Stepwise descent.",
+   "consensus": "low"
+  },
+  {
+   "id": "seed_res_7_1",
+   "name": "Leading tone resolves up (7→1)",
+   "category": "resolution",
+   "relativeTo": "key",
+   "fromDegree": "7",
+   "toDegree": "1",
+   "intervalSemitones": 1,
+   "moods": [
+    "resolved"
+   ],
+   "description": "The strongest melodic resolution.",
+   "consensus": "high"
+  },
+  {
+   "id": "seed_ct_root",
+   "name": "Chord root",
+   "category": "chord-tone",
+   "relativeTo": "currentChord",
+   "semitonesAboveChordRoot": 0,
+   "moods": [
+    "resolved"
+   ],
+   "description": "Most stable note over the chord.",
+   "consensus": "high"
+  }
+ ],
+ "modes": [
+  {
+   "id": "ionian",
+   "name": "Ionian (major)",
+   "intervals": [
+    0,
+    2,
+    4,
+    5,
+    7,
+    9,
+    11
+   ],
+   "moods": [
+    "bright",
+    "resolved"
+   ],
+   "description": "The major scale.",
+   "characteristicNotes": [
+    "3",
+    "7"
+   ]
+  },
+  {
+   "id": "aeolian",
+   "name": "Aeolian (natural minor)",
+   "intervals": [
+    0,
+    2,
+    3,
+    5,
+    7,
+    8,
+    10
+   ],
+   "moods": [
+    "melancholy",
+    "dark"
+   ],
+   "description": "Natural minor.",
+   "characteristicNotes": [
+    "♭3",
+    "♭6"
+   ]
+  },
+  {
+   "id": "lydian",
+   "name": "Lydian",
+   "intervals": [
+    0,
+    2,
+    4,
+    6,
+    7,
+    9,
+    11
+   ],
+   "moods": [
+    "dreamy",
+    "mystical"
+   ],
+   "description": "Major with ♯4.",
+   "characteristicNotes": [
+    "♯4"
+   ]
+  },
+  {
+   "id": "dorian",
+   "name": "Dorian",
+   "intervals": [
+    0,
+    2,
+    3,
+    5,
+    7,
+    9,
+    10
+   ],
+   "moods": [
+    "earthy",
+    "bittersweet"
+   ],
+   "description": "Minor with ♮6.",
+   "characteristicNotes": [
+    "6"
+   ]
+  }
+ ],
+ "progressions": []
+}

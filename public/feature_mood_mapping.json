@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "placeholder": true,
+    "note": "Placeholder (no overrides). Replace with research/aesthetics/feature_mood_mapping.json to tune scoring: either {\"config\": {...partial FeatureConfig}} or {\"rules\": [{\"feature\": \"quality:dim7\", \"dimension\": \"tension\", \"effect\": 0.9}]}."
+  },
+  "rules": []
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+.env
+.env.*
+*.local
+*.pem
+*.key
+.DS_Store
+npm-debug.log*
