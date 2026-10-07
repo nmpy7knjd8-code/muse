@@ -8,6 +8,7 @@ import { RomanNumeral, analyzeRoman, parseRoman } from './roman';
 import { Key, MODE_BY_ID, diatonicChords, inScale, keyName, spellInKey } from './scales';
 import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } from './voicing';
 import { neoRiemannianPath } from './relations';
+import { NoteRelation, beatWeight, melodyFit, noteRelation } from './noteRelation';
 import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension } from './harmonyTension';
 import { MoodDimensions, MoodProfile, ProfileMatch, characteristicOffsets, chordFeatures, chordFitsMode, isEmptyProfile, matchProfile, noteFeatures, profileFromMoods } from './profile';
 
@@ -48,6 +49,8 @@ export interface ChordSuggestion {
   match: ProfileMatch | null;
   /** tension model: level of this chord after the progression, debt after it, ranking adjustment + reasons */
   tension: CandidateTension | null;
+  /** when harmonizing melody notes: fit (−1..1) and each note's relation to this chord */
+  harmony: { fit: number; relations: NoteRelation[] } | null;
 }
 
 export interface NoteSuggestion {
@@ -68,6 +71,8 @@ export interface NoteSuggestion {
   moodMatch: number;
   features: MoodDimensions;
   match: ProfileMatch | null;
+  /** relation to the current chord (chord tone / tension / avoid / clash) */
+  relation: NoteRelation | null;
 }
 
 export interface ChordSuggestOptions {
@@ -81,6 +86,8 @@ export interface ChordSuggestOptions {
   limit?: number;
   /** tension budget style (default pop); null disables the tension advisor */
   tensionStyle?: TensionStyleId | null;
+  /** melody notes the chord must harmonize (reharmonization): ranked by fit + mood + context */
+  harmonize?: Array<{ midi: number; beat: number; dur?: number }>;
 }
 
 export interface NoteSuggestOptions {
@@ -91,6 +98,8 @@ export interface NoteSuggestOptions {
   profile?: MoodProfile | null;
   adventure?: number;
   limit?: number;
+  /** beat position (0..3) the note will land on: strong beats favour chord tones, weak beats tolerate tensions */
+  beat?: number;
 }
 
 // Functional-harmony transition priors (offset of chord root above tonic → next offset).
@@ -147,6 +156,8 @@ export function voiceProgression(chords: Chord[]): number[][] {
 }
 
 /** How strongly an explicit mood target outranks plain functional likelihood. */
+/** weight of melody fit when harmonizing notes (fit is −1..1). HEURISTIC. */
+export const HARMONIZE_GAIN = 2.2;
 const MOOD_GAIN = 3.6;
 /** Absolute fit values cluster (most chords fit a blend a bit), so also reward fit relative to the other candidates. */
 function moodContrast(list: { score: number; moodMatch: number }[]): void {
@@ -275,8 +286,9 @@ export class SuggestionEngine {
     const fam = this.family(k);
 
     const pool = new Map<string, { chord: Chord; evidence: Evidence[] }>();
+    const harm = opts.harmonize?.length ? opts.harmonize : null;
     const add = (c: Chord, ev?: Evidence) => {
-      if (cur && chordsEqual(c, cur)) return;
+      if (cur && !harm && chordsEqual(c, cur)) return;
       const id = chordSymbol(c);
       let e = pool.get(id);
       if (!e) pool.set(id, (e = { chord: c, evidence: [] }));
@@ -284,6 +296,7 @@ export class SuggestionEngine {
     };
 
     diatonicChords(k).forEach((c) => add(c));
+    if (harm) diatonicChords(k, true).forEach((c) => add(c)); // 7ths can absorb a melody's 7th/9th
     // dominant seventh on V, and harmonic-minor V in minor-family keys
     add({ root: spellInKey(k, t + 7), quality: '7' });
     if (fam === 'minor') add({ root: spellInKey(k, t + 7), quality: 'maj' });
@@ -346,18 +359,24 @@ export class SuggestionEngine {
       const smooth = ct * 0.08 - vl * 0.015;
       const moods = this.moodsFromEvidence(allEv, chord);
       const features = chordFeatures(chord, k, moods, commonness, rn.diatonic, this.lexicon);
-      const tension = tState ? candidateTension(tState, cur ?? null, chord, k) : null;
+      const tension = tState ? candidateTension(tState, cur ?? null, chord, k, harm?.map((n) => n.midi)) : null;
+      const harmony = harm ? { fit: melodyFit(harm, chord), relations: harm.map((n) => noteRelation(n.midi, chord, this.kb)) } : null;
       // the tension model (context-aware: distance from home, pull, roughness, motion) refines the lookup-table tension
       if (tension) features.tension = clamp01(0.5 * features.tension + 0.5 * clamp01(tension.level / TENSION_MAX));
       const pm = profile ? matchProfile(profile, moods, features, this.lexicon, (m) => chordFitsMode(chord, k, m)) : null;
       const match = pm?.total ?? 0;
       const moodBonus = pm ? MOOD_GAIN * match - MOOD_GAIN * 0.35 : 0;
-      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0);
+      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0) + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
-      const why = top
+      let why = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
         : `${rn.diatonic ? 'Diatonic' : 'Chromatic'} ${roman} in ${keyName(k)}.`;
+      if (harmony) {
+        const n = harmony.relations.length, ct = harmony.relations.filter((r) => r.kind === 'chord').length;
+        const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
+        why = `Melody → ${harmony.relations.map((r) => r.label).join(' · ')}: ${ct}/${n} chord tones${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
+      }
       out.push({
         id: chordSymbol(chord),
         chord,
@@ -381,6 +400,7 @@ export class SuggestionEngine {
         features,
         match: pm,
         tension,
+        harmony,
       });
     }
     if (profile) moodContrast(out);
@@ -436,6 +456,7 @@ export class SuggestionEngine {
         for (const m of mm) if (m.fromDegree !== undefined && m.toDegree !== undefined && m.fromDegree === lastOff && m.toDegree === off && (m.intervalSemitones === undefined || Math.abs(m.intervalSemitones) === Math.abs(iv))) push(m);
       }
       // relation to the current chord
+      let quality = 0;
       let isChordTone = false;
       if (chord) {
         const above = mod(midi - pc(chord.root), 12);
@@ -462,10 +483,18 @@ export class SuggestionEngine {
         }
       }
 
+      const relation = chord ? noteRelation(midi, chord, this.kb) : null;
+      if (relation) {
+        // strong beats want chord tones; tensions are colour (more welcome when adventurous); avoid/clash cost
+        const bw = opts.beat !== undefined ? beatWeight(opts.beat) : 1;
+        if (relation.kind === 'chord') quality += 0.1 * bw;
+        else if (relation.kind === 'tension') quality += 0.15 * a - 0.05 * bw;
+        else if (relation.kind === 'avoid') quality -= (0.35 - 0.15 * a) * bw;
+        else quality -= (0.7 - 0.25 * a) * bw;
+      }
       const absIv = Math.abs(iv);
       const ip = last === undefined ? 0.5 : INTERVAL_PRIOR[absIv] ?? 0.05;
       const commonness = clamp01(0.5 * ip + (scaleTone ? 0.3 : 0) + (isChordTone ? 0.2 : chord ? 0 : 0.1));
-      let quality = 0;
       if (ev.some((e) => e.category === 'resolution')) quality += 0.5;
       if (isChordTone) quality += 0.25;
       if (before !== undefined && last !== undefined) {
@@ -514,6 +543,7 @@ export class SuggestionEngine {
         moodMatch: match,
         features,
         match: pm,
+        relation,
       });
     }
     if (profile) moodContrast(out);
