@@ -51,6 +51,33 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
   - Listening pauses while Muse itself is playing, so its own audio can't feed back.
   - A live indicator shows what it hears, the confidence, a hold-progress bar and the input level.
 
+## Tension budget
+- `src/core/tension.ts` is a verbatim copy of `research/tension/tension.ts`; the tests in
+  `tests/tension.test.ts` come with it.
+- What the model measures, with sources in `research/tension/tension_report.md`:
+  - roughness, harmonicity and familiarity (Hutchinson & Knopoff; Parncutt; Harrison & Pearce)
+  - distance from home, surface tension and attraction (Lerdahl's Tonal Pitch Space)
+  - voice-leading motion
+- `src/core/harmonyTension.ts` connects the model to Muse:
+  - style presets, calibrated on three corpora: Pop/rock = RS200, Classical = Beethoven quartets,
+    Jazz = iRb. Film is heuristic.
+  - the Safe↔Adventurous slider and the mood target scale the sweet-spot band and the "unresolved
+    tension" budget
+  - an idiom discount for modal and blues colours (♭VII, I7, chords native to the mode), because
+    Lerdahl's model over-rates their tension
+  - melody-vs-chord dissonance folded into each chord's tension
+- **Effect on suggestions:** each one gets a ranking adjustment (`TENSION_GAIN × adjust`) and reason
+  chips such as "resolves built-up tension" or "adds colour after a settled stretch". The model's level
+  also refines the mood-map tension axis.
+- **UI:** a tension curve under the progression shows:
+  - status, coloured too-static / sweet / building / resolve-soon / over-budget
+  - the green sweet-spot band and the orange unresolved-tension area
+  - a dashed budget line and ↓ release marks
+  - a ghost segment for the selected suggestion
+  - a per-chord breakdown (tap a chord)
+  - a style picker, saved in localStorage
+- The weights are heuristics (evidence D) and should be tuned with listeners.
+
 ## Artist Lens
 A third tab covering 15 artists, TOOL first. It is built from `public/artists.json`, which comes from
 the research worker; `research/artists/` has the build and validation.

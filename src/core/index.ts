@@ -21,3 +21,5 @@ export * from './mapLayout';
 export * from './chroma';
 export * from './playback';
 export * from './artists';
+export * from './harmonyTension';
+export * as tensionModel from './tension';

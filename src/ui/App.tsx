@@ -5,12 +5,13 @@ import {
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, progressionText, romanOf, scalePcs,
   spellInKey, toMidiFile, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
-  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId, loadTryIt, type ArtistTryIt, type Artist,
+  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
+import { TensionCurve } from './TensionCurve';
 import { startListening, type ListenSession, type ListenStatus } from './listen';
 
 type Tab = 'chords' | 'melody' | 'artists';
@@ -48,6 +49,11 @@ function Composer({ data }: { data: LoadedData }) {
   const [visTab, setVisTab] = useState<VisTab>('piano');
   const [sevenths, setSevenths] = useState(false);
   const [adventure, setAdventure] = useState(0.35);
+  const [tStyle, setTStyle] = useState<TensionStyleId>(() => {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem('muse.tensionStyle') : null;
+    return v === 'pop' || v === 'classical' || v === 'jazz' || v === 'film' ? v : 'pop';
+  });
+  const chooseTStyle = (s: TensionStyleId) => { setTStyle(s); try { localStorage.setItem('muse.tensionStyle', s); } catch { /* private mode */ } };
   const [moodText, setMoodText] = useState('');
   const [profile, setProfile] = useState<MoodProfile | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -78,8 +84,12 @@ function Composer({ data }: { data: LoadedData }) {
   const spellMidi = (m: number) => midiName(m, spellInKey(k, m)).replace('#', '♯').replace(/b(?=\d)/, '♭');
 
   const chordSugs: ChordSuggestion[] = useMemo(
-    () => (tab === 'chords' ? engine.suggestChords({ key: k, progression: chords, profile, adventure, limit: 18 }) : []),
-    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure], // eslint-disable-line react-hooks/exhaustive-deps
+    () => (tab === 'chords' ? engine.suggestChords({ key: k, progression: chords, profile, adventure, limit: 18, tensionStyle: tStyle }) : []),
+    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const tState = useMemo(
+    () => (chords.length ? progressionTension(chords, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null),
+    [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const noteSugs: NoteSuggestion[] = useMemo(
     () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: cur ?? null, profile, adventure, limit: 12 }) : []),
@@ -482,6 +492,11 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       </section>
 
+      {tab !== 'artists' && tState && (
+        <TensionCurve state={tState} labels={chords.map((c) => chordSymbol(c, true))} style={tStyle} onStyle={chooseTStyle}
+          ghost={tab === 'chords' && selChord?.tension ? { level: selChord.tension.level, debtAfter: selChord.tension.debtAfter, label: selChord.symbol, color: lex.color(selChord.primaryMood) } : null} />
+      )}
+
       {/* Input */}
       <section className="input">
         <div className="seg">
@@ -677,6 +692,7 @@ function Composer({ data }: { data: LoadedData }) {
                       {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
                       {isChord && (s as ChordSuggestion).moodShift && <span className="shift">{(s as ChordSuggestion).moodShift!.arrow} {(s as ChordSuggestion).moodShift!.text}</span>}
                       {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
+                      {isChord && (s as ChordSuggestion).tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
                     </div>
                     <div className="why">{s.why}</div>
                   </div>

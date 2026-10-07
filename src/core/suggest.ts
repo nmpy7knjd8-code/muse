@@ -8,6 +8,7 @@ import { RomanNumeral, analyzeRoman, parseRoman } from './roman';
 import { Key, MODE_BY_ID, diatonicChords, inScale, keyName, spellInKey } from './scales';
 import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } from './voicing';
 import { neoRiemannianPath } from './relations';
+import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension } from './harmonyTension';
 import { MoodDimensions, MoodProfile, ProfileMatch, characteristicOffsets, chordFeatures, chordFitsMode, isEmptyProfile, matchProfile, noteFeatures, profileFromMoods } from './profile';
 
 export type Rarity = 'common' | 'colorful' | 'adventurous';
@@ -45,6 +46,8 @@ export interface ChordSuggestion {
   moodMatch: number;
   features: MoodDimensions;
   match: ProfileMatch | null;
+  /** tension model: level of this chord after the progression, debt after it, ranking adjustment + reasons */
+  tension: CandidateTension | null;
 }
 
 export interface NoteSuggestion {
@@ -76,6 +79,8 @@ export interface ChordSuggestOptions {
   /** 0 = safe/common … 1 = adventurous/unusual */
   adventure?: number;
   limit?: number;
+  /** tension budget style (default pop); null disables the tension advisor */
+  tensionStyle?: TensionStyleId | null;
 }
 
 export interface NoteSuggestOptions {
@@ -315,6 +320,8 @@ export class SuggestionEngine {
     const prevVoicing = voicings.length ? voicings[voicings.length - 1] : undefined;
     const curMoods = cur ? this.chordMoods(cur, k, prev) : [];
     const priorTable = fam === 'major' ? PRIOR_MAJOR : PRIOR_MINOR;
+    const tSettings: TensionSettings | null = opts.tensionStyle === null ? null : { style: opts.tensionStyle ?? 'pop', adventure: a, target: moodTarget(profile) };
+    const tState = tSettings ? progressionTension(prog, k, tSettings) : null;
 
     const out: ChordSuggestion[] = [];
     for (const { chord, evidence } of pool.values()) {
@@ -339,10 +346,13 @@ export class SuggestionEngine {
       const smooth = ct * 0.08 - vl * 0.015;
       const moods = this.moodsFromEvidence(allEv, chord);
       const features = chordFeatures(chord, k, moods, commonness, rn.diatonic, this.lexicon);
+      const tension = tState ? candidateTension(tState, cur ?? null, chord, k) : null;
+      // the tension model (context-aware: distance from home, pull, roughness, motion) refines the lookup-table tension
+      if (tension) features.tension = clamp01(0.5 * features.tension + 0.5 * clamp01(tension.level / TENSION_MAX));
       const pm = profile ? matchProfile(profile, moods, features, this.lexicon, (m) => chordFitsMode(chord, k, m)) : null;
       const match = pm?.total ?? 0;
       const moodBonus = pm ? MOOD_GAIN * match - MOOD_GAIN * 0.35 : 0;
-      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus;
+      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
       const why = top
@@ -370,6 +380,7 @@ export class SuggestionEngine {
         moodMatch: match,
         features,
         match: pm,
+        tension,
       });
     }
     if (profile) moodContrast(out);

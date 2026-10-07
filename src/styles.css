@@ -220,3 +220,22 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .sources a { color: #b9a7ff; word-break: break-word; }
 .guide li, .sources li { margin-bottom: 4px; }
 .linkish { background: none; border: none; padding: 0; color: #b9a7ff; text-decoration: underline; }
+/* Tension curve */
+.tension { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; margin: 10px 0; }
+.tension-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tension-head select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; font-size: 13px; }
+.tstatus { font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.tstatus i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.tmsg { margin: 2px 0 4px; color: #cfcbe0; }
+.tension-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tension svg { display: block; }
+.tlabel { font-size: 10px; fill: #bdb8d4; }
+.tlabel.ghost { font-weight: 700; }
+.tbreak { margin-top: 4px; line-height: 1.35; }
+.tlegend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.tlegend i { display: inline-block; width: 12px; height: 7px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.tlegend i.band { background: rgba(79, 209, 165, 0.35); }
+.tlegend i.debt { background: rgba(240, 160, 80, 0.55); }
+.tlegend i.ceil { height: 0; border-top: 2px dashed #ef5b5b; border-radius: 0; }
+.treason { font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #1f3d35; color: #a5e8cf; }
+.treason.warn { background: #45261f; color: #f3b49f; }
