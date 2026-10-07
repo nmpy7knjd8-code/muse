@@ -5,14 +5,15 @@ import {
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, progressionText, romanOf, scalePcs,
   spellInKey, toMidiFile, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
-  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId,
+  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId, loadTryIt, type ArtistTryIt, type Artist,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
+import { ArtistLens } from './ArtistLens';
 import { startListening, type ListenSession, type ListenStatus } from './listen';
 
-type Tab = 'chords' | 'melody';
+type Tab = 'chords' | 'melody' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
 interface Slot { chord: Chord; locked: boolean }
 interface Snapshot { slots: Slot[]; melody: number[] }
@@ -248,6 +249,30 @@ function Composer({ data }: { data: LoadedData }) {
     flash('Journey loaded — undo to go back');
   };
 
+  const [focusArtist, setFocusArtist] = useState<string | null>(null);
+  // ---- Artist Lens "Try it": load an exercise like a journey (key + chords, pedal bass applied) ----
+  const tryIt = (t: ArtistTryIt, artist: Artist) => {
+    const l = loadTryIt(t);
+    if (!l) return flash('Could not read that exercise');
+    snapshot();
+    setTonic(l.tonic); setMode(l.mode); setAuto(false);
+    setSlots(l.chords.map((chord) => ({ chord, locked: false })));
+    setTab('chords');
+    setSelectedId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    synth.unlock();
+    const v = voiceProgression(l.chords);
+    synth.playSequence(l.chords.map((c, i) => withBass(c, v[i])), 0.8, 0.75);
+    flash(`Loaded "${t.label}" (${artist.name} style) — undo to go back`);
+  };
+  const previewTryIt = (t: ArtistTryIt) => {
+    const l = loadTryIt(t);
+    if (!l) return;
+    synth.unlock();
+    const v = voiceProgression(l.chords);
+    synth.playSequence(l.chords.map((c, i) => withBass(c, v[i])), 0.8, 0.75);
+  };
+
   // ---- Listen (live mic: melody notes via YIN, chords via chroma templates) ----
   // callbacks run outside React's render cycle, so they read the latest state through refs
   const live = useRef({ tab, k, slots, melody });
@@ -259,7 +284,7 @@ function Composer({ data }: { data: LoadedData }) {
     if (listen) { listen.stop(); setListen(null); setListenStatus(null); return; }
     try {
       const session = await startListening({
-        target: () => live.current.tab,
+        target: () => (live.current.tab === 'melody' ? 'melody' : 'chords'),
         isPaused: () => synth.isPlaying(),
         onNote: (m) => {
           snapshotLive();
@@ -462,7 +487,11 @@ function Composer({ data }: { data: LoadedData }) {
         <div className="seg">
           <button className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); }}>Chords</button>
           <button className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); }}>Melody</button>
+          {data.artists && <button className={tab === 'artists' ? 'on' : ''} onClick={() => { setTab('artists'); setSelectedId(null); }}>Artist Lens</button>}
         </div>
+        {tab === 'artists' && data.artists ? (
+          <ArtistLens key={focusArtist ?? 'all'} initial={focusArtist} data={data.artists} lex={lex} kbIndex={data.kbIndex} onTryIt={tryIt} onPreview={previewTryIt} />
+        ) : (<>
         <div className={'listen' + (listen ? ' on' : '')}>
           <button className={listen ? 'rec' : ''} onClick={() => void toggleListen()} aria-pressed={!!listen}>
             {listen ? '■ Stop listening' : '👂 Listen'}
@@ -512,7 +541,10 @@ function Composer({ data }: { data: LoadedData }) {
             <p className="small muted">Tap keys (or use 👂 Listen and sing/play) to add melody notes. With Auto on, the key is detected from your notes too.</p>
           </div>
         )}
+        </>)}
       </section>
+
+      {tab !== 'artists' && (<>
 
       {/* Mood */}
       <section className="mood">
@@ -662,6 +694,8 @@ function Composer({ data }: { data: LoadedData }) {
       <div className="center" style={{ marginTop: 14 }}>
         <button className={'pill' + (loreOn ? ' on' : '')} onClick={() => setLoreOn((x) => !x)}>Lore mode {loreOn ? 'on' : 'off'}</button>
       </div>
+      </>)}
+
       <details className="about">
         <summary>About &amp; credits</summary>
         <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.</p>
@@ -703,6 +737,24 @@ function Composer({ data }: { data: LoadedData }) {
               ))}
               {!selChord.evidence.length && <li className="muted">No KB entry; mood inferred from chord quality.</li>}
             </ul>
+            {(() => {
+              const used = data.artists ? selChord.evidence.flatMap((e) => data.artists!.techniqueChipIndex[`chordMove:${e.id}`] ?? []) : [];
+              const uniq = [...new Map(used.map((u) => [u.artistId + u.techniqueId, u])).values()].slice(0, 6);
+              if (!uniq.length || !data.artists) return null;
+              const name = (id: string) => data.artists!.artists.find((a) => a.id === id)?.name ?? id;
+              return (
+                <>
+                  <h4>Used by (Artist Lens)</h4>
+                  <ul className="evidence">
+                    {uniq.map((u) => (
+                      <li key={u.artistId + u.techniqueId}>
+                        <button className="linkish" onClick={() => { setDetail(false); setFocusArtist(u.artistId); setTab('artists'); window.scrollTo({ top: 0 }); }}>{name(u.artistId)}</button> — {u.name}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

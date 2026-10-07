@@ -51,6 +51,22 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
   - Listening pauses while Muse itself is playing, so its own audio can't feed back.
   - A live indicator shows what it hears, the confidence, a hold-progress bar and the input level.
 
+## Artist Lens
+A third tab covering 15 artists, TOOL first. It is built from `public/artists.json`, which comes from
+the research worker; `research/artists/` has the build and validation.
+- **Cards:** the hook, mood chips (opacity = weight) and polarity bars (bar length = how many of the
+  artist's techniques work that polarity).
+- **Artist detail:**
+  - the aesthetic summary
+  - "Try it" exercises, labelled as original exercises in the artist's style. They load like the mood
+    journey (key + chords, undo-able); the pedal / held-bass degree becomes the bass of the listed
+    chords. ▶ previews an exercise without loading it.
+  - technique cards grouped by category, with evidence badges and citations
+  - technique chips that open the matching item from Muse's theory KB
+  - works, a listening guide, and the sources
+- The Chords detail sheet shows "Used by (Artist Lens)" reverse links for the KB moves behind a
+  suggestion.
+
 ## Sound
 - Sampled instruments, self-hosted in `public/samples/<instrument>/<midi>.mp3`. They are about 3.4 MB of
   MP3 (iOS Safari decodes these), lazy-loaded the first time you need them, and cached by the service

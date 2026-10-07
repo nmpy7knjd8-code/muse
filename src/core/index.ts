@@ -20,3 +20,4 @@ export * from './pitch';
 export * from './mapLayout';
 export * from './chroma';
 export * from './playback';
+export * from './artists';

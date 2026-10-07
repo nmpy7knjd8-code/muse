@@ -3,11 +3,11 @@
 // Hashed static assets: cache-first.
 // All paths are relative to the service worker's own location, so the app works under any sub-path
 // (e.g. GitHub Pages: https://<user>.github.io/<repo>/).
-const CACHE = 'muse-v4';
+const CACHE = 'muse-v5';
 const BASE = new URL('./', self.location.href).href;
 const at = (p) => new URL(p, BASE).href;
 const INDEX = at('index.html');
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'theory_kb.json', 'theory_kb.seed.json', 'lore.json', 'mood_lexicon.json', 'icons/icon-192.png', 'icons/apple-touch-icon.png'].map(at);
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'theory_kb.json', 'theory_kb.seed.json', 'lore.json', 'artists.json', 'mood_lexicon.json', 'icons/icon-192.png', 'icons/apple-touch-icon.png'].map(at);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).catch(() => {}));

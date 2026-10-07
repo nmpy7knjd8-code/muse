@@ -1,5 +1,8 @@
 // Runtime data loading: theory KB (real → seed fallback), optional mood lexicon and feature mapping.
-import { LoreFile, TheoryKB, applyFeatureMapping, normalizeKB, normalizeLore, setFeatureConfig } from '../core';
+import { ArtistsFile, LoreFile, TheoryKB, applyFeatureMapping, normalizeArtists, normalizeKB, normalizeLore, setFeatureConfig } from '../core';
+
+/** Display info for any KB item (raw file — includes items the engine can't place, e.g. 'varies' pedals). */
+export interface KbItemInfo { kind: string; id: string; name: string; description: string; moods: string[] }
 
 const base = import.meta.env.BASE_URL;
 
@@ -21,6 +24,23 @@ export interface LoadedData {
   moodLexicon: unknown | null;
   featureMapping: { applied: number; ignored: number } | null;
   lore: LoreFile | null;
+  artists: ArtistsFile | null;
+  kbIndex: Map<string, KbItemInfo>;
+}
+
+function indexKb(raw: unknown): Map<string, KbItemInfo> {
+  const out = new Map<string, KbItemInfo>();
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const add = (field: string, kind: string) => {
+    const list = Array.isArray(r[field]) ? (r[field] as Array<Record<string, unknown>>) : [];
+    for (const it of list) {
+      if (!it || typeof it.id !== 'string') continue;
+      const moods = Array.isArray(it.moods) ? (it.moods as unknown[]).map((m) => (typeof m === 'string' ? m : (m as { id?: string })?.id ?? '')).filter(Boolean) : [];
+      out.set(`${kind}:${it.id}`, { kind, id: it.id, name: String(it.name ?? it.id), description: String(it.description ?? ''), moods });
+    }
+  };
+  add('chordMoves', 'chordMove'); add('melodicMoves', 'melodicMove'); add('modes', 'mode'); add('progressions', 'progression');
+  return out;
 }
 
 export async function loadData(): Promise<LoadedData> {
@@ -31,12 +51,12 @@ export async function loadData(): Promise<LoadedData> {
     kbFile = 'theory_kb.seed.json';
   }
   const kb = normalizeKB(raw ?? {});
-  const [moodLexicon, mapping, loreRaw] = await Promise.all([getJson('mood_lexicon.json'), getJson('feature_mood_mapping.json'), getJson('lore.json')]);
+  const [moodLexicon, mapping, loreRaw, artistsRaw] = await Promise.all([getJson('mood_lexicon.json'), getJson('feature_mood_mapping.json'), getJson('lore.json'), getJson('artists.json')]);
   let featureMapping: LoadedData['featureMapping'] = null;
   if (mapping) {
     const res = applyFeatureMapping(mapping);
     setFeatureConfig(res.config);
     featureMapping = { applied: res.applied, ignored: res.ignored };
   }
-  return { kb, kbFile, moodLexicon, featureMapping, lore: loreRaw ? normalizeLore(loreRaw) : null };
+  return { kb, kbFile, moodLexicon, featureMapping, lore: loreRaw ? normalizeLore(loreRaw) : null, artists: normalizeArtists(artistsRaw), kbIndex: indexKb(raw) };
 }
