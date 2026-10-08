@@ -13,11 +13,25 @@ export interface ChordPath {
   id: string;
   chords: Chord[];
   symbols: string[];
-  /** One connecting melody MIDI between each consecutive pair (length = chords.length - 1). */
+  /** Connecting melody into each path chord (same length as chords). */
   links: number[];
   linkNames: string[];
   score: number;
   why: string;
+}
+
+/** Display like `Am — E4 → F — C5 → G` (chord, connecting note, chord…). */
+export function formatChordPath(p: Pick<ChordPath, 'symbols' | 'linkNames'>): string {
+  const parts: string[] = [];
+  p.symbols.forEach((sym, i) => {
+    if (i > 0) parts.push('→');
+    parts.push(sym);
+    if (p.linkNames[i]) {
+      parts.push('—');
+      parts.push(p.linkNames[i]);
+    }
+  });
+  return parts.join(' ');
 }
 
 export interface NotePath {
@@ -26,6 +40,11 @@ export interface NotePath {
   names: string[];
   score: number;
   why: string;
+}
+
+/** Display like `E4 → G4 → A4`. */
+export function formatNotePath(p: Pick<NotePath, 'names'>): string {
+  return p.names.join(' → ');
 }
 
 function linkTone(engine: SuggestionEngine, k: Key, a: Chord, b: Chord, melody: number[]): number {

@@ -13,7 +13,7 @@ import {
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtTag, rootMotion,
   TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, beatsPerBar, clampSlotsToMeter, parseMeter,
   timeSigLabel,
-  suggestChordPaths, suggestNotePaths, type ChordPath, type NotePath,
+  suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -181,15 +181,16 @@ function Composer({ data }: { data: LoadedData }) {
   );
   const [pathLen, setPathLen] = useState<2 | 3>(2);
   const chordPaths: ChordPath[] = useMemo(() => {
-    if (tab !== 'chords' || pendingHarm) return [];
+    if (tab !== 'chords') return [];
+    const progression = pendingHarm ? chordsOf(slots.slice(0, chordTarget)) : chords;
     return suggestChordPaths(engine, {
-      key: k, progression: chords, profile, adventure, tensionStyle: tStyle, melody, steps: pathLen, limit: 3,
+      key: k, progression, profile, adventure, tensionStyle: tStyle, melody, steps: pathLen, limit: 4,
     });
-  }, [engine, tab, pendingHarm, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engine, tab, pendingHarm, chordTarget, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const notePaths: NotePath[] = useMemo(() => {
     if (tab !== 'melody') return [];
     return suggestNotePaths(engine, {
-      key: k, melody, chord: noteChord, profile, adventure, steps: pathLen, limit: 3, beat: noteBeat,
+      key: k, melody, chord: noteChord, profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
     });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
@@ -1029,6 +1030,47 @@ function Composer({ data }: { data: LoadedData }) {
               ? `Next note after ${spellMidi(melody[melody.length - 1])}${noteChord ? ` over ${chordSymbol(noteChord, true)}` : ''}`
               : 'First melody note'}
         </h3>
+        {((tab === 'chords' && chordPaths.length > 0) || (tab === 'melody' && notePaths.length > 0)) && (
+          <div className="path-block">
+            <div className="row gap" style={{ alignItems: 'center', marginBottom: 4 }}>
+              <h4 style={{ margin: 0, flex: 1 }}>
+                {pathLen}-step {tab === 'chords' ? 'chord paths' : 'note lines'}
+              </h4>
+              <button type="button" className={'pill' + (pathLen === 2 ? ' on' : '')} onClick={() => setPathLen(2)}>2</button>
+              <button type="button" className={'pill' + (pathLen === 3 ? ' on' : '')} onClick={() => setPathLen(3)}>3</button>
+            </div>
+            <p className="small muted" style={{ margin: '0 0 6px' }}>
+              {tab === 'chords'
+                ? 'Add several chords at once. Blue notes are connecting melody between them — Hear plays the whole path.'
+                : 'Add a short melody run (2 or 3 notes) in one tap. Hear previews the line over the current chord.'}
+            </p>
+            <div className="path-row">
+              {tab === 'chords' ? chordPaths.map((p) => (
+                <div key={p.id} className="path-chip">
+                  <div>
+                    <div className="path-syms">{formatChordPath(p)}</div>
+                    <div className="path-mel">{p.linkNames.length ? `connecting notes: ${p.linkNames.join(' · ')}` : ''}</div>
+                  </div>
+                  <div className="path-actions">
+                    <button type="button" aria-label="Hear path" onClick={() => playChordPath(p)}>▶</button>
+                    <button type="button" className="add" aria-label="Add path" onClick={() => addChordPath(p)}>＋</button>
+                  </div>
+                </div>
+              )) : notePaths.map((p) => (
+                <div key={p.id} className="path-chip">
+                  <div>
+                    <div className="path-syms">{formatNotePath(p)}</div>
+                    <div className="small muted">{p.why}</div>
+                  </div>
+                  <div className="path-actions">
+                    <button type="button" aria-label="Hear path" onClick={() => playNotePath(p)}>▶</button>
+                    <button type="button" className="add" aria-label="Add path" onClick={() => addNotePath(p)}>＋</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <NextPickBoard
           mode={tab === 'melody' ? 'melody' : 'chords'}
           items={tab === 'chords' ? chordSugs : noteSugs}
@@ -1062,41 +1104,6 @@ function Composer({ data }: { data: LoadedData }) {
             }
           }}
         />
-        {((tab === 'chords' && chordPaths.length > 0) || (tab === 'melody' && notePaths.length > 0)) && (
-          <div className="path-block">
-            <div className="row gap" style={{ alignItems: 'center', marginBottom: 4 }}>
-              <h4 style={{ margin: 0, flex: 1 }}>Next {pathLen}-step {tab === 'chords' ? 'paths' : 'lines'}</h4>
-              <button type="button" className={'pill' + (pathLen === 2 ? ' on' : '')} onClick={() => setPathLen(2)}>2</button>
-              <button type="button" className={'pill' + (pathLen === 3 ? ' on' : '')} onClick={() => setPathLen(3)}>3</button>
-            </div>
-            <div className="path-row">
-              {tab === 'chords' ? chordPaths.map((p) => (
-                <div key={p.id} className="path-chip">
-                  <div>
-                    <div className="path-syms">{p.symbols.join(' → ')}</div>
-                    {p.linkNames.length > 0 && <div className="path-mel">via {p.linkNames.join(' · ')}</div>}
-                    <div className="small muted">{p.why}</div>
-                  </div>
-                  <div className="path-actions">
-                    <button type="button" aria-label="Hear path" onClick={() => playChordPath(p)}>▶</button>
-                    <button type="button" className="add" aria-label="Add path" onClick={() => addChordPath(p)}>＋</button>
-                  </div>
-                </div>
-              )) : notePaths.map((p) => (
-                <div key={p.id} className="path-chip">
-                  <div>
-                    <div className="path-syms">{p.names.join(' → ')}</div>
-                    <div className="small muted">{p.why}</div>
-                  </div>
-                  <div className="path-actions">
-                    <button type="button" aria-label="Hear path" onClick={() => playNotePath(p)}>▶</button>
-                    <button type="button" className="add" aria-label="Add path" onClick={() => addNotePath(p)}>＋</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="group">
           <div className="ghead">Best fit first <span className="muted" style={{ fontWeight: 500 }}>· mood is a tag, not the sort</span></div>
           {ranked.map((s, i) => {

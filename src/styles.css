@@ -322,14 +322,15 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .card-hands span.on { color: #cfc8e8; }
 .card-hands span.on b { color: #9ecbff; }
 .card-hands span.on .mono { color: #eceaf4; }
-.path-row { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 10px; }
+.path-block { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; margin: 8px 0 12px; }
+.path-row { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 0; }
 .path-chip {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
   background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 7px 9px; text-align: left;
 }
 .path-chip.on { border-color: #7fd0a8; }
-.path-chip .path-syms { font-weight: 700; font-size: 14px; }
-.path-chip .path-mel { color: #7fd3ff; font-size: 12px; }
+.path-chip .path-syms { font-weight: 700; font-size: 14px; line-height: 1.35; }
+.path-chip .path-mel { color: #7fd3ff; font-size: 12px; margin-top: 2px; }
 .path-actions { display: flex; gap: 4px; }
 .tension-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .tension-head select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; font-size: 13px; }
