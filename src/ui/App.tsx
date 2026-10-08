@@ -25,6 +25,7 @@ import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
+import { BrandMark, CloseIcon, LockIcon, ReharmIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'artists' | 'guide';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
@@ -783,7 +784,11 @@ function Composer({ data }: { data: LoadedData }) {
   return (
     <div className="app" onPointerDown={() => synth.unlock()}>
       <header className="top">
-        <div className="brand">Muse{kbBadge && <small> {kbBadge}</small>}</div>
+        <div className="brand" aria-label="Muse">
+          <BrandMark />
+          <span className="brand-name">Muse</span>
+          {kbBadge && <small>{kbBadge}</small>}
+        </div>
         <div className="keypick">
           <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => chooseTonic(e.target.value)}>
             {tonicChoices(mode).map((t) => <option key={t} value={t}>{t.replace('#', '♯').replace('b', '♭')}</option>)}
@@ -851,7 +856,7 @@ function Composer({ data }: { data: LoadedData }) {
                             <span>{spellMidi(n.midi)}</span>
                             {n.relation && <small>{n.relation.label}</small>}
                           </button>
-                          <button type="button" className="tx" aria-label="Remove note" onClick={() => dropNote(i, j)}>×</button>
+                          <button type="button" className="tx" aria-label="Remove note" onClick={() => dropNote(i, j)}><CloseIcon /></button>
                         </div>
                       );
                     })}
@@ -865,18 +870,43 @@ function Composer({ data }: { data: LoadedData }) {
                       }
                     }}
                   >
-                    <div className="sym" title={s.chord ? undefined : 'No chord yet — melody only'}>{s.chord ? chordSymbol(s.chord, true) : 'no chord'}</div>
-                    <div className="rn">{s.chord ? romanOf(s.chord, k) : 'melody only'}</div>
-                    <div className="chip-actions">
-                      {s.chord && <button aria-label="Lock chord" onClick={(e) => { e.stopPropagation(); toggleLock(i); }}>{s.locked ? '🔒' : '🔓'}</button>}
+                    <div className="tchord-body">
+                      <div className="sym" title={s.chord ? undefined : 'No chord yet — melody only'}>{s.chord ? chordSymbol(s.chord, true) : 'no chord'}</div>
+                      <div className="rn">{s.chord ? romanOf(s.chord, k) : 'melody only'}</div>
+                    </div>
+                    <div className="chip-actions" role="group" aria-label="Bar actions">
+                      {s.chord && (
+                        <button
+                          type="button"
+                          className={'ticon' + (s.locked ? ' on lock' : ' lock')}
+                          aria-label={s.locked ? 'Unlock chord' : 'Lock chord'}
+                          aria-pressed={s.locked}
+                          title={s.locked ? 'Unlock — Clear can remove this bar' : 'Lock — keep this bar when you Clear'}
+                          onClick={(e) => { e.stopPropagation(); toggleLock(i); }}
+                        >
+                          <LockIcon locked={!!s.locked} />
+                        </button>
+                      )}
                       {s.chord && s.notes.length > 0 && !s.locked && (
                         <button
+                          type="button"
+                          className="ticon"
                           aria-label="Reharmonize bar"
                           title="Clear chord and find a better fit for this melody"
                           onClick={(e) => { e.stopPropagation(); reharmBar(i); }}
-                        >↻</button>
+                        >
+                          <ReharmIcon />
+                        </button>
                       )}
-                      <button aria-label="Remove bar" onClick={(e) => { e.stopPropagation(); removeAt(i); }}>×</button>
+                      <button
+                        type="button"
+                        className="ticon danger"
+                        aria-label="Remove bar"
+                        title={s.locked ? 'Unlock before removing' : 'Remove bar'}
+                        onClick={(e) => { e.stopPropagation(); removeAt(i); }}
+                      >
+                        <CloseIcon />
+                      </button>
                     </div>
                   </div>
                 </div>
