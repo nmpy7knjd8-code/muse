@@ -313,20 +313,21 @@ export function cofVariantSlots(
     byPc.set(o.pc, list);
   });
   const nAll = Math.max(1, rim.length - 1);
-  const rimR = nodeR + 38;
+  const rimR = nodeR + 42;
   const out: CofVariantSlot[] = [];
   for (const [pitch, list] of byPc) {
     const baseA = (fifthsIndex(pitch) / 12) * Math.PI * 2 - Math.PI / 2;
     const k = list.length;
-    // ~0.22 rad ≈ 28px at rimR — enough for finger targets without colliding neighbours.
-    const spread = k <= 1 ? 0 : Math.min(0.26, 0.9 / k);
+    // Wider arc fan + radial step so ~28px finger targets don’t overlap.
+    // k=2 → ~0.34 rad; k=3 → ~0.30; k=4 → ~0.28 (capped).
+    const spread = k <= 1 ? 0 : Math.min(0.34, 0.9 / Math.max(1, k - 0.35));
     list.forEach((o, localRank) => {
       const rank = rankOf.get(o.id) ?? localRank;
       const a = baseA + (localRank - (k - 1) / 2) * spread;
-      // Slight radial step so overlaps can’t bury a worse pick under the best.
-      const rOrbit = rimR + localRank * 10;
+      // Push weaker variants outward so they never sit under the best.
+      const rOrbit = rimR + localRank * 14;
       const strength = 1 - rank / nAll;
-      const r = 5.2 + 3.4 * strength; // best ~8.6px, worst ~5.2px
+      const r = 5.4 + 3.8 * strength; // best ~9.2px, worst ~5.4px
       out.push({
         id: o.id,
         pc: pitch,
@@ -370,7 +371,7 @@ function cofNodeStroke(inKey: boolean, t: number, isTonic: boolean, hit: boolean
 
 export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
   // Extra canvas so fanned rim variants stay inside the viewBox.
-  const S = 340, c = S / 2, R = 112;
+  const S = 360, c = S / 2, R = 112;
   const [pressed, setPressed] = useState<number | null>(null);
   const [pressedDot, setPressedDot] = useState<string | null>(null);
   const pos = (p: number, r: number) => {
@@ -411,7 +412,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#f0a070" />
         </marker>
       </defs>
-      <circle cx={c} cy={c} r={R + 48} fill="#17161d" stroke="#2c2a36" />
+      <circle cx={c} cy={c} r={R + 58} fill="#17161d" stroke="#2c2a36" />
       <circle cx={c} cy={c} r={R - 30} fill="#121117" stroke="#2c2a36" />
       {/* Direction legend: clockwise = brighter / homeward; counter-clockwise = opener / relax */}
       <path d={`M ${c + 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 1 ${c + R - 42} ${c - 4}`} fill="none" stroke="#7fd0a8" strokeWidth={1.4} markerEnd="url(#arrowhead-cw)" opacity={0.85} />

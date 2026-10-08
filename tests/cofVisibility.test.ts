@@ -37,11 +37,11 @@ describe('cofVariantSlots', () => {
     const slots = cofVariantSlots(others, opts);
     const atC = slots.filter((s) => s.pc === 0).sort((a, b) => a.localRank - b.localRank);
     expect(atC).toHaveLength(3);
-    // Pairwise distance between variant centers should clear a ~24px finger gap.
+    // Pairwise distance between variant centers should clear ~28px finger hit targets.
     for (let i = 0; i < atC.length; i++) {
       for (let j = i + 1; j < atC.length; j++) {
         const dx = atC[i].x - atC[j].x, dy = atC[i].y - atC[j].y;
-        expect(Math.hypot(dx, dy)).toBeGreaterThan(22);
+        expect(Math.hypot(dx, dy)).toBeGreaterThan(28);
       }
     }
   });
