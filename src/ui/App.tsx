@@ -37,8 +37,8 @@ type Tab = 'chords' | 'melody' | 'bass';
 /** Left drawer pages — Guide / Artist Lens / mood reference live off the main strip. */
 type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
-/** Best-fit card note graphic: piano keys (default) or staff. */
-type CardNoteViz = 'piano' | 'staff';
+/** Timeline (and card) note graphic: piano keys (default) or staff. */
+type NoteViz = 'piano' | 'staff';
 type InputSource = 'mic' | 'midi';
 interface Snapshot { slots: TimelineSlot[] }
 
@@ -207,17 +207,17 @@ function Composer({ data }: { data: LoadedData }) {
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
   const [visTab, setVisTab] = useState<VisTab>('piano');
-  /** Best-fit cards: piano keys (default) or staff notation. */
-  const [cardNoteViz, setCardNoteViz] = useState<CardNoteViz>(() => {
+  /** Timeline chord graphic: piano keys (default) or staff. */
+  const [noteViz, setNoteViz] = useState<NoteViz>(() => {
     try {
-      const v = localStorage.getItem('muse.cardNoteViz');
+      const v = localStorage.getItem('muse.noteViz') ?? localStorage.getItem('muse.cardNoteViz');
       if (v === 'staff' || v === 'piano') return v;
     } catch { /* private mode */ }
     return 'piano';
   });
-  const chooseCardNoteViz = (v: CardNoteViz) => {
-    setCardNoteViz(v);
-    try { localStorage.setItem('muse.cardNoteViz', v); } catch { /* private mode */ }
+  const chooseNoteViz = (v: NoteViz) => {
+    setNoteViz(v);
+    try { localStorage.setItem('muse.noteViz', v); } catch { /* private mode */ }
   };
   const [adventure, setAdventure] = useState(0.35);
   const [tStyle, setTStyle] = useState<TensionStyleId>(() => {
@@ -265,7 +265,8 @@ function Composer({ data }: { data: LoadedData }) {
   const k: Key = auto && detected && (mode === 'major' || mode === 'minor') ? detected.key : picked;
   const scale = scalePcs(k);
   const cur = chords[chords.length - 1];
-  const prevVoicing = useMemo(() => { const v = voiceProgression(chords); return v[v.length - 1]; }, [slots]); // eslint-disable-line react-hooks/exhaustive-deps
+  const timelineVoicings = useMemo(() => voiceProgression(chords), [slots]); // eslint-disable-line react-hooks/exhaustive-deps
+  const prevVoicing = timelineVoicings[timelineVoicings.length - 1];
   const spell = (m: number) => noteName(spellInKey(k, m), true);
   const spellMidi = (m: number) => midiName(m, spellInKey(k, m)).replace('#', '♯').replace(/b(?=\d)/, '♭');
 
@@ -927,36 +928,7 @@ function Composer({ data }: { data: LoadedData }) {
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
-      <div className="ghead best-fit-head">
-        <span>Best fit first</span>
-        <div className="card-viz-toggle" role="group" aria-label="Card note display">
-          <button
-            type="button"
-            className={'pill' + (cardNoteViz === 'piano' ? ' on' : '')}
-            aria-pressed={cardNoteViz === 'piano'}
-            title="Show piano keys on cards"
-            onClick={() => chooseCardNoteViz('piano')}
-          >
-            Keys
-          </button>
-          <button
-            type="button"
-            className={'pill' + (cardNoteViz === 'staff' ? ' on' : '')}
-            aria-pressed={cardNoteViz === 'staff'}
-            title="Show staff notation on cards"
-            onClick={() => chooseCardNoteViz('staff')}
-          >
-            Staff
-          </button>
-        </div>
-      </div>
-      {cur && (
-        <div className="card-note-legend small muted" aria-hidden="true">
-          <span><i style={{ background: CURRENT_COLOR }} />now: {chordSymbol(cur, true)}</span>
-          <span><i style={{ background: '#9C7CF4' }} />next</span>
-          <span><i className="ring" />shared</span>
-        </div>
-      )}
+      <div className="ghead">Best fit first</div>
       {ranked.map((s, i) => {
         const isChord = 'chord' in s;
         const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
@@ -966,7 +938,7 @@ function Composer({ data }: { data: LoadedData }) {
         const ns = !isChord ? s as NoteSuggestion : null;
         const root = cs && cur ? rootMotion(cur, cs.chord) : null;
         const midis = cs ? cs.voicing : ns ? [ns.midi] : [];
-        // Previous chord tones (voice-led) — same “now” colour as the big Piano tab.
+        // Previous chord tones (voice-led) — same “now” colour as the Piano tab.
         const prior = cs && cur && prevVoicing?.length ? prevVoicing : [];
         return (
           <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
@@ -993,7 +965,7 @@ function Composer({ data }: { data: LoadedData }) {
                 {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
               </div>
               <div className="why">{s.why}</div>
-              {midis.length > 0 && cardNoteViz === 'piano' && (
+              {midis.length > 0 && (
                 <div className="card-piano" aria-label={cs ? `Piano notes for ${cs.symbol}` : `Piano note ${(ns as NoteSuggestion).name}`}>
                   <PianoViz
                     variant="card"
@@ -1003,19 +975,6 @@ function Composer({ data }: { data: LoadedData }) {
                     color={color}
                     spell={spell}
                     height={44}
-                    label={cs ? cs.symbol : (ns as NoteSuggestion).name}
-                  />
-                </div>
-              )}
-              {midis.length > 0 && cardNoteViz === 'staff' && (
-                <div className="card-staff" aria-label={cs ? `Staff notes for ${cs.symbol}` : `Staff note ${(ns as NoteSuggestion).name}`}>
-                  <StaffChordViz
-                    midis={midis}
-                    priorMidis={prior}
-                    color={color}
-                    spell={spell}
-                    scalePcs={scale}
-                    tonicPc={pc(k.tonic)}
                     label={cs ? cs.symbol : (ns as NoteSuggestion).name}
                   />
                 </div>
@@ -1304,6 +1263,36 @@ function Composer({ data }: { data: LoadedData }) {
         {slots.length === 0 ? (
           <p className="muted small">Tap chords below to start, or switch to Melody / Bass — all share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
         ) : (
+          <>
+          <div className="strip-tools">
+            <div className="card-viz-toggle" role="group" aria-label="Timeline chord display">
+              <button
+                type="button"
+                className={'pill' + (noteViz === 'piano' ? ' on' : '')}
+                aria-pressed={noteViz === 'piano'}
+                title="Show piano keys on timeline chords"
+                onClick={() => chooseNoteViz('piano')}
+              >
+                Keys
+              </button>
+              <button
+                type="button"
+                className={'pill' + (noteViz === 'staff' ? ' on' : '')}
+                aria-pressed={noteViz === 'staff'}
+                title="Show staff notation on timeline chords"
+                onClick={() => chooseNoteViz('staff')}
+              >
+                Staff
+              </button>
+            </div>
+            {chords.length > 1 && (
+              <div className="card-note-legend small muted" aria-hidden="true">
+                <span><i style={{ background: CURRENT_COLOR }} />prev</span>
+                <span><i style={{ background: '#c4b0ff' }} />this bar</span>
+                <span><i className="ring" />shared</span>
+              </div>
+            )}
+          </div>
           <div
             className={'timeline' + (slots.some((s) => s.notes.length || slotBass(s).length) ? '' : ' chords-only')}
             role="list"
@@ -1319,6 +1308,11 @@ function Composer({ data }: { data: LoadedData }) {
               const bassPlayId = bassInst === 'off' ? 'bass' : bassInst;
               const showLanes = labeled.length > 0 || bassLabeled.length > 0
                 || slots.some((x) => x.notes.length || slotBass(x).length);
+              const barMidis = s.chord
+                ? (chordedIdx >= 0 ? (timelineVoicings[chordedIdx] ?? pianoVoicing(s.chord)) : pianoVoicing(s.chord))
+                : [];
+              const priorMidis = chordedIdx > 0 ? (timelineVoicings[chordedIdx - 1] ?? []) : [];
+              const barColor = s.locked ? '#ffd54f' : '#c4b0ff';
               return (
                 <div
                   key={i}
@@ -1359,11 +1353,26 @@ function Composer({ data }: { data: LoadedData }) {
                       }
                     }}
                   >
-                    {s.chord && (
+                    {s.chord && noteViz === 'piano' && (
+                      <div className="tchord-piano" aria-label={`Piano for ${chordSymbol(s.chord, true)}`}>
+                        <PianoViz
+                          variant="card"
+                          current={priorMidis}
+                          suggested={barMidis}
+                          fingers={[]}
+                          color={barColor}
+                          spell={spell}
+                          height={40}
+                          label={chordSymbol(s.chord, true)}
+                        />
+                      </div>
+                    )}
+                    {s.chord && noteViz === 'staff' && (
                       <div className="tchord-staff" aria-hidden={false} aria-label={`Staff for ${chordSymbol(s.chord, true)}`}>
                         <StaffChordViz
-                          midis={pianoVoicing(s.chord)}
-                          color={s.locked ? '#ffd54f' : '#c4b0ff'}
+                          midis={barMidis}
+                          priorMidis={priorMidis}
+                          color={barColor}
                           spell={spell}
                           scalePcs={scale}
                           tonicPc={pc(k.tonic)}
@@ -1445,6 +1454,7 @@ function Composer({ data }: { data: LoadedData }) {
               );
             })}
           </div>
+          </>
         )}
         <div className="rel-legend small muted" aria-hidden={!slots.some((s) => (s.notes.length || slotBass(s).length) && s.chord)}>
           {(['chord', 'tension', 'avoid', 'clash'] as RelKind[]).map((r) => (

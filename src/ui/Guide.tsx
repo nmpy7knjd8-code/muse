@@ -46,7 +46,7 @@ const SECTIONS: Section[] = [
     id: 'timeline',
     toc: 'Timeline',
     title: 'The timeline (three lanes)',
-    use: 'Each bar can hold melody on top, a chord in the middle, and optional bass underneath. Toggle Keys / Staff above the strip (Keys by default). From the second bar on, previous-chord tones show in blue-grey next to this bar’s notes. Tap a chord or note label to hear it. Lock keeps a bar through Clear.',
+    use: 'Each bar can hold melody on top, a chord in the middle (piano keys by default, or staff — toggle Keys / Staff above the strip), and optional bass notes underneath. From the second bar on, previous-chord tones show in blue-grey next to this bar’s notes. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
     musicality: 'Harmony, melody, and bass are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are. Composed bass replaces the automatic root for that bar when you write one.',
     tip: 'Chord-only timelines hide empty melody/bass lanes so the strip stays clean.',
   },
