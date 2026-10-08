@@ -23,9 +23,11 @@ import { Guide } from './Guide';
 import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
+import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 
 type Tab = 'chords' | 'melody' | 'artists' | 'guide';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
+type InputSource = 'mic' | 'midi';
 interface Snapshot { slots: TimelineSlot[] }
 
 const PRESET_MOODS = ['mystical', 'melancholy', 'triumphant', 'tense', 'dreamy', 'dark', 'bright', 'peaceful', 'epic', 'bittersweet', 'yearning', 'solemn'];
@@ -145,6 +147,7 @@ function Composer({ data }: { data: LoadedData }) {
   const [loreOn, setLoreOn] = useState(false);
   const [listen, setListen] = useState<ListenSession | null>(null);
   const [listenStatus, setListenStatus] = useState<ListenStatus | null>(null);
+  const [inputSource, setInputSource] = useState<InputSource>('mic');
   const [lastHeard, setLastHeard] = useState<string | null>(null);
   useEffect(() => () => listen?.stop(), [listen]);
 
@@ -484,42 +487,55 @@ function Composer({ data }: { data: LoadedData }) {
     synth.playSequence(l.chords.map((c, i) => withBass(c, v[i])), 0.8, 0.75);
   };
 
-  // ---- Listen (live mic: melody notes via YIN, chords via chroma templates) ----
+  // ---- Listen (mic YIN/chroma) or MIDI keyboard (Web MIDI → same note/chord callbacks) ----
   // callbacks run outside React's render cycle, so they read the latest state through refs
   const live = useRef({ tab, k, slots, timeSig });
   live.current = { tab, k, slots, timeSig };
   const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots }]);
   const heardChord = (root: number, quality: string): Chord => ({ root: spellInKey(live.current.k, root), quality: quality as Chord['quality'] });
+  const stopInput = () => { listen?.stop(); setListen(null); setListenStatus(null); };
+  const chooseInputSource = (src: InputSource) => {
+    if (src === inputSource) return;
+    stopInput();
+    setInputSource(src);
+  };
   const toggleListen = async () => {
-    // Unlock first (gesture), then startListening switches AudioSession to play-and-record for the mic.
     synth.unlock();
-    if (listen) { listen.stop(); setListen(null); setListenStatus(null); return; }
+    if (listen) { stopInput(); return; }
+    const onNote = (m: number) => {
+      snapshotLive();
+      setSlots((x) => insertNote(x, m, undefined, beatsPerBar(live.current.timeSig)).slots);
+      setSelectedId(null);
+      setLastHeard(midiName(m, spellInKey(live.current.k, m)));
+    };
+    const onChord = (cm: { root: number; quality: string }) => {
+      const c = heardChord(cm.root, cm.quality);
+      snapshotLive();
+      setSlots((x) => setSlotChord(x, chordTargetIndex(x), c));
+      setSelectedId(null);
+      setLastHeard(chordSymbol(c, true));
+    };
+    const shared = {
+      target: () => (live.current.tab === 'melody' ? 'melody' as const : 'chords' as const),
+      onNote,
+      onChord,
+      onStatus: setListenStatus,
+      noteName: (m: number) => midiName(m, spellInKey(live.current.k, m)),
+      chordName: (cm: { root: number; quality: string }) => chordSymbol(heardChord(cm.root, cm.quality), true),
+    };
     try {
-      const session = await startListening({
-        target: () => (live.current.tab === 'melody' ? 'melody' : 'chords'),
-        isPaused: () => synth.isPlaying(),
-        onNote: (m) => {
-          snapshotLive();
-          setSlots((x) => insertNote(x, m, undefined, beatsPerBar(live.current.timeSig)).slots);
-          setSelectedId(null);
-          setLastHeard(midiName(m, spellInKey(live.current.k, m)));
-        },
-        onChord: (cm) => {
-          const c = heardChord(cm.root, cm.quality);
-          snapshotLive();
-          setSlots((x) => setSlotChord(x, chordTargetIndex(x), c));
-          setSelectedId(null);
-          setLastHeard(chordSymbol(c, true));
-        },
-        onStatus: setListenStatus,
-        noteName: (m) => midiName(m, spellInKey(live.current.k, m)),
-        chordName: (cm) => chordSymbol(heardChord(cm.root, cm.quality), true),
-      });
+      const session = inputSource === 'midi'
+        ? await startMidiInput(shared)
+        : await startListening({ ...shared, isPaused: () => synth.isPlaying() });
       setListen(session);
       setLastHeard(null);
-      flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — fills the melody lane');
+      if (inputSource === 'midi') {
+        flash(tab === 'chords' ? 'MIDI — hold a chord ~¼ s to add' : 'MIDI — press keys to fill the melody lane');
+      } else {
+        flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — fills the melody lane');
+      }
     } catch (e) {
-      flash(listenErrorMessage(e));
+      flash(inputSource === 'midi' ? midiErrorMessage(e) : listenErrorMessage(e));
     }
   };
 
@@ -871,8 +887,12 @@ function Composer({ data }: { data: LoadedData }) {
           <ArtistLens key={focusArtist ?? 'all'} initial={focusArtist} data={data.artists} lex={lex} kbIndex={data.kbIndex} onTryIt={tryIt} onPreview={previewTryIt} />
         ) : (<>
         <div className={'listen' + (listen ? ' on' : '')}>
+          <div className="seg listen-src" role="group" aria-label="Input source">
+            <button type="button" className={inputSource === 'mic' ? 'on' : ''} onClick={() => chooseInputSource('mic')} aria-pressed={inputSource === 'mic'}>Mic</button>
+            <button type="button" className={inputSource === 'midi' ? 'on' : ''} onClick={() => chooseInputSource('midi')} aria-pressed={inputSource === 'midi'} title={midiSupported() ? 'USB or Bluetooth MIDI keyboard' : 'Web MIDI not supported in this browser'}>MIDI</button>
+          </div>
           <button className={listen ? 'rec' : ''} onClick={() => void toggleListen()} aria-pressed={!!listen}>
-            {listen ? '■ Stop listening' : '👂 Listen'}
+            {listen ? '■ Stop' : (inputSource === 'midi' ? '🎹 MIDI' : '👂 Listen')}
           </button>
           {listen ? (
             <div className="live" aria-live="polite">
@@ -885,13 +905,21 @@ function Composer({ data }: { data: LoadedData }) {
                   <span className="holdbar"><i style={{ width: `${Math.round(listenStatus.hold * 100)}%` }} /></span>
                 </>
               ) : (
-                <span className="muted">{tab === 'chords' ? 'play a chord…' : 'sing or play a note…'}</span>
+                <span className="muted">
+                  {inputSource === 'midi'
+                    ? (tab === 'chords' ? 'hold a chord on your keyboard…' : 'press a key…')
+                    : (tab === 'chords' ? 'play a chord…' : 'sing or play a note…')}
+                </span>
               )}
-              <span className="level"><i style={{ width: `${Math.min(100, Math.round((listenStatus?.level ?? 0) * 600))}%` }} /></span>
+              <span className="level"><i style={{ width: `${Math.min(100, Math.round((listenStatus?.level ?? 0) * (inputSource === 'midi' ? 100 : 600)))}%` }} /></span>
               {lastHeard && <span className="added">added {lastHeard}</span>}
             </div>
           ) : (
-            <span className="small muted">{tab === 'chords' ? 'hear chords from your instrument' : 'hear notes you sing or play'}</span>
+            <span className="small muted">
+              {inputSource === 'midi'
+                ? (tab === 'chords' ? 'add chords from a MIDI keyboard' : 'add melody notes from a MIDI keyboard')
+                : (tab === 'chords' ? 'hear chords from your instrument' : 'hear notes you sing or play')}
+            </span>
           )}
         </div>
         {tab === 'chords' ? (
@@ -935,7 +963,7 @@ function Composer({ data }: { data: LoadedData }) {
           <div className="melody-input">
             <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" labelKeys="all" />
             <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
-            <p className="small muted">Tap keys (or 👂 Listen) to put notes above each chord. Notes land on successive beats; a full bar spills into a new bar with no chord yet. Use <b>Find a chord</b> to pick harmony — Hear plays chord + melody together. On a filled bar, ↻ finds a better chord for that melody.</p>
+            <p className="small muted">Tap keys (or 👂 Listen / 🎹 MIDI) to put notes above each chord. Notes land on successive beats; a full bar spills into a new bar with no chord yet. Use <b>Find a chord</b> to pick harmony — Hear plays chord + melody together. On a filled bar, ↻ finds a better chord for that melody.</p>
           </div>
         )}
         </>)}

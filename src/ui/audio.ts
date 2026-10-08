@@ -63,9 +63,9 @@ function makeImpulse(ctx: BaseAudioContext, seconds = 1.7, preDelay = 0.012): Au
 }
 
 /** Hard-clip / tanh drive curve for a high-gain metal amp stage. */
-function metalDriveCurve(drive = 28): Float32Array {
+function metalDriveCurve(drive = 28): Float32Array<ArrayBuffer> {
   const n = 2048;
-  const curve = new Float32Array(n);
+  const curve = new Float32Array(new ArrayBuffer(n * 4));
   for (let i = 0; i < n; i++) {
     const x = (i * 2) / (n - 1) - 1;
     // Asymmetric saturator (amp-like) then hard tanh for compressed high-gain.

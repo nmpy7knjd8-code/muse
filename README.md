@@ -110,6 +110,7 @@ the research worker; `research/artists/` has the build and validation.
   - a generated convolution reverb and a compressor followed by a limiter
 - The instrument picker (Piano / Nylon / Steel / Metal / Rhodes / Pad / Bass) is remembered in `localStorage`.
   Key and mode picks are remembered too.
+- Live input: **Mic** (YIN notes / chroma chords) or **MIDI** keyboard (Web MIDI). Same hold-to-add behaviour; MIDI does not touch the mic AudioSession.
 - iPhone: audio starts on the first tap, and the AudioSession is set to `playback`. If you hear nothing,
   check the ring/silent switch and the volume. The app shows this tip.
 - `scripts/fetch-samples.sh` reproduces the sample set.
