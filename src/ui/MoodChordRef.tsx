@@ -118,7 +118,6 @@ export function MoodChordRef({ kb, lex }: Props): ReactNode {
         <h2>Moods &amp; chords</h2>
         <p className="muted">
           Every mood tag Muse uses, and the chord moves / qualities that carry it.
-          Suggestions are ranked by fit — mood is a label on the result, not the sort order.
         </p>
       </header>
 
