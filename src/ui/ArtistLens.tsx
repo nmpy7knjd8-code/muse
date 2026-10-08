@@ -170,6 +170,8 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
 }
 
 const REQUEST_ISSUE = 'https://github.com/nmpy7knjd8-code/muse/issues/new';
+/** Use a label that exists on the repo — unknown labels are dropped and can confuse the new-issue form. */
+const REQUEST_LABEL = 'enhancement';
 const REQUEST_STORAGE = 'muse.bandRequests';
 type BandRequest = { band: string; note: string; song?: string; at: number; taskUrl?: string };
 
@@ -180,50 +182,68 @@ function loadRequests(): BandRequest[] {
   } catch { return []; }
 }
 
+/** Prefill payload for the GitHub new-issue form (exported for tests). */
+export function buildRequestIssue(band: string, songReq: string): { title: string; body: string; taskUrl: string } {
+  const title = `Artist Lens request: ${band}`;
+  const body = [
+    '## Band / artist request',
+    '',
+    `**Name:** ${band}`,
+    '',
+    '## Song to include in analysis (optional)',
+    songReq || '(none)',
+    '',
+    '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`, and if a song is named, include it in the Artist Lens analysis / try-it material._',
+    '',
+    '### Checklist',
+    '- [ ] Research techniques + sources',
+    '- [ ] Add artist entry with try-it exercise',
+    '- [ ] Update `tests/artists.test.ts` counts',
+    songReq ? '- [ ] Include the requested song in the analysis' : '',
+  ].filter(Boolean).join('\n');
+  const taskUrl = `${REQUEST_ISSUE}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(REQUEST_LABEL)}`;
+  return { title, body, taskUrl };
+}
+
 function BandRequestBox() {
   const [name, setName] = useState('');
   const [song, setSong] = useState('');
   const [sent, setSent] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [recent, setRecent] = useState<BandRequest[]>(() => loadRequests());
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const band = name.trim();
     if (!band) return;
     const songReq = song.trim();
-    const title = `Artist Lens request: ${band}`;
-    const body = [
-      '## Band / artist request',
-      '',
-      `**Name:** ${band}`,
-      '',
-      '## Song to include in analysis (optional)',
-      songReq || '(none)',
-      '',
-      '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`, and if a song is named, include it in the Artist Lens analysis / try-it material._',
-      '',
-      '### Checklist',
-      '- [ ] Research techniques + sources',
-      '- [ ] Add artist entry with try-it exercise',
-      '- [ ] Update `tests/artists.test.ts` counts',
-      songReq ? '- [ ] Include the requested song in the analysis' : '',
-    ].filter(Boolean).join('\n');
-    const taskUrl = `${REQUEST_ISSUE}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent('artist-lens-request')}`;
+    const { taskUrl } = buildRequestIssue(band, songReq);
     const entry: BandRequest = { band, note: '', song: songReq || undefined, at: Date.now(), taskUrl };
     const next = [entry, ...loadRequests().filter((r) => r.band.toLowerCase() !== band.toLowerCase())].slice(0, 20);
     try { localStorage.setItem(REQUEST_STORAGE, JSON.stringify(next)); } catch { /* private mode */ }
     setRecent(next);
-    // Open a GitHub issue = the maintainer/agent task to add the band
+    // Prefill a GitHub issue — user must tap Create issue so the agent can see it.
     const win = window.open(taskUrl, '_blank', 'noopener,noreferrer');
     if (!win) window.location.assign(taskUrl);
     setSent(band);
+    setCopied(false);
     setName('');
     setSong('');
+  };
+  const copyLatest = async () => {
+    const r = recent[0];
+    if (!r) return;
+    const { title, body } = buildRequestIssue(r.band, r.song ?? '');
+    const text = `${title}\n\n${body}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch { /* ignore */ }
   };
   return (
     <form className="band-request-stack" onSubmit={submit} aria-label="Request a band for Artist Lens">
       <div className="band-request">
         <h4>Request a band</h4>
-        <p className="small muted">Missing someone? Submit a name — we’ll add it in minutes.</p>
+        <p className="small muted">Missing someone? Submit a name — we’ll research and add them after the GitHub issue is created.</p>
         <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div className="band-request band-request-songbox">
@@ -239,11 +259,16 @@ function BandRequestBox() {
         />
       </div>
       <div className="band-request-actions">
-        <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
-        {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
+        <button type="submit" className="add" disabled={!name.trim()}>Open GitHub add-band issue</button>
+        {sent && (
+          <p className="small" role="status">
+            Prefill opened for <b>{sent}</b> — tap <b>Create</b> on GitHub to finish (required so Muse can pick it up).
+            {' '}<button type="button" className="linkish" onClick={() => void copyLatest()}>{copied ? 'Copied' : 'Copy request text'}</button>
+          </p>
+        )}
         {recent.length > 0 && (
           <div className="band-request-recent">
-            <div className="small muted">Recent requests</div>
+            <div className="small muted">Recent requests on this device</div>
             <ul className="small">
               {recent.slice(0, 5).map((r) => (
                 <li key={`${r.band}-${r.at}`}>
