@@ -41,7 +41,7 @@ const SECTIONS: Section[] = [
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Below, ranked cards and the next-pick board show Muse’s best next chords. ▶ hears; ＋ adds.',
+    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths; the next-pick board below compares them on a map. ▶ hears; ＋ adds.',
     musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
@@ -102,7 +102,7 @@ const SECTIONS: Section[] = [
   {
     id: 'circle',
     title: 'Circle of fifths',
-    use: 'Big letters add a chord (or melody note on the Melody tab). Colored rim dots are Muse’s next picks — tap to hear. +1/−1 under letters = steps from where you are (right = brighter / pulls home, left = opens / relaxes).',
+    use: 'Big letters add a chord (or melody note on the Melody tab). Colored rim dots are Muse’s next picks — tap to hear. +1/−1 under letters = steps from where you are (right = brighter / pulls home, left = opens / relaxes). Ranked “Best fit first” cards sit directly under the circle.',
     musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
     tip: 'Switch instruments under the circle — taps play on the sound you chose (including bass).',
   },
