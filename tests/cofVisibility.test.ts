@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { COF_MAX_RIM_DOTS, COF_MAX_VARIANTS_PER_PC, cofPcVisibility, cofVariantSlots } from '../src/ui/visuals';
+import {
+  COF_MAX_RIM_DOTS,
+  COF_MAX_VARIANTS_PER_PC,
+  COF_VARIANT_RADIAL_STEP,
+  cofPcVisibility,
+  cofVariantSlots,
+  cofVariantTag,
+} from '../src/ui/visuals';
 
 describe('cofPcVisibility', () => {
   it('with no suggestions, every pitch class is fully visible', () => {
@@ -24,10 +31,21 @@ describe('cofPcVisibility', () => {
   });
 });
 
-describe('cofVariantSlots', () => {
-  const opts = { cx: 170, cy: 170, nodeR: 112 };
+describe('cofVariantTag', () => {
+  it('strips the root and shortens common qualities', () => {
+    expect(cofVariantTag('Cmaj7')).toBe('Δ7');
+    expect(cofVariantTag('Am')).toBe('m');
+    expect(cofVariantTag('G7')).toBe('7');
+    expect(cofVariantTag('Bdim')).toBe('°');
+    expect(cofVariantTag('F♯aug')).toBe('+');
+    expect(cofVariantTag('C')).toBe('');
+  });
+});
 
-  it('fans variants of the same root so centers are spaced for tapping', () => {
+describe('cofVariantSlots', () => {
+  const opts = { cx: 260, cy: 260, nodeR: 152 };
+
+  it('stacks variants of the same root on one radial spoke without overlap', () => {
     const others = [
       { pc: 0, color: '#a', id: 'C', label: 'C' },
       { pc: 0, color: '#b', id: 'Cmaj7', label: 'Cmaj7' },
@@ -37,13 +55,24 @@ describe('cofVariantSlots', () => {
     const slots = cofVariantSlots(others, opts);
     const atC = slots.filter((s) => s.pc === 0).sort((a, b) => a.localRank - b.localRank);
     expect(atC).toHaveLength(3);
-    // Pairwise distance between variant centers should clear ~28px finger hit targets.
+    // Same spoke angle for every variant of this root.
+    expect(atC.every((s) => Math.abs(s.angle - atC[0].angle) < 1e-9)).toBe(true);
+    // Best sits nearest the letter; weaker steps outward by the radial step.
+    const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+      Math.hypot(a.x - b.x, a.y - b.y);
+    const origin = { x: opts.cx, y: opts.cy };
+    expect(dist(atC[0], origin)).toBeLessThan(dist(atC[1], origin));
+    expect(dist(atC[1], origin)).toBeLessThan(dist(atC[2], origin));
+    expect(dist(atC[0], atC[1])).toBeGreaterThanOrEqual(COF_VARIANT_RADIAL_STEP - 0.01);
+    expect(dist(atC[1], atC[2])).toBeGreaterThanOrEqual(COF_VARIANT_RADIAL_STEP - 0.01);
+    // Pairwise distance clears finger hit targets.
     for (let i = 0; i < atC.length; i++) {
       for (let j = i + 1; j < atC.length; j++) {
-        const dx = atC[i].x - atC[j].x, dy = atC[i].y - atC[j].y;
-        expect(Math.hypot(dx, dy)).toBeGreaterThan(28);
+        expect(dist(atC[i], atC[j])).toBeGreaterThan(28);
       }
     }
+    expect(atC[1].tag).toBe('Δ7');
+    expect(atC[2].tag).toBe('6');
   });
 
   it('marks best overall / best-of-root larger and stronger than worse variants', () => {
@@ -69,7 +98,9 @@ describe('cofVariantSlots', () => {
     const slots = cofVariantSlots(others, opts);
     expect(slots.filter((s) => s.pc === 0)).toHaveLength(COF_MAX_VARIANTS_PER_PC);
     // Keeps the best-first ids
-    expect(slots.map((s) => s.id).sort()).toEqual(['C0', 'C1', 'C2', 'C3'].sort());
+    expect(slots.map((s) => s.id).sort()).toEqual(
+      Array.from({ length: COF_MAX_VARIANTS_PER_PC }, (_, i) => `C${i}`).sort(),
+    );
   });
 
   it('only lays out the top rim suggestions', () => {
