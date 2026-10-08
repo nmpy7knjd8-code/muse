@@ -34,14 +34,14 @@ const SECTIONS: Section[] = [
   {
     id: 'timeline',
     title: 'The timeline (three lanes)',
-    use: 'Each bar can hold melody on top, a chord in the middle (staff of its notes above the name), and optional bass notes underneath. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
+    use: 'Each bar can hold melody on top, a chord in the middle (piano keys by default, or staff — toggle Keys / Staff above the strip), and optional bass notes underneath. From the second bar on, previous-chord tones show in blue-grey next to this bar’s notes. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
     musicality: 'Harmony, melody, and bass are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are. Composed bass replaces the automatic root for that bar when you write one.',
     tip: 'Tap a chord card to select it — ▶ Play starts from that bar and continues through the rest. Loop (on by default) repeats until you ■ Stop. Chord-only timelines skip the empty melody/bass lanes. Use BPM next to Play to change tempo.',
   },
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Open colour / Extra colour / Secondaries for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths — toggle Keys (default) or Staff; piano/staff show now→next notes when you already have a chord. Timeline bars keep a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
+    use: 'Use In this key / 7ths / Open colour / Extra colour / Secondaries for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano showing now→next). The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
     musicality: 'Muse ranks next chords by key fit, voice leading, cadence grammar (V→I, deceptive vi), secondary setup/resolve, bass motion, common pop/jazz skeletons, mood, and tension style. In-key family first; 7ths and Open colour enrich home; Extra colour and Secondaries open the door when you ask for adventure.',
     jump: 'chords',
     jumpLabel: 'Open Chords',

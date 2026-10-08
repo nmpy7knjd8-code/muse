@@ -498,13 +498,15 @@ svg .cnote { fill: #bbb; font-size: 10px; text-anchor: middle; }
 .ghead i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .best-fit-under-cof { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
 .best-fit-under-cof .ghead { margin-top: 8px; }
-.best-fit-head { justify-content: space-between; flex-wrap: wrap; gap: 8px; text-transform: none; }
-.best-fit-head > span { text-transform: capitalize; }
+.strip-tools {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 12px; margin: 0 0 8px; padding: 0 2px;
+}
 .card-viz-toggle { display: inline-flex; gap: 4px; }
 .card-viz-toggle .pill { padding: 2px 10px; font-size: 12px; font-weight: 600; text-transform: none; }
 .card-note-legend {
   display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
-  margin: 0 0 8px; padding: 0 2px;
+  margin: 0; padding: 0;
 }
 .card-note-legend i {
   display: inline-block; width: 10px; height: 10px; border-radius: 3px;
@@ -516,24 +518,16 @@ svg .cnote { fill: #bbb; font-size: 10px; text-anchor: middle; }
 .card-piano { margin-top: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .card-piano .piano-card { display: block; height: 44px; width: auto; max-width: 100%; }
 .card-piano .kname.card-k { font-size: 7px; font-weight: 700; }
-.card-staff {
-  margin-top: 8px;
-  padding: 4px 6px 2px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.card-staff .staff-card { display: block; height: 56px; width: auto; max-width: 100%; }
 svg.staff-card .staff-name.prior { fill: #8FA8C8; }
-.tchord-staff {
+.tchord-piano, .tchord-staff {
   padding: 6px 6px 0;
   background: rgba(0, 0, 0, 0.28);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+.tchord-piano .piano-card { display: block; height: 40px; width: auto; max-width: 100%; margin: 0 auto; }
+.tchord-piano .kname.card-k { font-size: 7px; font-weight: 700; }
 .tchord-staff .staff-card { display: block; height: 48px; width: auto; max-width: 100%; margin: 0 auto; }
 svg.staff-card .staff-line { stroke: #6a6578; stroke-width: 1; }
 svg.staff-card .staff-line.ledger { stroke: #7a758c; }
