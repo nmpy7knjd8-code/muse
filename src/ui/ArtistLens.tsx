@@ -1,6 +1,6 @@
 // Artist Lens: how artists use musical polarities, with technique chips linked to Muse's theory KB
 // and "Try it" exercises that load into the progression (pedal / held bass applied).
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, loadTryIt, timeSigLabel, tryItText } from '../core';
 import type { KbItemInfo } from './data';
 
@@ -169,6 +169,42 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
   );
 }
 
+const REQUEST_ISSUE = 'https://github.com/nmpy7knjd8-code/muse/issues/new';
+
+function BandRequestBox() {
+  const [name, setName] = useState('');
+  const [note, setNote] = useState('');
+  const [sent, setSent] = useState<string | null>(null);
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const band = name.trim();
+    if (!band) return;
+    const why = note.trim();
+    try {
+      const prev = JSON.parse(localStorage.getItem('muse.bandRequests') || '[]') as Array<{ band: string; note: string; at: number }>;
+      localStorage.setItem('muse.bandRequests', JSON.stringify([{ band, note: why, at: Date.now() }, ...prev].slice(0, 20)));
+    } catch { /* private mode */ }
+    const title = encodeURIComponent(`Artist Lens request: ${band}`);
+    const body = encodeURIComponent(
+      `## Band / artist request\n\n**Name:** ${band}\n\n**Why / notes:**\n${why || '(none)'}\n\n_Submitted from Muse Artist Lens._\n`,
+    );
+    window.open(`${REQUEST_ISSUE}?title=${title}&body=${body}`, '_blank', 'noopener,noreferrer');
+    setSent(band);
+    setName('');
+    setNote('');
+  };
+  return (
+    <form className="band-request" onSubmit={submit} aria-label="Request a band for Artist Lens">
+      <h4>Request a band</h4>
+      <p className="small muted">Missing someone? Send a request — it opens a GitHub task for the Muse maintainers.</p>
+      <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
+      <input aria-label="Why they fit" placeholder="Why they’re interesting (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+      <button type="submit" className="add" disabled={!name.trim()}>Request</button>
+      {sent && <p className="small" role="status">Request for <b>{sent}</b> opened — thanks.</p>}
+    </form>
+  );
+}
+
 export function ArtistLens(props: Props) {
   const { data, lex } = props;
   const [sel, setSel] = useState<string | null>(props.initial ?? null);
@@ -186,6 +222,7 @@ export function ArtistLens(props: Props) {
           <div className="small muted">{a.techniques.length} techniques · {a.tryIt.length} try-it exercise{a.tryIt.length === 1 ? '' : 's'} · {a.sources.length} sources</div>
         </button>
       ))}
+      <BandRequestBox />
     </div>
   );
 }

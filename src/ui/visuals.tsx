@@ -199,10 +199,13 @@ export interface CircleProps {
   others: Array<{ pc: number; color: string; id: string }>;
   selected?: { pc: number; color: string; label: string };
   spellPc: (p: number) => string;
+  /** Tap an outer suggestion dot to preview/select that suggestion. */
   onPick?: (id: string) => void;
+  /** Tap a pitch-class node to add that root (chord or melody note) to the timeline. */
+  onAddPc?: (pitchClass: number) => void;
 }
 
-export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick }: CircleProps) {
+export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
   const S = 300, c = S / 2, R = 112;
   const pos = (p: number, r: number) => {
     const a = (fifthsIndex(p) / 12) * Math.PI * 2 - Math.PI / 2;
@@ -244,10 +247,18 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         const inKey = scalePcs.includes(p);
         const isTonic = p === tonicPc;
         const isCur = p === currentPc;
+        const label = spellPc(p);
         return (
-          <g key={p}>
+          <g
+            key={p}
+            onClick={() => onAddPc?.(p)}
+            style={{ cursor: onAddPc ? 'pointer' : undefined }}
+            role={onAddPc ? 'button' : undefined}
+            aria-label={onAddPc ? `Add ${label}` : undefined}
+          >
             <circle cx={x} cy={y} r={17} fill={isCur ? CURRENT_COLOR : inKey ? '#2E2A40' : '#1d1c24'} stroke={isTonic ? '#fff' : inKey ? '#5d5680' : '#33313d'} strokeWidth={isTonic ? 2.5 : 1} />
-            <text x={x} y={y + 4} className={'cname' + (isCur ? ' dark' : '')}>{spellPc(p)}</text>
+            <text x={x} y={y + 4} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
+            {onAddPc && <text x={x} y={y + 22} className="cadd">＋</text>}
           </g>
         );
       })}

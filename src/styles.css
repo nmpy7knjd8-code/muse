@@ -131,6 +131,7 @@ svg .cname.dark { fill: #111; }
 svg .ccenter { font-size: 18px; font-weight: 800; text-anchor: middle; }
 svg .cmove { font-size: 11px; font-weight: 700; text-anchor: middle; }
 svg .cdir { font-size: 9px; fill: #8f8aa3; text-anchor: middle; }
+svg .cadd { font-size: 9px; fill: #8f8aa3; text-anchor: middle; pointer-events: none; }
 svg .tgrid line { stroke: #34313f; stroke-width: 1; }
 svg .tnode { fill: #1d1c24; stroke: #4a4658; }
 svg .tnode.tonic { stroke: #fff; stroke-width: 2; }
@@ -213,6 +214,9 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .instr-status .loading { color: #b9b4d6; }
 /* Artist Lens */
 .artists { display: flex; flex-direction: column; gap: 8px; }
+.band-request { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+.band-request h4 { margin: 0; }
+.band-request input { width: 100%; }
 .artist-card { text-align: left; display: flex; flex-direction: column; gap: 6px; background: var(--panel2); border-radius: 12px; padding: 10px 12px; width: 100%; }
 .artist-card .ac-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .artist-card .ac-head b { font-size: 17px; }

@@ -413,6 +413,15 @@ function Composer({ data }: { data: LoadedData }) {
   const visuals = (all: boolean) => {
     if (tab === 'melody') {
       const underV = noteChord === cur ? prevVoicing : noteChord ? pianoVoicing(noteChord) : [];
+      const addMelodyPc = (p: number) => {
+        const anchor = melody.length ? melody[melody.length - 1]! : 60;
+        let best = p + 60;
+        for (let oct = 3; oct <= 6; oct++) {
+          const m = p + 12 * (oct + 1);
+          if (Math.abs(m - anchor) < Math.abs(best - anchor)) best = m;
+        }
+        addNote(best);
+      };
       return (
         <div className="vis-body">
           <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={noteChord ? underV : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" />
@@ -423,6 +432,16 @@ function Composer({ data }: { data: LoadedData }) {
             <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
           </div>
           <Contour melody={melody.slice(-10)} next={selNote?.midi} color={selColor} spell={spellMidi} />
+          <CircleOfFifths
+            tonicPc={pc(k.tonic)} scalePcs={scale}
+            currentPc={melody.length ? melody[melody.length - 1]! % 12 : undefined}
+            others={noteSugs.map((s) => ({ pc: s.midi % 12, color: lex.color(s.primaryMood), id: s.id }))}
+            selected={selNote ? { pc: selNote.midi % 12, color: selColor, label: selNote.name.replace('#', '♯') } : undefined}
+            spellPc={spell}
+            onPick={(id) => { const s = noteSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playNoteMove(s); } }}
+            onAddPc={addMelodyPc}
+          />
+          <p className="small muted center">Tap a note to add it to the melody · outer dots preview suggestions</p>
         </div>
       );
     }
@@ -477,8 +496,13 @@ function Composer({ data }: { data: LoadedData }) {
           selected={{ pc: pc(selChord.chord.root), color: selColor, label: selChord.symbol }}
           spellPc={spell}
           onPick={(id) => { const s = chordSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playMove(s); } }}
+          onAddPc={(p) => {
+            const dia = diatonicChords(k).find((c) => pc(c.root) === p);
+            const built = dia ?? parseChord(noteName(spellInKey(k, p)));
+            if (built) addChord(built);
+          }}
         />
-        <p className="small muted center">Ring = key of {keyName(k)} · CW = sharpward / dominant side · CCW = flatward / subdominant · arrow = selected root move</p>
+        <p className="small muted center">Tap a note to add its chord · outer dots preview suggestions · CW = ♯/V · CCW = ♭/IV</p>
       </div>
     );
     const tonnetz = (
@@ -914,7 +938,7 @@ function Composer({ data }: { data: LoadedData }) {
         <summary>About &amp; credits</summary>
         <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
-          Nylon &amp; steel guitar, bass guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
+          Nylon, steel &amp; overdriven electric guitar, bass guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
           Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>
         <p><b>No sound on iPhone?</b> Flip off Silent mode (the switch on the side), turn the volume up, and tap again — Safari only starts audio after a tap.</p>
         <p><b>Theory &amp; moods.</b> Mood labels come from the bundled research knowledge base and mood lexicon (sources listed inside the data files). Lore mode notes are folklore, not science.</p>

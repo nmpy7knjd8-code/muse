@@ -3,7 +3,7 @@
   "title": "Muse Artist Lens",
   "version": "1.0.0",
   "generated": "2026-10-07",
-  "description": "How artists use musical polarities (tension/release, consonance/dissonance, light/dark, stability, dynamics, complexity) and how to try their techniques in Muse. TOOL first, then 17 artists across genres.",
+  "description": "How artists use musical polarities (tension/release, consonance/dissonance, light/dark, stability, dynamics, complexity) and how to try their techniques in Muse. TOOL first, then 19 artists across genres.",
   "kb": "theory_kb.json (chordMoves, melodicMoves, modes, progressions, moodVocabulary)",
   "romanConvention": "Roman numerals follow web/src/core/roman.ts parseRoman: roots relative to the MAJOR scale of the tonic regardless of mode (bIII, bVI, bVII for minor-mode chords). Suffixes: 5, sus2, sus4, add9, maj7, (maj7), 7, m7, 7b9, 7#9, maj7#11, 7sus4, m9, 6, +, °, °7, ø. Pedal tones are given separately in bassPedal (scale degree).",
   "tryItPolicy": "All tryIt progressions are ORIGINAL exercises illustrating a technique. They are not transcriptions of the artists' songs.",
@@ -7617,6 +7617,478 @@
      "type": "encyclopedia"
     }
    ]
+  },
+  {
+   "id": "led-zeppelin",
+   "name": "Led Zeppelin",
+   "era": "1968–1980",
+   "origin": "London, UK",
+   "genres": [
+    "hard rock",
+    "blues rock",
+    "folk rock"
+   ],
+   "documentation": "high",
+   "hook": "Classic rock alchemy: blues riffs, Mixolydian swagger, and acoustic–electric dynamics.",
+   "aestheticSummary": "Led Zeppelin fused Chicago blues vocabulary with British folk and heavy riff rock. Mixolydian and blues-scale guitar lines sit on open-string power shapes; verses can be acoustic and modal before the band stomps into electric choruses. Dynamics and groove matter as much as harmony — the stop-time hit and the long held V are signature releases.",
+   "polarities": [
+    {
+     "id": "loud_quiet",
+     "how": "Acoustic or clean verses set up crushing electric choruses and riff returns."
+    },
+    {
+     "id": "light_dark",
+     "how": "Bright Mixolydian major colour against darker blues / minor pentatonic riffs."
+    },
+    {
+     "id": "simple_complex",
+     "how": "Many riffs are one-chord or I–♭VII cells; arrangement and dynamics carry the drama."
+    },
+    {
+     "id": "organic_synthetic",
+     "how": "Analog tape, room mics, and acoustic instruments keep the heavy parts human."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "lz-mixo",
+     "category": "mode",
+     "name": "Mixolydian riff major (♭7 swagger)",
+     "description": "Major-key riffs often use ♭7 (Mixolydian) for a loose, blues-rock lift instead of a classical leading tone.",
+     "kbRefs": [
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_V"
+      }
+     ],
+     "moods": [
+      "bright",
+      "energetic",
+      "triumphant"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "lz-wp"
+     ],
+     "tryInMuse": "In Mixolydian, vamp I ↔ ♭VII (or I–V) and compare to plain major.",
+     "polarities": [
+      "light_dark"
+     ]
+    },
+    {
+     "id": "lz-bVII",
+     "category": "harmony",
+     "name": "I–♭VII rock cell",
+     "description": "The ♭VII chord against I is a classic hard-rock move — borrowed colour that still feels open and singable.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "min_i_bVII"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_IV"
+      }
+     ],
+     "moods": [
+      "energetic",
+      "earthy",
+      "triumphant"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "lz-wp"
+     ],
+     "tryInMuse": "Alternate I and ♭VII in a major key; keep the groove straight.",
+     "polarities": [
+      "simple_complex"
+     ]
+    },
+    {
+     "id": "lz-power",
+     "category": "voicing-tuning",
+     "name": "Open-string power riffs",
+     "description": "Riffs hang on open roots and fifths so the guitar rings while the voice or solo moves above.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "col_power"
+      },
+      {
+       "kind": "chordMove",
+       "id": "ped_tonic"
+      }
+     ],
+     "moods": [
+      "aggressive",
+      "earthy",
+      "epic"
+     ],
+     "evidence": "critic-description",
+     "sourceIds": [
+      "lz-wp"
+     ],
+     "tryInMuse": "Hold a power-chord pedal and move a second chord above it.",
+     "polarities": [
+      "stable_unstable"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "Led Zeppelin IV (album era)",
+     "year": 1971,
+     "release": "Led Zeppelin IV",
+     "whatHappens": "Acoustic folk textures collide with heavy electric riffs and dynamic stops.",
+     "whyItFeels": "The quiet–loud architecture makes every return of the riff feel bigger.",
+     "techniqueIds": [
+      "lz-mixo",
+      "lz-power"
+     ],
+     "moods": [
+      "epic",
+      "energetic"
+     ],
+     "listenFor": [
+      "Mixolydian ♭7 colour",
+      "acoustic-to-electric jumps"
+     ],
+     "sourceIds": [
+      "lz-wp"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "energetic",
+     "weight": 0.9
+    },
+    {
+     "mood": "epic",
+     "weight": 0.8
+    },
+    {
+     "mood": "earthy",
+     "weight": 0.75
+    },
+    {
+     "mood": "triumphant",
+     "weight": 0.65
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Mixolydian stomp",
+     "key": {
+      "tonic": "A",
+      "mode": "mixolydian"
+     },
+     "roman": [
+      "I",
+      "bVII",
+      "I",
+      "IV",
+      "I"
+     ],
+     "meter": "4/4",
+     "howToPlay": "Straight rock pulse. Lean on ♭VII as the swagger chord before IV.",
+     "moods": [
+      "energetic",
+      "bright",
+      "triumphant"
+     ],
+     "kbRefs": [
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_IV"
+      }
+     ],
+     "techniqueIds": [
+      "lz-mixo",
+      "lz-bVII"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Find the riff cell",
+     "what": "Most Zeppelin grooves are a short cell — count it before chasing the solo."
+    },
+    {
+     "step": 2,
+     "title": "Hear the ♭7",
+     "what": "If a major riff feels loose rather than classical, you are probably in Mixolydian."
+    },
+    {
+     "step": 3,
+     "title": "Watch the dynamics",
+     "what": "Notice when instruments drop out — the next hit is the release."
+    }
+   ],
+   "relatedArtists": [
+    "tool",
+    "opeth"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "lz-wp",
+     "title": "Wikipedia: Led Zeppelin",
+     "url": "https://en.wikipedia.org/wiki/Led_Zeppelin",
+     "type": "encyclopedia"
+    }
+   ]
+  },
+  {
+   "id": "the-beatles",
+   "name": "The Beatles",
+   "era": "1960–1970",
+   "origin": "Liverpool, UK",
+   "genres": [
+    "pop rock",
+    "rock",
+    "psychedelic pop"
+   ],
+   "documentation": "high",
+   "hook": "Songcraft laboratory: I–vi–IV–V comfort, bright modal colour, and surprise borrowed chords.",
+   "aestheticSummary": "The Beatles turned three-minute pop into a harmony workshop. Early songs lean on I–vi–IV–V and clean major/minor contrasts; later writing borrows ♭VII, modal mixtures, and unexpected secondary dominants while keeping singable melodies. Arrangement — doubles, bass motion, and sectional surprises — sells the theory as feeling.",
+   "polarities": [
+    {
+     "id": "expectation_surprise",
+     "how": "Familiar verse progressions pivot with a borrowed chord or sudden key colour."
+    },
+    {
+     "id": "simple_complex",
+     "how": "Triadic songs hide crafty bass lines and secondary dominants."
+    },
+    {
+     "id": "light_dark",
+     "how": "Major choruses against minor verses, or a bright ♭VII in a major key."
+    },
+    {
+     "id": "consonance_dissonance",
+     "how": "Mostly consonant pop harmony with carefully placed colourful chords."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "beat-ivi",
+     "category": "harmony",
+     "name": "I–vi–IV–V comfort progression",
+     "description": "The classic early-rock turnaround: tonic, relative minor, subdominant, dominant — home, sigh, lift, pull.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "maj_I_vi"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_IV"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_V"
+      }
+     ],
+     "moods": [
+      "peaceful",
+      "warm",
+      "bittersweet"
+     ],
+     "evidence": "documented",
+     "sourceIds": [
+      "beat-wp"
+     ],
+     "tryInMuse": "Play I–vi–IV–V in C and watch Muse's mood tags stay friendly.",
+     "polarities": [
+      "expectation_surprise"
+     ]
+    },
+    {
+     "id": "beat-bVII",
+     "category": "harmony",
+     "name": "Borrowed ♭VII in major",
+     "description": "A major ♭VII chord in a major key (Mixolydian colour) brightens without needing a full modulation.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "min_i_bVII"
+      },
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      }
+     ],
+     "moods": [
+      "bright",
+      "surprising",
+      "hopeful"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "beat-wp"
+     ],
+     "tryInMuse": "In C major, insert B♭ between F and C and compare the lift.",
+     "polarities": [
+      "light_dark"
+     ]
+    },
+    {
+     "id": "beat-sec",
+     "category": "harmony",
+     "name": "Secondary dominant sparkle",
+     "description": "V/V or V/vi briefly tonicizes a chord so the next landing feels earned.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "sec_I_II"
+      },
+      {
+       "kind": "chordMove",
+       "id": "sec_II_V"
+      }
+     ],
+     "moods": [
+      "bright",
+      "triumphant",
+      "surprising"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "beat-wp"
+     ],
+     "tryInMuse": "Before V, try II (V/V) and hear the extra pull.",
+     "polarities": [
+      "tension_release"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "Rubber Soul / Revolver era",
+     "year": 1966,
+     "release": "Revolver",
+     "whatHappens": "Pop forms absorb modal colour, tape experiments, and richer chords.",
+     "whyItFeels": "Surprises sit inside singable tunes, so craft reads as charm.",
+     "techniqueIds": [
+      "beat-ivi",
+      "beat-bVII"
+     ],
+     "moods": [
+      "dreamy",
+      "warm",
+      "bright"
+     ],
+     "listenFor": [
+      "borrowed ♭VII colour",
+      "I–vi sighs into brighter choruses"
+     ],
+     "sourceIds": [
+      "beat-wp"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "warm",
+     "weight": 0.85
+    },
+    {
+     "mood": "bright",
+     "weight": 0.8
+    },
+    {
+     "mood": "bittersweet",
+     "weight": 0.7
+    },
+    {
+     "mood": "hopeful",
+     "weight": 0.65
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Early-rock turnaround",
+     "key": {
+      "tonic": "C",
+      "mode": "major"
+     },
+     "roman": [
+      "I",
+      "vi",
+      "IV",
+      "V",
+      "I"
+     ],
+     "meter": "4/4",
+     "howToPlay": "Sing a simple melody on top. Keep IV–V as the lift home.",
+     "moods": [
+      "peaceful",
+      "warm",
+      "bittersweet"
+     ],
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "maj_I_vi"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_V"
+      }
+     ],
+     "techniqueIds": [
+      "beat-ivi"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Map the four chords",
+     "what": "Label I, vi, IV, V in a verse — then notice what breaks the pattern."
+    },
+    {
+     "step": 2,
+     "title": "Spot the colourful chord",
+     "what": "A sudden ♭VII or secondary dominant is usually the 'smile' in the harmony."
+    },
+    {
+     "step": 3,
+     "title": "Follow the bass",
+     "what": "Bass motion often sells a simple progression as something smarter."
+    }
+   ],
+   "relatedArtists": [
+    "steely-dan",
+    "radiohead"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "beat-wp",
+     "title": "Wikipedia: The Beatles",
+     "url": "https://en.wikipedia.org/wiki/The_Beatles",
+     "type": "encyclopedia"
+    }
+   ]
   }
  ],
  "techniqueChipIndex": {
@@ -7710,6 +8182,11 @@
     "artistId": "animals-as-leaders",
     "techniqueId": "aal-power",
     "name": "Extended-range power stacks"
+   },
+   {
+    "artistId": "led-zeppelin",
+    "techniqueId": "lz-power",
+    "name": "Open-string power riffs"
    }
   ],
   "chordMove:col_power": [
@@ -7767,6 +8244,11 @@
     "artistId": "animals-as-leaders",
     "techniqueId": "aal-poly",
     "name": "Polymetric low cells"
+   },
+   {
+    "artistId": "led-zeppelin",
+    "techniqueId": "lz-power",
+    "name": "Open-string power riffs"
    }
   ],
   "melodicMove:ct_root": [
@@ -8808,6 +9290,11 @@
     "artistId": "snarky-puppy",
     "techniqueId": "sp-iiv",
     "name": "Pocket ii–V turnarounds"
+   },
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-sec",
+    "name": "Secondary dominant sparkle"
    }
   ],
   "chordMove:mod_phrygian_bII_i": [
@@ -8815,6 +9302,56 @@
     "artistId": "animals-as-leaders",
     "techniqueId": "aal-phrygian",
     "name": "Phrygian low-string menace"
+   }
+  ],
+  "chordMove:maj_I_V": [
+   {
+    "artistId": "led-zeppelin",
+    "techniqueId": "lz-mixo",
+    "name": "Mixolydian riff major (♭7 swagger)"
+   },
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-ivi",
+    "name": "I–vi–IV–V comfort progression"
+   }
+  ],
+  "chordMove:min_i_bVII": [
+   {
+    "artistId": "led-zeppelin",
+    "techniqueId": "lz-bVII",
+    "name": "I–♭VII rock cell"
+   },
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-bVII",
+    "name": "Borrowed ♭VII in major"
+   }
+  ],
+  "chordMove:maj_I_IV": [
+   {
+    "artistId": "led-zeppelin",
+    "techniqueId": "lz-bVII",
+    "name": "I–♭VII rock cell"
+   },
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-ivi",
+    "name": "I–vi–IV–V comfort progression"
+   }
+  ],
+  "chordMove:maj_I_vi": [
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-ivi",
+    "name": "I–vi–IV–V comfort progression"
+   }
+  ],
+  "chordMove:sec_I_II": [
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-sec",
+    "name": "Secondary dominant sparkle"
    }
   ]
  }
