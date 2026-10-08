@@ -628,13 +628,14 @@ function Composer({ data }: { data: LoadedData }) {
               </div>
               <div className="why">{s.why}</div>
               {midis.length > 0 && (
-                <div className="card-staff" aria-label={cs ? `Staff notes for ${cs.symbol}` : `Staff note ${(ns as NoteSuggestion).name}`}>
-                  <StaffChordViz
-                    midis={midis}
+                <div className="card-piano" aria-label={cs ? `Piano notes for ${cs.symbol}` : `Piano note ${(ns as NoteSuggestion).name}`}>
+                  <PianoViz
+                    variant="card"
+                    suggested={midis}
+                    fingers={[]}
                     color={color}
                     spell={spell}
-                    scalePcs={scale}
-                    tonicPc={pc(k.tonic)}
+                    height={44}
                     label={cs ? cs.symbol : (ns as NoteSuggestion).name}
                   />
                 </div>
@@ -916,6 +917,18 @@ function Composer({ data }: { data: LoadedData }) {
                       }
                     }}
                   >
+                    {s.chord && (
+                      <div className="tchord-staff" aria-hidden={false} aria-label={`Staff for ${chordSymbol(s.chord, true)}`}>
+                        <StaffChordViz
+                          midis={pianoVoicing(s.chord)}
+                          color={s.locked ? '#ffd54f' : '#c4b0ff'}
+                          spell={spell}
+                          scalePcs={scale}
+                          tonicPc={pc(k.tonic)}
+                          label={chordSymbol(s.chord, true)}
+                        />
+                      </div>
+                    )}
                     <div className="tchord-body">
                       <div className="sym" title={s.chord ? undefined : 'No chord yet — melody only'}>{s.chord ? chordSymbol(s.chord, true) : 'no chord'}</div>
                       <div className="rn">{s.chord ? romanOf(s.chord, k) : 'melody only'}</div>
