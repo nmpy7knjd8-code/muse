@@ -42,7 +42,12 @@ type CardNoteViz = 'piano' | 'staff';
 type InputSource = 'mic' | 'midi';
 interface Snapshot { slots: TimelineSlot[] }
 
-const PRESET_MOODS = ['mystical', 'melancholy', 'triumphant', 'tense', 'dreamy', 'dark', 'bright', 'peaceful', 'epic', 'bittersweet', 'yearning', 'solemn'];
+const PRESET_MOODS = [
+  'mystical', 'melancholy', 'triumphant', 'tense', 'dreamy', 'dark', 'bright', 'peaceful',
+  'epic', 'bittersweet', 'yearning', 'solemn', 'hopeful', 'warm', 'romantic', 'nostalgic',
+  'ominous', 'dramatic', 'uncanny', 'wonder', 'floating', 'surprising', 'bluesy', 'jazzy',
+  'earthy', 'playful', 'resolved',
+];
 const RARITY_MARK: Record<string, { sym: string; label: string }> = {
   common: { sym: '●', label: 'common' },
   colorful: { sym: '◆', label: 'colorful' },
