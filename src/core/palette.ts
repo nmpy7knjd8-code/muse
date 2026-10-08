@@ -52,15 +52,8 @@ export function degreeRole(degree: number): string {
   return 'pulls home';
 }
 
-/**
- * Extra palette chords beyond diatonic triads/7ths: borrowed modal colour and a couple of
- * common secondaries. Realised via roman numerals so spelling follows the key.
- */
-export function colourPaletteChords(k: Key): Chord[] {
-  const fam = MODE_BY_ID[k.mode].family;
-  const romans = fam === 'major'
-    ? ['bVII', 'bVI', 'iv', 'II', 'V7/V', 'bIII']
-    : ['bVII', 'bVI', 'IV', 'V', 'VII', 'iiø7'];
+/** Realise a list of roman numerals in `k`, skipping failures and root+quality dupes. */
+function fromRomans(k: Key, romans: string[]): Chord[] {
   const seen = new Set<string>();
   const out: Chord[] = [];
   for (const r of romans) {
@@ -72,6 +65,49 @@ export function colourPaletteChords(k: Key): Chord[] {
     out.push(c);
   }
   return out;
+}
+
+/**
+ * Borrowed / modal colour beyond diatonic triads & 7ths (surprise without a secondary target).
+ * Secondaries live in {@link secondaryPaletteChords}.
+ * Minor skips ♭VI/♭VII/iiø7 — those already sit in In this key / 7ths.
+ */
+export function colourPaletteChords(k: Key): Chord[] {
+  const fam = MODE_BY_ID[k.mode].family;
+  return fromRomans(
+    k,
+    fam === 'major'
+      ? ['bVII', 'bVI', 'iv', 'bIII', 'bII']
+      // IV / V / VII = modal & harmonic colour; bII = Neapolitan; I = Picardy; VI = Dorian lift
+      : ['IV', 'V', 'VII', 'bII', 'I', 'VI'],
+  );
+}
+
+/**
+ * Secondary dominants (and a bluesy I7) — aim at a diatonic chord, then resolve.
+ * Kept as its own palette row so Extra colour stays “borrowed / modal”.
+ */
+export function secondaryPaletteChords(k: Key): Chord[] {
+  const fam = MODE_BY_ID[k.mode].family;
+  return fromRomans(
+    k,
+    fam === 'major'
+      ? ['V7/V', 'V7/vi', 'V7/ii', 'V7/IV', 'V7/iii']
+      : ['V7/V', 'V7/III', 'V7/iv', 'V7/VI'],
+  );
+}
+
+/**
+ * Open / suspended colour on home degrees: sus, add9, and 6 — pop/folk texture without leaving the key.
+ */
+export function openPaletteChords(k: Key): Chord[] {
+  const fam = MODE_BY_ID[k.mode].family;
+  return fromRomans(
+    k,
+    fam === 'major'
+      ? ['Iadd9', 'Isus2', 'Isus4', 'I6', 'IVadd9', 'V7sus4']
+      : ['iadd9', 'isus2', 'isus4', 'ivadd9', 'V7sus4'],
+  );
 }
 
 /** True when `c` is the same triad class + root as a diatonic triad (so the colour row can skip it). */

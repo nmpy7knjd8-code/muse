@@ -277,6 +277,69 @@ function moodContrast(list: { score: number; moodMatch: number }[], gain = MOOD_
   for (const x of list) x.score += gain * 0.6 * ((x.moodMatch - lo) / (hi - lo) - 0.5);
 }
 
+/** Soft identity for variety: same root + triad class (C ≈ Cmaj7 ≈ C6). */
+function chordFamilyId(c: Chord): string {
+  return `${pc(c.root)}:${triadClass(c.quality)}`;
+}
+
+/**
+ * Prefer not looping recent chords. Tonic returns are lightly taxed only so cadences home still win.
+ * HEURISTIC — keeps the suggestion list moving without rewriting functional priors.
+ */
+function recentVarietyAdjust(chord: Chord, prog: Chord[], k: Key): number {
+  if (prog.length < 2) return 0;
+  const hist = prog.slice(0, -1);
+  const fam = chordFamilyId(chord);
+  let dist = -1;
+  for (let i = hist.length - 1; i >= 0; i--) {
+    if (chordFamilyId(hist[i]) === fam) {
+      dist = hist.length - 1 - i;
+      break;
+    }
+  }
+  if (dist < 0 || dist > 3) return 0;
+  const mag = dist === 0 ? 0.42 : dist === 1 ? 0.22 : dist === 2 ? 0.12 : 0.06;
+  const tonicHome = pc(chord.root) === pc(k.tonic) && (triadClass(chord.quality) === 'maj' || triadClass(chord.quality) === 'min');
+  return -(tonicHome ? mag * 0.4 : mag);
+}
+
+/**
+ * When the current chord is a secondary dominant, prefer landing on its target root.
+ * Priors already help by root offset; this lifts the whole resolution family (V, V7…).
+ * HEURISTIC.
+ */
+function secondaryResolveBonus(cur: Chord | undefined, chord: Chord, k: Key): number {
+  if (!cur) return 0;
+  const rn = analyzeRoman(cur, k);
+  if (!rn.secondary) return 0;
+  const targetPc = mod(pc(cur.root) - 7, 12);
+  if (pc(chord.root) !== targetPc) return 0;
+  const plain = chord.quality === 'maj' || chord.quality === 'min';
+  return plain ? 0.4 : 0.28;
+}
+
+/**
+ * Single-step neo-Riemannian moves (P/L/R) are especially smooth common-tone transforms.
+ * Tiny nudge on top of the voice-leading term — nrt is already computed for display. HEURISTIC.
+ */
+function nrtSmoothBonus(nrt: string | null): number {
+  if (!nrt) return 0;
+  if (nrt.length === 1) return 0.1;
+  if (nrt.length === 2) return 0.04;
+  return 0;
+}
+
+/**
+ * Descending-fifth / ascending-fourth root motion is the backbone of functional sequences.
+ * Priors cover diatonic cases; a light bonus still helps chromatic / secondary chains. HEURISTIC.
+ */
+function fallingFifthBonus(cur: Chord | undefined, chord: Chord): number {
+  if (!cur) return 0;
+  const asc = mod(pc(chord.root) - pc(cur.root), 12);
+  if (asc === 5) return 0.16; // root up a fourth = falling fifth
+  return 0;
+}
+
 const CHORD_PAIR_RE = /\b[A-G][#b♭♯]?[a-z0-9#b♭♯°ø+]*\s*(?:→|->)\s*[A-G][#b♭♯]?[a-z0-9#b♭♯°ø+]*/;
 
 export class SuggestionEngine {
@@ -496,7 +559,13 @@ export class SuggestionEngine {
       const simplicity = (1 - a) * (plainTriad ? 0.35 : chord.quality === '7' || chord.quality === 'm7' || chord.quality === 'maj7' ? 0.12 : 0);
       // Empty progression: land on the plain tonic triad first (extensions still appear below).
       const startBias = !cur && plainTriad && off === 0 ? 1.1 : 0;
-      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + simplicity + startBias + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0) + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
+      const nrt = cur ? neoRiemannianPath(cur, chord) : null;
+      // Light grammar / variety terms — additive only; do not replace priors, KB, or tension.
+      const variety = recentVarietyAdjust(chord, prog, k);
+      const resolveSec = secondaryResolveBonus(cur, chord, k);
+      const nrtBonus = nrtSmoothBonus(nrt);
+      const fifths = fallingFifthBonus(cur, chord);
+      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + simplicity + startBias + variety + resolveSec + nrtBonus + fifths + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0) + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
       let why = top
@@ -524,7 +593,7 @@ export class SuggestionEngine {
         commonTones: ct,
         voicing,
         voiceLines: prevVoicing ? voiceLeading(prevVoicing, voicing) : [],
-        nrt: cur ? neoRiemannianPath(cur, chord) : null,
+        nrt,
         moodShift: cur ? this.lexicon.shift(curMoods, moods) : null,
         moodMatch: match,
         features,

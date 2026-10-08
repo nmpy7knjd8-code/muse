@@ -11,7 +11,7 @@ import {
   setSlotChord, slotBass, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents,
   REL_COLORS, REL_LABEL, type RelKind,
-  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, rootMotion,
+  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, openPaletteChords, rootMotion, secondaryPaletteChords,
   TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, BPM_PRESETS, DEFAULT_BPM, beatSecFromBpm, clampBpm,
   beatsPerBar, clampSlotsToMeter, parseMeter,
   timeSigLabel,
@@ -1390,36 +1390,34 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
         {tab === 'chords' ? (
           <>
-            <PaletteRow
-              label="In this key"
-              chords={diatonicChords(k, false)}
-              k={k}
-              prev={cur ?? null}
-              prevMoods={cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : []}
-              lex={lex}
-              engine={engine}
-              onAdd={addChord}
-            />
-            <PaletteRow
-              label="7ths (richer)"
-              chords={diatonicChords(k, true)}
-              k={k}
-              prev={cur ?? null}
-              prevMoods={cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : []}
-              lex={lex}
-              engine={engine}
-              onAdd={addChord}
-            />
-            <PaletteRow
-              label="Extra colour"
-              chords={colourPaletteChords(k).filter((c) => !isDiatonicTriadClone(c, diatonicChords(k, false)) && !isDiatonicTriadClone(c, diatonicChords(k, true)))}
-              k={k}
-              prev={cur ?? null}
-              prevMoods={cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : []}
-              lex={lex}
-              engine={engine}
-              onAdd={addChord}
-            />
+            {(() => {
+              const dia = diatonicChords(k, false);
+              const sev = diatonicChords(k, true);
+              const taken = (c: Chord) => isDiatonicTriadClone(c, dia) || isDiatonicTriadClone(c, sev);
+              const prevMoods = cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : [];
+              const row = (label: string, chords: Chord[]) => (
+                <PaletteRow
+                  key={label}
+                  label={label}
+                  chords={chords}
+                  k={k}
+                  prev={cur ?? null}
+                  prevMoods={prevMoods}
+                  lex={lex}
+                  engine={engine}
+                  onAdd={addChord}
+                />
+              );
+              return (
+                <>
+                  {row('In this key', dia)}
+                  {row('7ths (richer)', sev)}
+                  {row('Open colour', openPaletteChords(k).filter((c) => !taken(c)))}
+                  {row('Extra colour', colourPaletteChords(k).filter((c) => !taken(c)))}
+                  {row('Secondaries', secondaryPaletteChords(k).filter((c) => !taken(c)))}
+                </>
+              );
+            })()}
             <form className="typed" onSubmit={(e) => { e.preventDefault(); submitTyped(); }}>
               <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type a chord: F#m7, Bb/D…" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
               <button type="submit">Add</button>
