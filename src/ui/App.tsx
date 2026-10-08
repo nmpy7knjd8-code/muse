@@ -18,7 +18,7 @@ import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
 import { TensionCurve } from './TensionCurve';
-import { startListening, type ListenSession, type ListenStatus } from './listen';
+import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 
 type Tab = 'chords' | 'melody' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
@@ -337,6 +337,7 @@ function Composer({ data }: { data: LoadedData }) {
   const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots }]);
   const heardChord = (root: number, quality: string): Chord => ({ root: spellInKey(live.current.k, root), quality: quality as Chord['quality'] });
   const toggleListen = async () => {
+    // Unlock first (gesture), then startListening switches AudioSession to play-and-record for the mic.
     synth.unlock();
     if (listen) { listen.stop(); setListen(null); setListenStatus(null); return; }
     try {
@@ -364,7 +365,7 @@ function Composer({ data }: { data: LoadedData }) {
       setLastHeard(null);
       flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — fills the melody lane');
     } catch (e) {
-      flash((e as Error).message || 'Microphone unavailable');
+      flash(listenErrorMessage(e));
     }
   };
 

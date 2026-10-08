@@ -154,7 +154,8 @@ with your own endpoint/model/key. If it fails, it falls back to the offline lexi
 
 ## Known limitations
 - Not yet tested on a real iPhone. Audio unlock, PWA install, and mic were only checked in desktop
-  Chrome at iPhone viewport size.
+  Chrome at iPhone viewport size. Listen switches the iOS AudioSession to `play-and-record` (and
+  back to `playback` when you stop) so the mic is not blocked after the first chord tap.
 - Mood labels come from cited consensus where the KB has it. Otherwise they are heuristics, and the
   lore notes are not science.
 - Melody suggestions use single notes only (no rhythm). The synth is simple.

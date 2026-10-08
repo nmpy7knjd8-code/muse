@@ -2,7 +2,10 @@
 // or chords (FFT → chroma → template match, polyphonic). Debounced with HoldTracker so a sustained
 // note/chord is added once; an RMS gate ignores silence/noise; listening pauses while Muse itself plays.
 // getUserMedia needs a secure context (HTTPS or localhost).
+// iOS: the page AudioSession must be `play-and-record` before capture — `playback` (set on unlock
+// so Muse plays through the silent switch) throws "AudioSession category is not compatible…".
 import { HoldTracker, chromaFromSpectrum, dbToMagnitudes, detectPitch, freqToMidi, matchChord, rms, type ChordMatch } from '../core';
+import { setAudioSession } from './audio';
 
 export type ListenTarget = 'melody' | 'chords';
 export interface ListenStatus {
@@ -30,9 +33,33 @@ export interface ListenOptions {
 }
 export interface ListenSession { stop(): void }
 
+/** Friendlier copy for the iOS AudioSession / permission failures. */
+export function listenErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? '');
+  const s = raw.toLowerCase();
+  if (s.includes('audiosession') || s.includes('not compatible with audio capture')) {
+    return 'Mic needs play-and-record audio — tap Listen again. If it still fails, reload the page and try Listen before playing chords.';
+  }
+  if (s.includes('notallowed') || s.includes('permission') || s.includes('denied')) {
+    return 'Microphone permission denied — allow mic access for this site in Safari settings.';
+  }
+  if (s.includes('secure') || s.includes('https')) {
+    return 'Microphone needs HTTPS (or localhost).';
+  }
+  return raw || 'Microphone unavailable';
+}
+
 export async function startListening(o: ListenOptions): Promise<ListenSession> {
   if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone not available (needs HTTPS or localhost).');
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  // Must run in the same user-gesture turn as the tap when possible; unlock() may have set `playback`.
+  setAudioSession('play-and-record');
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    setAudioSession('playback');
+    throw e;
+  }
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   const ctx = new AC();
   await ctx.resume();
@@ -102,6 +129,8 @@ export async function startListening(o: ListenOptions): Promise<ListenSession> {
       window.clearInterval(timer);
       stream.getTracks().forEach((t) => t.stop());
       if (ctx.state !== 'closed') ctx.close().catch(() => {});
+      // Restore playback-only so Muse keeps sounding through the silent switch after Listen.
+      setAudioSession('playback');
     },
   };
 }
