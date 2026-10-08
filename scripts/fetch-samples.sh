@@ -29,7 +29,7 @@ fetch piano https://tonejs.github.io/audio/salamander sharp 60 96 3 4.5 1.2 96k 
 FL=https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM
 fetch nylon    $FL/acoustic_guitar_nylon-mp3 flat 40 85 3 3 0.8 80k 1
 fetch steel    $FL/acoustic_guitar_steel-mp3 flat 40 85 3 3 0.8 80k 1
-fetch electric $FL/overdriven_guitar-mp3     flat 40 85 3 2.8 0.8 80k 1
+fetch electric $FL/distortion_guitar-mp3     flat 40 85 3 2.8 0.8 80k 1
 fetch rhodes   $FL/electric_piano_1-mp3      flat 36 90 3 3 0.8 80k 1
 fetch pad      $FL/pad_2_warm-mp3            flat 36 84 3 3 1.0 72k 1
 fetch bass     $FL/acoustic_bass-mp3         flat 28 55 3 2.5 0.8 80k 1
