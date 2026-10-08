@@ -8,7 +8,7 @@ import { mod, pc } from './notes';
 import { neoRiemannianPath, nrtPathLabel } from './relations';
 import { rootMotion, type RootMotion } from './palette';
 import { Key, spellInKey } from './scales';
-import { TimelineSlot, labelSlot, slotBass } from './timeline';
+import { TimelineSlot, isSounding, labelSlot, slotBass } from './timeline';
 import { VoiceLine, commonTones, moveKind, pianoVoicing, voiceLeading, type MoveKind } from './voicing';
 
 /** Sequential voice-led piano voicings (same idea as suggest.voiceProgression, kept local to avoid cycles). */
@@ -121,12 +121,17 @@ export function linkHintMidi(a: Chord, b: Chord, anchor = 64): number | null {
 function seqFromLabeled(
   labeled: ReturnType<typeof labelSlot>,
 ): SeqNote[] {
-  return labeled.map((n) => ({
-    midi: n.midi,
-    beat: n.beat,
-    relationLabel: n.relation?.label ?? null,
-    relationKind: n.relation?.kind ?? null,
-  }));
+  const out: SeqNote[] = [];
+  for (const n of labeled) {
+    if (!isSounding(n)) continue;
+    out.push({
+      midi: n.midi,
+      beat: n.beat,
+      relationLabel: n.relation?.label ?? null,
+      relationKind: n.relation?.kind ?? null,
+    });
+  }
+  return out;
 }
 
 /** Analyze the timeline: within-bar note sequences and between-chord voice leading. */
@@ -147,18 +152,16 @@ export function analyzeConnections(
 
   const bars: BarSequence[] = slots.map((s, i) => {
     const melLabeled = labelSlot(s, kb, beats);
-    const bassLabeled = slotBass(s).length
-      ? slotBass(s).map((n) => {
-        const rel = s.chord ? noteRelation(n.midi, s.chord, kb) : null;
-        return {
-          midi: n.midi,
-          beat: n.beat,
-          relationLabel: rel?.label ?? null,
-          relationKind: rel?.kind ?? null,
-        } satisfies SeqNote;
-      })
-      : [];
-    const melody = seqFromLabeled(melLabeled);
+    const bassLabeled = slotBass(s).filter(isSounding).map((n) => {
+      const rel = s.chord ? noteRelation(n.midi, s.chord, kb) : null;
+      return {
+        midi: n.midi,
+        beat: n.beat,
+        relationLabel: rel?.label ?? null,
+        relationKind: rel?.kind ?? null,
+      } satisfies SeqNote;
+    });
+    const melody = seqFromLabeled(melLabeled.filter(isSounding));
     return {
       slotIndex: i,
       chord: s.chord,

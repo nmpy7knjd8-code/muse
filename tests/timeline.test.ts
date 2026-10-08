@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { loadKB } from './helpers';
 import {
   SuggestionEngine, parseChord, key, noteRelation, melodyFit, REL_FIT,
-  insertNote, insertBassNote, setSlotChord, chordTargetIndex, activeSlotIndex, activeBassSlotIndex,
+  insertNote, insertBassNote, insertRest, setSlotChord, chordTargetIndex, activeSlotIndex, activeBassSlotIndex,
   nextNoteBeat, nextBassBeat, labelSlot, labelBassSlot, timelineEvents, harmPreviewEvents,
   melodyOf, bassOf, chordsOf, removeNoteAt, removeBassAt, clearSlotChord,
-  toMidiTimeline, timelineText, noteDurations, slotBass,
+  toMidiTimeline, timelineText, noteDurations, slotBass, isRest, isSounding,
+  defaultPartMeters, clampSlotsToPartMeters, pulseStep, slotsPerPartBar, partPulseSec,
 } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
@@ -146,6 +147,65 @@ describe('timeline slots', () => {
     expect(prev.notes[0].at).toBe(0);
     expect(prev.notes[1].at).toBe(1);
     expect(prev.notes[0].dur).toBeCloseTo(0.95); // 2 beats × 0.5s × 0.95
+  });
+  it('insertRest advances the pulse without sounding; export skips rests', () => {
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = insertNote(slots, 60).slots;
+    slots = insertRest(slots, 'notes').slots;
+    slots = insertNote(slots, 64).slots;
+    expect(slots[0].notes.map((n) => n.midi)).toEqual([60, null, 64]);
+    expect(slots[0].notes.map((n) => n.beat)).toEqual([0, 1, 2]);
+    expect(isRest(slots[0].notes[1]!)).toBe(true);
+    expect(isSounding(slots[0].notes[0]!)).toBe(true);
+    expect(melodyOf(slots)).toEqual([60, 64]);
+    const ev = timelineEvents(slots, { beatSec: 0.5 });
+    expect(ev.notes).toHaveLength(2);
+    expect(ev.notes.map((n) => n.beat)).toEqual([0, 2]);
+    const txt = timelineText(key('C'), slots);
+    expect(txt).toMatch(/rest@2/);
+  });
+  it('subdivision packs half-pulse notes and rests', () => {
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = insertNote(slots, 60, undefined, 4, 2).slots;
+    slots = insertRest(slots, 'notes', undefined, 4, 2).slots;
+    slots = insertNote(slots, 62, undefined, 4, 2).slots;
+    expect(slots[0].notes.map((n) => n.beat)).toEqual([0, 0.5, 1]);
+    expect(nextNoteBeat(slots, 4, 2)).toBe(1.5);
+    expect(pulseStep(2)).toBe(0.5);
+    expect(slotsPerPartBar({ timeSig: { num: 4, den: 4 }, subdiv: 2 })).toBe(8);
+  });
+  it('polyrhythm maps part pulses onto the master bar wall-clock', () => {
+    const master = { num: 4, den: 4 };
+    const parts = defaultPartMeters(master);
+    parts.melody = { timeSig: { num: 3, den: 4 }, subdiv: 1 };
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = insertNote(slots, 72, undefined, 3, 1).slots;
+    slots = insertNote(slots, 74, undefined, 3, 1).slots;
+    slots = insertNote(slots, 76, undefined, 3, 1).slots;
+    const ev = timelineEvents(slots, { beatSec: 0.5, timeSig: master, partMeters: parts });
+    // Master bar = 2s; melody pulses = 2/3 s → notes at 0, 2/3, 4/3
+    expect(ev.total).toBe(2);
+    expect(ev.notes).toHaveLength(3);
+    expect(ev.notes[0]!.at).toBeCloseTo(0);
+    expect(ev.notes[1]!.at).toBeCloseTo(2 / 3);
+    expect(ev.notes[2]!.at).toBeCloseTo(4 / 3);
+    expect(partPulseSec(2, parts.melody)).toBeCloseTo(2 / 3);
+  });
+  it('clampSlotsToPartMeters respects each lane’s capacity', () => {
+    const parts = defaultPartMeters({ num: 4, den: 4 });
+    parts.melody = { timeSig: { num: 3, den: 4 }, subdiv: 1 };
+    parts.bass = { timeSig: { num: 4, den: 4 }, subdiv: 2 };
+    // Overfill a single bar, then clamp: melody keeps 3, bass keeps 8 half-pulses
+    const slots = [{
+      chord: ch('Am'),
+      notes: [60, 62, 64, 65, 67].map((midi, i) => ({ midi, beat: i })),
+      bass: [36, 38, 40, 41, 43, 45, 47, 48, 50].map((midi, i) => ({ midi, beat: i * 0.5 })),
+    }];
+    const clamped = clampSlotsToPartMeters(slots, parts);
+    expect(clamped[0]!.notes).toHaveLength(3);
+    expect(clamped[0]!.notes.map((n) => n.beat)).toEqual([0, 1, 2]);
+    expect(slotBass(clamped[0]!)).toHaveLength(8);
+    expect(slotBass(clamped[0]!)[1]!.beat).toBe(0.5);
   });
 });
 
