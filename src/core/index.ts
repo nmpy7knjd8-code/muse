@@ -25,3 +25,4 @@ export * from './harmonyTension';
 export * as tensionModel from './tension';
 export * from './noteRelation';
 export * from './timeline';
+export * from './palette';

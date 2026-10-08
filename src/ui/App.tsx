@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Chord, ChordSuggestion, MoodProfile, ModeId, MODES, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
+  Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
   spellInKey, tonicChoices, voiceProgression, type Key,
@@ -9,6 +9,7 @@ import {
   TimelineSlot, activeSlotIndex, chordTargetIndex, chordsOf, clearSlotChord, insertNote, labelSlot, melodyOf,
   nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
   REL_COLORS, REL_LABEL, type RelKind,
+  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtTag, rootMotion,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -48,7 +49,6 @@ function Composer({ data }: { data: LoadedData }) {
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [tab, setTab] = useState<Tab>('chords');
   const [visTab, setVisTab] = useState<VisTab>('piano');
-  const [sevenths, setSevenths] = useState(false);
   const [adventure, setAdventure] = useState(0.35);
   const [tStyle, setTStyle] = useState<TensionStyleId>(() => {
     const v = typeof localStorage !== 'undefined' ? localStorage.getItem('muse.tensionStyle') : null;
@@ -597,21 +597,40 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
         {tab === 'chords' ? (
           <>
-            <div className="palette">
-              {diatonicChords(k, sevenths).map((c) => (
-                <button key={chordSymbol(c)} className="pal" onClick={() => addChord(c)}>
-                  <b>{chordSymbol(c, true)}</b>
-                  <small>{analyzeRoman(c, k).text}</small>
-                </button>
-              ))}
-            </div>
-            <div className="row gap">
-              <label className="small toggle"><input type="checkbox" checked={sevenths} onChange={(e) => setSevenths(e.target.checked)} /> 7ths</label>
-              <form className="typed" onSubmit={(e) => { e.preventDefault(); submitTyped(); }}>
-                <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type a chord: F#m7, Bb/D…" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
-                <button type="submit">Add</button>
-              </form>
-            </div>
+            <PaletteRow
+              label="Diatonic"
+              chords={diatonicChords(k, false)}
+              k={k}
+              prev={cur ?? null}
+              prevMoods={cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : []}
+              lex={lex}
+              engine={engine}
+              onAdd={addChord}
+            />
+            <PaletteRow
+              label="7ths"
+              chords={diatonicChords(k, true)}
+              k={k}
+              prev={cur ?? null}
+              prevMoods={cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : []}
+              lex={lex}
+              engine={engine}
+              onAdd={addChord}
+            />
+            <PaletteRow
+              label="Colour"
+              chords={colourPaletteChords(k).filter((c) => !isDiatonicTriadClone(c, diatonicChords(k, false)) && !isDiatonicTriadClone(c, diatonicChords(k, true)))}
+              k={k}
+              prev={cur ?? null}
+              prevMoods={cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : []}
+              lex={lex}
+              engine={engine}
+              onAdd={addChord}
+            />
+            <form className="typed" onSubmit={(e) => { e.preventDefault(); submitTyped(); }}>
+              <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type a chord: F#m7, Bb/D…" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+              <button type="submit">Add</button>
+            </form>
           </>
         ) : (
           <div className="melody-input">
@@ -855,6 +874,64 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+/** One palette row: chord symbol, roman, and (vs previous) root ↑/↓ + mood shift. */
+function PaletteRow({
+  label, chords, k, prev, prevMoods, lex, engine, onAdd,
+}: {
+  label: string;
+  chords: Chord[];
+  k: Key;
+  prev: Chord | null;
+  prevMoods: Array<{ id: string; weight: number }>;
+  lex: MoodLexicon;
+  engine: SuggestionEngine;
+  onAdd: (c: Chord) => void;
+}) {
+  if (!chords.length) return null;
+  return (
+    <div className="pal-block">
+      <div className="pal-label small muted">{label}{prev ? ' · vs last chord' : ''}</div>
+      <div className="palette">
+        {chords.map((c) => {
+          const rn = analyzeRoman(c, k);
+          const roman = rn.secondary ?? rn.text;
+          const motion = prev ? rootMotion(prev, c) : null;
+          const nrt = prev ? nrtTag(prev, c) : null;
+          const moods = engine.chordMoods(c, k, prev ?? undefined);
+          const shift = prev && prevMoods.length ? lex.shift(prevMoods, moods) : null;
+          const moodId = moods[0]?.id;
+          const color = moodId ? lex.color(moodId) : undefined;
+          const role = !prev ? degreeRole(rn.degree) : null;
+          const rel = prev
+            ? [nrt || motion?.label, shift ? `${shift.arrow} ${shift.text}` : null].filter(Boolean).join(' · ')
+            : role;
+          const tip = [
+            `${chordSymbol(c, true)} (${roman})`,
+            motion ? `root ${motion.label} than ${chordSymbol(prev!, true)}` : null,
+            nrt ? `neo-Riemannian ${nrt}` : null,
+            shift ? `${shift.arrow} ${shift.text}` : moodId ? lex.label(moodId) : null,
+            role,
+          ].filter(Boolean).join(' — ');
+          return (
+            <button
+              key={`${label}:${chordSymbol(c)}`}
+              type="button"
+              className={'pal' + (motion ? ` root-${motion.dir === '↑' ? 'up' : motion.dir === '↓' ? 'down' : 'same'}` : '')}
+              style={color ? { borderColor: color } : undefined}
+              title={tip}
+              onClick={() => onAdd(c)}
+            >
+              <b>{chordSymbol(c, true)}</b>
+              <small className="pal-rn">{roman}</small>
+              {rel && <small className="pal-rel">{prev ? (nrt || motion?.label) : role}{shift ? ` ${shift.arrow}` : ''}</small>}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
