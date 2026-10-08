@@ -21,7 +21,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Novice-friendly copy: relation tags (in the chord / colour note), palette roles (home / pulls home), “no chord” + Find a chord, glossed terms on cards and visuals.
 - Guide tab: how-to for each feature with “how to use” + “why it matters” musicality notes and jump buttons.
 - Note suggestions ranked by harmonic/melodic fit first (mood is a light tint); rank strip bars follow score, not colourfulness.
-- Metal guitar: electric instrument retuned (tighter release/ring/reverb) with a live amp path (HPF → WaveShaper drive → mid scoop → presence → air → LPF) on distortion samples and sawtooth fallback.
+- Metal guitar: thicker/cleaner amp path (lower HPF, low-mid body boost, milder drive, tamed presence/fizz) on distortion samples and sawtooth fallback; slightly longer ring + a bit more reverb.
 - MIDI keyboard input: Mic ↔ MIDI toggle beside Listen; Web MIDI note-on fills melody, held notes → `chromaFromMidis` + `matchChord` for chords (same templates as mic).
 - Guide: “Which notes & chords will work” (relation tags + ranking) and Mic/MIDI section.
 - In-context FitExplainer under Melody piano / Chords palettes (key tint + relation chips + ranking why).

@@ -62,54 +62,65 @@ function makeImpulse(ctx: BaseAudioContext, seconds = 1.7, preDelay = 0.012): Au
   return ir;
 }
 
-/** Hard-clip / tanh drive curve for a high-gain metal amp stage. */
-function metalDriveCurve(drive = 28): Float32Array<ArrayBuffer> {
+/** Soft-clip / tanh drive curve — moderate gain for a thicker, cleaner metal stack. */
+function metalDriveCurve(drive = 18): Float32Array<ArrayBuffer> {
   const n = 2048;
   const curve = new Float32Array(new ArrayBuffer(n * 4));
   for (let i = 0; i < n; i++) {
     const x = (i * 2) / (n - 1) - 1;
-    // Asymmetric saturator (amp-like) then hard tanh for compressed high-gain.
-    const shaped = x >= 0 ? x : x * 0.85;
+    // Mild asymmetry (amp-like) without the ice-pick hard clip of the old curve.
+    const shaped = x >= 0 ? x : x * 0.92;
     curve[i] = Math.tanh(shaped * drive);
   }
   return curve;
 }
 
 /**
- * Metal amp path: tighten lows → drive → scoop mids → presence bite → tame fizz.
+ * Metal amp path: keep body → gentle drive → light mid scoop → warm presence → cut fizz.
+ * Tuned thicker/cleaner (less tinny) than a scooped high-gain stack.
  * Applied only to the electric (metal) instrument so other guitars stay clean.
  */
 function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number): AudioNode {
   const pre = ctx.createGain();
-  pre.gain.value = 1.35 + vel * 0.55;
+  pre.gain.value = 1.05 + vel * 0.35;
+  // Keep low body — only shed sub rumble, not the guitar's thickness.
   const hpf = ctx.createBiquadFilter();
   hpf.type = 'highpass';
-  hpf.frequency.value = 140;
-  hpf.Q.value = 0.7;
+  hpf.frequency.value = 75;
+  hpf.Q.value = 0.55;
   const drive = ctx.createWaveShaper();
-  drive.curve = metalDriveCurve(32);
-  drive.oversample = '2x';
+  drive.curve = metalDriveCurve(18);
+  drive.oversample = '4x';
+  // Warm low-mids for thickness (palm-mutes / power chords).
+  const body = ctx.createBiquadFilter();
+  body.type = 'peaking';
+  body.frequency.value = 220;
+  body.Q.value = 0.7;
+  body.gain.value = 3.2;
+  // Mild scoop — enough clarity without hollowing the tone.
   const scoop = ctx.createBiquadFilter();
   scoop.type = 'peaking';
-  scoop.frequency.value = 780;
-  scoop.Q.value = 0.9;
-  scoop.gain.value = -5.5;
+  scoop.frequency.value = 900;
+  scoop.Q.value = 0.8;
+  scoop.gain.value = -2.5;
+  // Soft upper-mid presence (was +6–8 dB @ 3.2 kHz → tinny).
   const presence = ctx.createBiquadFilter();
   presence.type = 'peaking';
-  presence.frequency.value = 3200;
-  presence.Q.value = 0.85;
-  presence.gain.value = 6.5 + vel * 2;
+  presence.frequency.value = 2400;
+  presence.Q.value = 0.7;
+  presence.gain.value = 1.8 + vel * 0.6;
+  // Roll ice / fizz instead of boosting air.
   const air = ctx.createBiquadFilter();
   air.type = 'highshelf';
-  air.frequency.value = 6500;
-  air.gain.value = 2.5;
+  air.frequency.value = 5200;
+  air.gain.value = -3.5;
   const fizz = ctx.createBiquadFilter();
   fizz.type = 'lowpass';
-  fizz.frequency.value = 9200;
-  fizz.Q.value = 0.5;
+  fizz.frequency.value = 6200;
+  fizz.Q.value = 0.55;
   const post = ctx.createGain();
-  post.gain.value = 0.42;
-  source.connect(pre).connect(hpf).connect(drive).connect(scoop).connect(presence).connect(air).connect(fizz).connect(post);
+  post.gain.value = 0.48;
+  source.connect(pre).connect(hpf).connect(drive).connect(body).connect(scoop).connect(presence).connect(air).connect(fizz).connect(post);
   return post;
 }
 
@@ -333,10 +344,10 @@ export class AudioEngine {
       g.setValueAtTime(0, start); g.linearRampToValueAtTime(level, start + 0.18); g.setValueAtTime(level, off); g.setTargetAtTime(0, off, 0.5);
       end = off + 3;
     } else if (def.id === 'electric') {
-      // Fallback metal: stacked saws through the same amp curve until samples load.
+      // Fallback metal: slightly softer stacked saws through the thicker amp curve until samples load.
       const merge = ctx.createGain();
-      merge.gain.value = 0.12;
-      for (const det of [-12, 0, 12]) {
+      merge.gain.value = 0.1;
+      for (const det of [-8, 0, 8]) {
         const o = ctx.createOscillator();
         o.type = 'sawtooth';
         o.frequency.value = f;
@@ -346,7 +357,7 @@ export class AudioEngine {
       }
       const amp = connectMetalAmp(ctx, merge, vel);
       amp.connect(out);
-      const level = 0.55 * (0.4 + 0.6 * vel);
+      const level = 0.48 * (0.4 + 0.6 * vel);
       g.setValueAtTime(0, start);
       g.linearRampToValueAtTime(level, start + 0.004);
       g.setTargetAtTime(level * 0.55, start + 0.02, 0.18);
