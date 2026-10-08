@@ -85,6 +85,17 @@ section { margin-top: 10px; }
 .root-move.root-up { color: #7fd0a8; }
 .root-move.root-down { color: #f0a070; }
 .root-move.root-same { color: var(--muted); }
+.root-badge {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+  padding: 1px 7px; border-radius: 999px; border: 1px solid;
+  vertical-align: middle; margin-left: 6px;
+}
+.root-badge.tight { margin-left: 4px; font-size: 10px; padding: 0 5px; }
+.root-badge.root-up { color: #7fd0a8; border-color: #3a6b55; background: rgba(127, 208, 168, 0.12); }
+.root-badge.root-down { color: #f0a070; border-color: #6b4a32; background: rgba(240, 160, 112, 0.12); }
+.root-badge.root-same { color: var(--muted); border-color: var(--line); background: transparent; }
+.nprank-meta { display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; flex-wrap: wrap; }
 .typed { display: flex; gap: 6px; flex: 1; min-width: 200px; margin-top: 2px; }
 .typed input { flex: 1; min-width: 0; }
 .toggle { display: flex; align-items: center; gap: 4px; }

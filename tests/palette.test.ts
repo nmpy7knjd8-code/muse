@@ -5,12 +5,14 @@ const ch = (s: string) => parseChord(s)!;
 
 describe('rootMotion', () => {
   it('marks higher / lower / same roots with functional 4ths/5ths', () => {
-    expect(rootMotion(ch('C'), ch('G'))).toMatchObject({ dir: '↑', label: '↑ 5th' });
-    expect(rootMotion(ch('C'), ch('F'))).toMatchObject({ dir: '↑', label: '↑ 4th' });
+    expect(rootMotion(ch('C'), ch('G'))).toMatchObject({ dir: '↑', label: '↑ higher · 5th' });
+    expect(rootMotion(ch('C'), ch('F'))).toMatchObject({ dir: '↑', label: '↑ higher · 4th' });
     expect(rootMotion(ch('C'), ch('D')).dir).toBe('↑');
     expect(rootMotion(ch('C'), ch('Bb')).dir).toBe('↓');
-    expect(rootMotion(ch('C'), ch('C')).dir).toBe('→');
-    expect(rootMotion(ch('C'), ch('Am')).label).toBe('↓ 3rd');
+    expect(rootMotion(ch('C'), ch('C'))).toMatchObject({ dir: '→', label: '→ same root' });
+    expect(rootMotion(ch('C'), ch('Am')).label).toBe('↓ lower · 3rd');
+    expect(rootMotion(ch('C'), ch('Bb')).label).toMatch(/lower/i);
+    expect(rootMotion(ch('C'), ch('D')).label).toMatch(/higher/i);
   });
 });
 

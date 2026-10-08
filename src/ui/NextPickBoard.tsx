@@ -127,9 +127,9 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
               <span className="nprank-i">{i + 1}</span>
               <span className="nprank-name" style={{ color }}>{name}</span>
               <span className="nprank-bar"><i style={{ width: `${Math.max(8, bar)}%`, background: color }} /></span>
-              <span className="nprank-meta muted">
-                {isChord(s) ? s.roman : s.degree}
-                {root ? ` · ${root.label}` : ''}
+              <span className="nprank-meta">
+                <span className="muted">{isChord(s) ? s.roman : s.degree}</span>
+                {root && <span className={'root-badge tight ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')}>{root.label}</span>}
               </span>
             </button>
           );
@@ -146,7 +146,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
               {isChord(selected) ? selected.roman : `degree ${selected.degree}`}
               {isChord(selected) && fromChord ? (() => {
                 const r = rootMotion(fromChord, selected.chord);
-                return <>{' · '}<span className={'root-move ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')}>{r.label}</span></>;
+                return <span className={'root-badge ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')}>{r.label}</span>;
               })() : null}
               {' · '}{labelOf(selected.primaryMood).toLowerCase()}
               {isChord(selected) && selected.moodShift ? ` · ${selected.moodShift.arrow} ${selected.moodShift.text}` : ''}

@@ -9,7 +9,7 @@ import { parseRoman } from './roman';
 export interface RootMotion {
   /** Higher / lower / same root vs previous (nearest pitch-class move, −6..6). */
   dir: '↑' | '↓' | '→';
-  /** Compact label, e.g. "↑ 4th", "↓ step", "same". */
+  /** Compact label, e.g. "↑ higher · 4th", "↓ lower · step", "→ same root". */
   label: string;
   /** Signed semitone distance −6..6. */
   semitones: number;
@@ -30,12 +30,13 @@ function motionName(abs: number): string {
  */
 export function rootMotion(prev: Chord, next: Chord): RootMotion {
   const asc = mod(pc(next.root) - pc(prev.root), 12);
-  if (asc === 0) return { dir: '→', label: 'same', semitones: 0 };
-  if (asc === 7) return { dir: '↑', label: '↑ 5th', semitones: 7 };
-  if (asc === 5) return { dir: '↑', label: '↑ 4th', semitones: 5 };
+  if (asc === 0) return { dir: '→', label: '→ same root', semitones: 0 };
+  if (asc === 7) return { dir: '↑', label: '↑ higher · 5th', semitones: 7 };
+  if (asc === 5) return { dir: '↑', label: '↑ higher · 4th', semitones: 5 };
   const d = mod(asc + 6, 12) - 6;
   const dir: '↑' | '↓' = d > 0 ? '↑' : '↓';
-  return { dir, label: `${dir} ${motionName(Math.abs(d))}`, semitones: d };
+  const word = dir === '↑' ? 'higher' : 'lower';
+  return { dir, label: `${dir} ${word} · ${motionName(Math.abs(d))}`, semitones: d };
 }
 
 /** Short P/L/R tag when the move is a single neo-Riemannian step; otherwise null. */

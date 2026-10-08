@@ -783,7 +783,14 @@ function Composer({ data }: { data: LoadedData }) {
         <div className="vis-head">
           {tab === 'chords' && selChord ? (
             <>
-              <div className="vis-title"><b style={{ color: selColor }}>{cur ? `${chordSymbol(cur, true)} → ` : ''}{selChord.symbol}</b> <span className="muted">{selChord.roman}</span></div>
+              <div className="vis-title">
+                <b style={{ color: selColor }}>{cur ? `${chordSymbol(cur, true)} → ` : ''}{selChord.symbol}</b>
+                <span className="muted">{selChord.roman}</span>
+                {cur ? (() => {
+                  const r = rootMotion(cur, selChord.chord);
+                  return <span className={'root-badge ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{r.label}</span>;
+                })() : null}
+              </div>
               <button className="ghost" onClick={() => setDetail(true)}>Details</button>
             </>
           ) : tab === 'melody' && selNote ? (
@@ -901,7 +908,7 @@ function Composer({ data }: { data: LoadedData }) {
                     <div className="card-top">
                       <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
                       <span className="rn">{isChord ? (s as ChordSuggestion).roman : (s as NoteSuggestion).degree}</span>
-                      {root && <span className={'root-move ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{root.label}</span>}
+                      {root && <span className={'root-badge ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{root.label}</span>}
                       <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
                     </div>
                     <div className="tags">
@@ -1038,7 +1045,7 @@ function PaletteRow({
             : role;
           const tip = [
             `${chordSymbol(c, true)} (${roman})`,
-            motion ? `root ${motion.label} than ${chordSymbol(prev!, true)}` : null,
+            motion ? `root ${motion.label} vs ${chordSymbol(prev!, true)}` : null,
             nrt ? `neo-Riemannian ${nrt}` : null,
             shift ? `${shift.arrow} ${shift.text}` : moodId ? lex.label(moodId) : null,
             role,
