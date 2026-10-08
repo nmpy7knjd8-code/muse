@@ -170,25 +170,50 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
 }
 
 const REQUEST_ISSUE = 'https://github.com/nmpy7knjd8-code/muse/issues/new';
+const REQUEST_STORAGE = 'muse.bandRequests';
+type BandRequest = { band: string; note: string; at: number; taskUrl?: string };
+
+function loadRequests(): BandRequest[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(REQUEST_STORAGE) || '[]') as BandRequest[];
+    return Array.isArray(raw) ? raw.slice(0, 20) : [];
+  } catch { return []; }
+}
 
 function BandRequestBox() {
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [sent, setSent] = useState<string | null>(null);
+  const [recent, setRecent] = useState<BandRequest[]>(() => loadRequests());
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const band = name.trim();
     if (!band) return;
     const why = note.trim();
-    try {
-      const prev = JSON.parse(localStorage.getItem('muse.bandRequests') || '[]') as Array<{ band: string; note: string; at: number }>;
-      localStorage.setItem('muse.bandRequests', JSON.stringify([{ band, note: why, at: Date.now() }, ...prev].slice(0, 20)));
-    } catch { /* private mode */ }
-    const title = encodeURIComponent(`Artist Lens request: ${band}`);
-    const body = encodeURIComponent(
-      `## Band / artist request\n\n**Name:** ${band}\n\n**Why / notes:**\n${why || '(none)'}\n\n_Submitted from Muse Artist Lens._\n`,
-    );
-    window.open(`${REQUEST_ISSUE}?title=${title}&body=${body}`, '_blank', 'noopener,noreferrer');
+    const title = `Artist Lens request: ${band}`;
+    const body = [
+      '## Band / artist request',
+      '',
+      `**Name:** ${band}`,
+      '',
+      '**Why / notes:**',
+      why || '(none)',
+      '',
+      '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`._',
+      '',
+      '### Checklist',
+      '- [ ] Research techniques + sources',
+      '- [ ] Add artist entry with try-it exercise',
+      '- [ ] Update `tests/artists.test.ts` counts',
+    ].join('\n');
+    const taskUrl = `${REQUEST_ISSUE}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent('artist-lens-request')}`;
+    const entry: BandRequest = { band, note: why, at: Date.now(), taskUrl };
+    const next = [entry, ...loadRequests().filter((r) => r.band.toLowerCase() !== band.toLowerCase())].slice(0, 20);
+    try { localStorage.setItem(REQUEST_STORAGE, JSON.stringify(next)); } catch { /* private mode */ }
+    setRecent(next);
+    // Open a GitHub issue = the maintainer/agent task to add the band
+    const win = window.open(taskUrl, '_blank', 'noopener,noreferrer');
+    if (!win) window.location.assign(taskUrl);
     setSent(band);
     setName('');
     setNote('');
@@ -196,11 +221,23 @@ function BandRequestBox() {
   return (
     <form className="band-request" onSubmit={submit} aria-label="Request a band for Artist Lens">
       <h4>Request a band</h4>
-      <p className="small muted">Missing someone? Send a request — it opens a GitHub task for the Muse maintainers.</p>
+      <p className="small muted">Missing someone? Submit a name — Muse opens a GitHub task to add them to Artist Lens.</p>
       <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
       <input aria-label="Why they fit" placeholder="Why they’re interesting (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-      <button type="submit" className="add" disabled={!name.trim()}>Request</button>
-      {sent && <p className="small" role="status">Request for <b>{sent}</b> opened — thanks.</p>}
+      <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
+      {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
+      {recent.length > 0 && (
+        <div className="band-request-recent">
+          <div className="small muted">Recent requests</div>
+          <ul className="small">
+            {recent.slice(0, 5).map((r) => (
+              <li key={`${r.band}-${r.at}`}>
+                {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </form>
   );
 }

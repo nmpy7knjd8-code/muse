@@ -246,6 +246,9 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .band-request { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
 .band-request h4 { margin: 0; }
 .band-request input { width: 100%; }
+.band-request-recent { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line); }
+.band-request-recent ul { margin: 4px 0 0; padding-left: 18px; }
+.band-request-recent a { color: #9ecbff; }
 .artist-card { text-align: left; display: flex; flex-direction: column; gap: 6px; background: var(--panel2); border-radius: 12px; padding: 10px 12px; width: 100%; }
 .artist-card .ac-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .artist-card .ac-head b { font-size: 17px; }
