@@ -162,7 +162,8 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
     <aside className="fit-explainer" aria-label="Which chords will work">
       <p>
         <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (home / builds / pulls home).
-        <b> 7ths</b> = same family, richer colour. <b>Extra colour</b> = borrowed or secondary moves for surprise.
+        <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture at home.
+        <b> Extra colour</b> = borrowed modal surprise. <b>Secondaries</b> = aim at another chord, then resolve.
       </p>
       <p className="fit-why">
         Muse ranks next chords by key fit, voice-leading from where you are, mood, and (when harmonizing) how well they sit under your melody.
