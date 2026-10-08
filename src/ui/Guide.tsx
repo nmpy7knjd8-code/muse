@@ -1,0 +1,176 @@
+// How-to guide: each Muse feature with a plain “how to use it” and why it matters musically.
+import type { ReactNode } from 'react';
+
+export type GuideJump = 'chords' | 'melody' | 'artists';
+
+interface Props {
+  onJump: (tab: GuideJump) => void;
+}
+
+interface Section {
+  id: string;
+  title: string;
+  use: string;
+  musicality: string;
+  tip?: string;
+  jump?: GuideJump;
+  jumpLabel?: string;
+}
+
+const SECTIONS: Section[] = [
+  {
+    id: 'overview',
+    title: 'What Muse is for',
+    use: 'Build a short progression and/or melody one decision at a time. Hear each option before you add it. Muse ranks suggestions by fit to your key, what you already wrote, and the mood you asked for — not by random aesthetics alone.',
+    musicality: 'Songwriting is often “what comes next?” Muse externalizes that choice so you can compare tension, colour, and familiarity with your ears, then lock what feels true.',
+  },
+  {
+    id: 'key',
+    title: 'Key, Auto, and meter',
+    use: 'Pick a tonic and mode at the top, or leave Auto on so Muse guesses major/minor from what you enter. Set the meter (time signature) so melody notes land on the right beat grid.',
+    musicality: 'Key is “home.” Notes and chords inside the key feel related; outside notes add colour or friction. Meter shapes where strong beats fall — chord tones on strong beats usually feel more settled.',
+    tip: 'If Auto keeps flipping your key, turn it off and set the tonic yourself.',
+  },
+  {
+    id: 'timeline',
+    title: 'The timeline (two lanes)',
+    use: 'Each bar has a chord underneath and optional melody notes on top. Tap a chord to hear it; tap a melody note’s label to hear that pitch. Lock (🔒) a bar you want to keep. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
+    musicality: 'Harmony and melody are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are.',
+    tip: '▶ Play hears chords and melody together in time.',
+  },
+  {
+    id: 'chords',
+    title: 'Chords tab — palette & suggestions',
+    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Below, ranked cards and the next-pick board show Muse’s best next chords. ▶ hears; ＋ adds.',
+    musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
+    jump: 'chords',
+    jumpLabel: 'Open Chords',
+  },
+  {
+    id: 'melody',
+    title: 'Melody tab — keyboard & Listen',
+    use: 'Tap the piano strip (or 👂 Listen) to place notes on successive beats. Full bars spill into a new “no chord” bar. Colour tags tell you if a note sits in the chord, adds colour, rubs if held, or clashes.',
+    musicality: 'Melody that hugs chord tones on strong beats feels singable; colour notes and mild rubs create interest; clashes want resolution. That push–pull is melodic storytelling.',
+    jump: 'melody',
+    jumpLabel: 'Open Melody',
+    tip: 'Hear on a suggestion previews only the next note — not the whole line — so you judge the step itself.',
+  },
+  {
+    id: 'harmonize',
+    title: 'Find a chord (harmonize)',
+    use: 'When a bar has melody but no chord, the banner offers Find a chord. On the Chords tab, Hear plays each candidate under that melody. ↻ on a filled bar clears the chord so you can reharmonize.',
+    musicality: 'Reharmonization is a classic craft: same tune, new chords. Fitting melody “in the chord” stabilizes; deliberate colour or rub changes the emotional read without rewriting the melody.',
+    jump: 'chords',
+    jumpLabel: 'Go find a chord',
+  },
+  {
+    id: 'nextpick',
+    title: 'Next-pick board',
+    use: 'The scatter map places options by familiarity↔colour (or clash↔fit when harmonizing) and calm↔tense. Tap a dot to hear; use the rank strip for a top-to-bottom best-fit list.',
+    musicality: 'You’re choosing a path through musical space: safer moves stay left/down; adventurous colours and tension climb up/right. Best fit is the rank order — use the map to understand *why*.',
+  },
+  {
+    id: 'paths',
+    title: 'Ready-made progressions & melody runs',
+    use: 'Above the cards, Muse offers 2- or 3-step packages. For chords, blue passing notes sit between chords. ▶ hears the whole path; ＋ adds it in order.',
+    musicality: 'Short paths teach voice-leading and phrase shape: not just “what chord,” but how to walk there so the ear follows. Passing notes are the glue between harmonic pillars.',
+  },
+  {
+    id: 'mood',
+    title: 'Mood bar & Safe ↔ Adventurous',
+    use: 'Type a mood (haunting, victorious but bittersweet…) or tap presets. The slider favors common/safe moves vs rarer/colourful ones. Mood fit % on cards shows alignment with your request.',
+    musicality: 'Mood language maps onto brightness, tension, stability, and surprise. Sliding toward Adventurous is how you leave the diatonic neighborhood without losing the thread of “what you’re going for.”',
+  },
+  {
+    id: 'circle',
+    title: 'Circle of fifths',
+    use: 'Big letters add a chord (or melody note on the Melody tab). Colored rim dots are Muse’s next picks — tap to hear. +1/−1 under letters = steps from where you are (right = brighter / pulls home, left = opens / relaxes).',
+    musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
+    tip: 'Switch instruments under the circle — taps play on the sound you chose (including bass).',
+  },
+  {
+    id: 'visuals',
+    title: 'Visuals (Piano, Guitar, Moves, Mood, Map)',
+    use: 'With a chord selected: Piano / Guitar show where to put your hands; Moves shows how each voice travels; Mood places candidates by dark↔bright and calm↔tense; Map (Tonnetz) shows nearby major/minor triads.',
+    musicality: 'Seeing shared notes and small motion trains smooth voice leading. The mood map is emotional geography; the Tonnetz is geometric neighborhood — both ways of choosing with intention instead of habit.',
+  },
+  {
+    id: 'instruments',
+    title: 'Instrument sounds',
+    use: 'Pick Piano, guitar variants, Rhodes, pad, or bass. Muse voices chords for that instrument (bass plays a single low root). Melody notes fold into each instrument’s playable range.',
+    musicality: 'Register and timbre change meaning: the same progression on bass vs pad feels like different arrangements. Hear options in the texture you’ll actually write in.',
+  },
+  {
+    id: 'artists',
+    title: 'Artist Lens',
+    use: 'Browse artists’ polarities and techniques, then Try it to load a short exercise into your timeline. Request a song or artist analysis when you want the catalog expanded.',
+    musicality: 'Styles are patterns of tension, darkness, and surprise. Trying an exercise is apprenticing for a minute — then remixing it with Muse’s suggestions into your own voice.',
+    jump: 'artists',
+    jumpLabel: 'Open Artist Lens',
+  },
+  {
+    id: 'lore-export',
+    title: 'Lore mode & export',
+    use: 'Lore mode shows folklore notes about keys/chords (not science). Copy / MIDI export your timeline for another DAW or shared lead sheet.',
+    musicality: 'Lore is seasoning for imagination. Export is how sketches leave the sandbox and become rehearsal material.',
+  },
+];
+
+const WORKFLOW: Array<{ step: string; detail: string }> = [
+  { step: 'Set key & mood', detail: 'Pick home, type a mood, leave Safe near the middle.' },
+  { step: 'Lay a spine', detail: 'Add 2–4 in-key chords (or a ready-made progression). Hear each one.' },
+  { step: 'Sing a line', detail: 'Switch to Melody; place a short phrase. Watch in-the-chord vs colour tags.' },
+  { step: 'Harmonize gaps', detail: 'On “no chord” bars, Find a chord and pick by melody fit.' },
+  { step: 'Colour on purpose', detail: 'Nudge Adventurous or Extra colour when you want a lift — then resolve home.' },
+  { step: 'Export', detail: '▶ Play the whole thing, then MIDI or Copy into your other tools.' },
+];
+
+function Block({ s, onJump }: { s: Section; onJump: (t: GuideJump) => void }) {
+  return (
+    <article className="guide-card" id={`guide-${s.id}`}>
+      <h3>{s.title}</h3>
+      <p className="guide-use"><span className="guide-kicker">How to use it</span>{s.use}</p>
+      <p className="guide-mus"><span className="guide-kicker mus">Why it matters</span>{s.musicality}</p>
+      {s.tip && <p className="small muted guide-tip">Tip: {s.tip}</p>}
+      {s.jump && (
+        <button type="button" className="pill" onClick={() => onJump(s.jump!)}>
+          {s.jumpLabel ?? 'Try it'}
+        </button>
+      )}
+    </article>
+  );
+}
+
+export function Guide({ onJump }: Props): ReactNode {
+  return (
+    <div className="guide-page">
+      <header className="guide-hero">
+        <h2>How to use Muse</h2>
+        <p className="muted">
+          A field guide to each feature — what to tap, and how it connects to writing music that feels intentional.
+        </p>
+      </header>
+
+      <nav className="guide-toc" aria-label="Guide sections">
+        {SECTIONS.map((s) => (
+          <a key={s.id} href={`#guide-${s.id}`}>{s.title.replace(/ — .*| \(.*/, '')}</a>
+        ))}
+      </nav>
+
+      <section className="guide-workflow" aria-label="Suggested workflow">
+        <h3>A simple writing loop</h3>
+        <ol>
+          {WORKFLOW.map((w) => (
+            <li key={w.step}><b>{w.step}.</b> {w.detail}</li>
+          ))}
+        </ol>
+      </section>
+
+      {SECTIONS.map((s) => <Block key={s.id} s={s} onJump={onJump} />)}
+
+      <p className="small muted center guide-foot">
+        Muse works offline on this device. Suggestions are helpers — your ear has the final vote.
+      </p>
+    </div>
+  );
+}

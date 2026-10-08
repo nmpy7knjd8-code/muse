@@ -19,10 +19,11 @@ import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
+import { Guide } from './Guide';
 import { NextPickBoard } from './NextPickBoard';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 
-type Tab = 'chords' | 'melody' | 'artists';
+type Tab = 'chords' | 'melody' | 'artists' | 'guide';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
 interface Snapshot { slots: TimelineSlot[] }
 
@@ -714,10 +715,10 @@ function Composer({ data }: { data: LoadedData }) {
         <p className="meter-note small muted" title="From Artist Lens try-it">Meter note: {meterNote}</p>
       )}
 
-      {/* Unified timeline: melody lane above, chords below */}
-      <section className="strip" aria-label="Timeline">
+      {/* Unified timeline: melody lane above, chords below (hidden on Guide) */}
+      {tab !== 'guide' && <section className="strip" aria-label="Timeline">
         {slots.length === 0 ? (
-          <p className="muted small">Tap chords below to start, or switch to Melody — both share this timeline.</p>
+          <p className="muted small">Tap chords below to start, or switch to Melody — both share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setTab('guide')}>Guide</button>.</p>
         ) : (
           <div className="timeline" role="list">
             {slots.map((s, i) => {
@@ -807,7 +808,7 @@ function Composer({ data }: { data: LoadedData }) {
             : loadState.state === 'ready' ? <span className="muted">♪ {INSTRUMENTS[instrument].label} ready</span>
             : <span className="muted">Tap anything to start sound</span>}
         </div>
-      </section>
+      </section>}
 
       {/* Input */}
       <section className="input">
@@ -815,8 +816,11 @@ function Composer({ data }: { data: LoadedData }) {
           <button className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); }}>Chords</button>
           <button className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); }}>Melody</button>
           {data.artists && <button className={tab === 'artists' ? 'on' : ''} onClick={() => { setTab('artists'); setSelectedId(null); }}>Artist Lens</button>}
+          <button className={tab === 'guide' ? 'on' : ''} onClick={() => { setTab('guide'); setSelectedId(null); }}>Guide</button>
         </div>
-        {tab === 'artists' && data.artists ? (
+        {tab === 'guide' ? (
+          <Guide onJump={(t) => { setTab(t); setSelectedId(null); window.scrollTo({ top: 0 }); }} />
+        ) : tab === 'artists' && data.artists ? (
           <ArtistLens key={focusArtist ?? 'all'} initial={focusArtist} data={data.artists} lex={lex} kbIndex={data.kbIndex} onTryIt={tryIt} onPreview={previewTryIt} />
         ) : (<>
         <div className={'listen' + (listen ? ' on' : '')}>
@@ -890,7 +894,7 @@ function Composer({ data }: { data: LoadedData }) {
         </>)}
       </section>
 
-      {tab !== 'artists' && (<>
+      {tab !== 'artists' && tab !== 'guide' && (<>
 
       {/* Mood */}
       <section className="mood">
@@ -1182,7 +1186,8 @@ function Composer({ data }: { data: LoadedData }) {
 
       <details className="about">
         <summary>About &amp; credits</summary>
-        <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.</p>
+        <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.
+          {' '}<button type="button" className="linkish" onClick={() => { setTab('guide'); window.scrollTo({ top: 0 }); }}>Open the Guide</button> for how each feature connects to musicality.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
           Nylon, steel &amp; distorted electric guitar, bass guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
           Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>

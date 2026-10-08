@@ -79,8 +79,8 @@ section { margin-top: 10px; }
 .reltag { border: 1px solid; border-radius: 999px; padding: 1px 7px; font-size: 11.5px; }
 
 .input { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
-.seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; margin-bottom: 8px; }
-.seg button { flex: 1; border: none; background: transparent; padding: 7px 4px; border-radius: 8px; font-size: 14px; }
+.seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; margin-bottom: 8px; gap: 2px; }
+.seg button { flex: 1; border: none; background: transparent; padding: 7px 3px; border-radius: 8px; font-size: 13px; }
 .seg button.on { background: #3a3550; font-weight: 600; }
 .small-seg button { font-size: 12.5px; padding: 6px 2px; }
 .pal-block { margin-bottom: 8px; }
@@ -309,7 +309,41 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .work summary { cursor: pointer; }
 .sources a { color: #b9a7ff; word-break: break-word; }
 .guide li, .sources li { margin-bottom: 4px; }
-.linkish { background: none; border: none; padding: 0; color: #b9a7ff; text-decoration: underline; }
+.linkish { background: none; border: none; padding: 0; color: #b9a7ff; text-decoration: underline; cursor: pointer; }
+
+/* How-to Guide */
+.guide-page { margin-top: 4px; }
+.guide-hero h2 { margin: 4px 0 6px; font-size: 22px; font-weight: 800; letter-spacing: 0.01em; }
+.guide-hero p { margin: 0 0 12px; line-height: 1.45; }
+.guide-toc {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0;
+}
+.guide-toc a {
+  font-size: 12px; color: var(--muted); text-decoration: none;
+  border: 1px solid var(--line); background: var(--panel2); border-radius: 999px; padding: 4px 9px;
+}
+.guide-toc a:hover { color: var(--text); border-color: #5d5680; }
+.guide-workflow {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.guide-workflow h3 { margin: 0 0 6px; font-size: 14px; color: var(--text); text-transform: none; letter-spacing: 0; }
+.guide-workflow ol { margin: 0; padding-left: 1.2em; }
+.guide-workflow li { margin: 4px 0; line-height: 1.4; font-size: 13.5px; }
+.guide-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 12px 10px; margin: 0 0 10px;
+}
+.guide-card h3 { margin: 0 0 8px; font-size: 16px; color: var(--text); font-weight: 700; text-transform: none; letter-spacing: 0; }
+.guide-use, .guide-mus { margin: 0 0 8px; font-size: 13.5px; line-height: 1.45; }
+.guide-kicker {
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: #7fd0a8; margin-bottom: 2px;
+}
+.guide-kicker.mus { color: #9ecbff; }
+.guide-tip { margin: 0 0 8px; }
+.guide-card .pill { margin-top: 2px; }
+.guide-foot { margin: 16px 0 8px; }
 .card-rank { font-size: 11px; font-weight: 700; color: #7fd0a8; min-width: 1.4em; }
 .card-hands { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; font-size: 11px; color: var(--muted); }
 .card-hands b { color: var(--text); font-weight: 600; margin-right: 4px; }
