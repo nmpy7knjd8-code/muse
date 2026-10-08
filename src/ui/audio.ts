@@ -1,4 +1,4 @@
-// Muse audio engine: sampled instruments (piano / nylon & steel / metal guitar / Rhodes / pad / bass) with ADSR,
+// Muse audio engine: sampled instruments (piano / nylon & steel / metal guitar / Rhodes / pad / electronic / bass) with ADSR,
 // velocity, humanized strums, a generated convolution reverb, and a compressor + limiter master bus.
 // Works on any BaseAudioContext, so the offline preview renderer uses exactly the same code.
 // Realtime use must be unlocked from a user gesture (iOS Safari autoplay rules).
@@ -343,6 +343,29 @@ export class AudioEngine {
       const level = 0.09 * (0.4 + 0.6 * vel);
       g.setValueAtTime(0, start); g.linearRampToValueAtTime(level, start + 0.18); g.setValueAtTime(level, off); g.setTargetAtTime(0, off, 0.5);
       end = off + 3;
+    } else if (def.id === 'synth') {
+      // Bright saw lead until samples load — quick attack, filter bite, short tail.
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.Q.value = 1.1;
+      lp.frequency.setValueAtTime(900 + vel * 1400, start);
+      lp.frequency.setTargetAtTime(1400 + vel * 900, start + 0.04, 0.12);
+      const merge = ctx.createGain();
+      merge.gain.value = 0.12;
+      for (const det of [-6, 0, 7]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = f;
+        o.detune.value = det;
+        o.connect(merge);
+        oscs.push(o);
+      }
+      merge.connect(lp).connect(out);
+      const level = 0.16 * (0.4 + 0.6 * vel);
+      g.setValueAtTime(0, start);
+      g.linearRampToValueAtTime(level, start + 0.01);
+      g.setTargetAtTime(level * 0.55, start + 0.05, 0.2);
+      g.setTargetAtTime(0, off, def.release);
+      end = off + def.release * 5;
     } else if (def.id === 'electric') {
       // Fallback metal: slightly softer stacked saws through the thicker amp curve until samples load.
       const merge = ctx.createGain();

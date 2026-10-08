@@ -121,7 +121,7 @@ const SECTIONS: Section[] = [
   {
     id: 'instruments',
     title: 'Instrument sounds',
-    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, or bass. Muse voices chords for that instrument (bass plays a single low root; metal runs a high-gain amp). Melody notes fold into each instrument’s playable range.',
+    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, Electronic (saw lead), or bass. Muse voices chords for that instrument (bass plays a single low root; metal runs a high-gain amp). Melody notes fold into each instrument’s playable range.',
     musicality: 'Register and timbre change meaning: the same progression on bass vs pad feels like different arrangements. Hear options in the texture you’ll actually write in.',
   },
   {
