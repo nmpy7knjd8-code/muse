@@ -62,65 +62,99 @@ function makeImpulse(ctx: BaseAudioContext, seconds = 1.7, preDelay = 0.012): Au
   return ir;
 }
 
-/** Soft-clip / tanh drive curve — moderate gain for a thicker, cleaner metal stack. */
-function metalDriveCurve(drive = 18): Float32Array<ArrayBuffer> {
+/** Soft-clip drive curve with slight even-harmonic asymmetry (tube-ish, not digital hard-clip). */
+function metalDriveCurve(drive: number): Float32Array<ArrayBuffer> {
   const n = 2048;
   const curve = new Float32Array(new ArrayBuffer(n * 4));
   for (let i = 0; i < n; i++) {
     const x = (i * 2) / (n - 1) - 1;
-    // Mild asymmetry (amp-like) without the ice-pick hard clip of the old curve.
-    const shaped = x >= 0 ? x : x * 0.92;
+    const shaped = x >= 0 ? x : x * 0.88;
     curve[i] = Math.tanh(shaped * drive);
   }
   return curve;
 }
 
 /**
- * Metal amp path: keep body → gentle drive → light mid scoop → warm presence → cut fizz.
- * Tuned thicker/cleaner (less tinny) than a scooped high-gain stack.
- * Applied only to the electric (metal) instrument so other guitars stay clean.
+ * Clean electric-guitar samples → metal amp: preamp EQ → drive → speaker cab.
+ * Source samples are MusyngKite electric_guitar_clean (real guitar), not FluidR3 distortion
+ * (which reads as a synth lead). Cab low-pass is what makes it sound like a guitar cab.
  */
 function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number): AudioNode {
   const pre = ctx.createGain();
-  pre.gain.value = 0.95 + vel * 0.28;
-  // Keep low body — only shed sub rumble, not the guitar's thickness.
+  // Dig into the amp a bit harder when velocity is high (pick attack).
+  pre.gain.value = 0.88 + vel * 0.35;
+
+  // Pickup / DI: shed sub rumble that muddies power chords.
   const hpf = ctx.createBiquadFilter();
   hpf.type = 'highpass';
-  hpf.frequency.value = 75;
-  hpf.Q.value = 0.55;
-  const drive = ctx.createWaveShaper();
-  drive.curve = metalDriveCurve(18);
-  drive.oversample = '4x';
-  // Warm low-mids for thickness (palm-mutes / power chords).
+  hpf.frequency.value = 90;
+  hpf.Q.value = 0.7;
+
+  // Preamp EQ into the drive: cut boxy mud, feed the amp some bite.
+  const preMud = ctx.createBiquadFilter();
+  preMud.type = 'peaking';
+  preMud.frequency.value = 380;
+  preMud.Q.value = 0.9;
+  preMud.gain.value = -3.5;
+  const preBite = ctx.createBiquadFilter();
+  preBite.type = 'peaking';
+  preBite.frequency.value = 1800;
+  preBite.Q.value = 0.8;
+  preBite.gain.value = 2.8 + vel * 1.2;
+
+  // Two soft stages → saturated without ice-pick fizz.
+  const drive1 = ctx.createWaveShaper();
+  drive1.curve = metalDriveCurve(14);
+  drive1.oversample = '4x';
+  const inter = ctx.createGain();
+  inter.gain.value = 0.85;
+  const drive2 = ctx.createWaveShaper();
+  drive2.curve = metalDriveCurve(9);
+  drive2.oversample = '4x';
+
+  // Guitar-cab sim: body, mild scoop, speaker roll-off (this is the "sounds like a guitar" part).
   const body = ctx.createBiquadFilter();
   body.type = 'peaking';
-  body.frequency.value = 220;
-  body.Q.value = 0.7;
-  body.gain.value = 3.2;
-  // Mild scoop — enough clarity without hollowing the tone.
+  body.frequency.value = 240;
+  body.Q.value = 0.75;
+  body.gain.value = 3.0;
   const scoop = ctx.createBiquadFilter();
   scoop.type = 'peaking';
-  scoop.frequency.value = 900;
-  scoop.Q.value = 0.8;
-  scoop.gain.value = -2.5;
-  // Soft upper-mid presence (was +6–8 dB @ 3.2 kHz → tinny).
+  scoop.frequency.value = 800;
+  scoop.Q.value = 0.85;
+  scoop.gain.value = -3.0;
   const presence = ctx.createBiquadFilter();
   presence.type = 'peaking';
-  presence.frequency.value = 2400;
-  presence.Q.value = 0.7;
-  presence.gain.value = 1.8 + vel * 0.6;
-  // Roll ice / fizz instead of boosting air.
+  presence.frequency.value = 3200;
+  presence.Q.value = 0.9;
+  presence.gain.value = 2.2 + vel * 0.8;
+  const cab = ctx.createBiquadFilter();
+  cab.type = 'lowpass';
+  cab.frequency.value = 4800;
+  cab.Q.value = 0.65;
   const air = ctx.createBiquadFilter();
   air.type = 'highshelf';
-  air.frequency.value = 5200;
-  air.gain.value = -3.5;
-  const fizz = ctx.createBiquadFilter();
-  fizz.type = 'lowpass';
-  fizz.frequency.value = 6200;
-  fizz.Q.value = 0.55;
+  air.frequency.value = 5500;
+  air.gain.value = -5.5;
+
   const post = ctx.createGain();
-  post.gain.value = 0.44;
-  source.connect(pre).connect(hpf).connect(drive).connect(body).connect(scoop).connect(presence).connect(air).connect(fizz).connect(post);
+  // Leave headroom for 4–6 string chords through the master compressor/limiter.
+  post.gain.value = 0.15;
+
+  source
+    .connect(pre)
+    .connect(hpf)
+    .connect(preMud)
+    .connect(preBite)
+    .connect(drive1)
+    .connect(inter)
+    .connect(drive2)
+    .connect(body)
+    .connect(scoop)
+    .connect(presence)
+    .connect(cab)
+    .connect(air)
+    .connect(post);
   return post;
 }
 
@@ -344,23 +378,36 @@ export class AudioEngine {
       g.setValueAtTime(0, start); g.linearRampToValueAtTime(level, start + 0.18); g.setValueAtTime(level, off); g.setTargetAtTime(0, off, 0.5);
       end = off + 3;
     } else if (def.id === 'electric') {
-      // Fallback metal: slightly softer stacked saws through the thicker amp curve until samples load.
+      // Fallback until samples load: filtered saw "pickup" → same amp/cab as sampled path.
       const merge = ctx.createGain();
-      merge.gain.value = 0.1;
-      for (const det of [-8, 0, 8]) {
+      merge.gain.value = 0.12;
+      const tone = ctx.createBiquadFilter();
+      tone.type = 'lowpass';
+      tone.frequency.value = 2200 + vel * 900;
+      tone.Q.value = 0.5;
+      for (const det of [-6, 0, 7]) {
         const o = ctx.createOscillator();
         o.type = 'sawtooth';
         o.frequency.value = f;
         o.detune.value = det;
-        o.connect(merge);
+        o.connect(tone);
         oscs.push(o);
       }
+      // Quiet sine fundamental keeps the note guitar-like under heavy drive.
+      const fund = ctx.createOscillator();
+      fund.type = 'sine';
+      fund.frequency.value = f;
+      const fundG = ctx.createGain();
+      fundG.gain.value = 0.04;
+      fund.connect(fundG).connect(merge);
+      oscs.push(fund);
+      tone.connect(merge);
       const amp = connectMetalAmp(ctx, merge, vel);
       amp.connect(out);
-      const level = 0.48 * (0.4 + 0.6 * vel);
+      const level = 0.42 * (0.4 + 0.6 * vel);
       g.setValueAtTime(0, start);
-      g.linearRampToValueAtTime(level, start + 0.004);
-      g.setTargetAtTime(level * 0.55, start + 0.02, 0.18);
+      g.linearRampToValueAtTime(level, start + 0.003);
+      g.setTargetAtTime(level * 0.62, start + 0.025, 0.2);
       g.setTargetAtTime(0, off, def.release);
       end = off + def.release * 5;
     } else {
