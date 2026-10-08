@@ -660,7 +660,7 @@ function Composer({ data }: { data: LoadedData }) {
             onAddPc={addMelodyPc}
           />
           <p className="small muted center">
-            Big letters = notes you can add · colored rim dots = Muse’s next-note picks (tap to hear) ·
+            Big letters = notes you can add (brighter = stronger next pick) · colored rim dots = Muse’s next-note picks (tap to hear) ·
             numbers are steps from where you are (+ right/brighter, − left/opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
           </p>
           <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
@@ -691,7 +691,7 @@ function Composer({ data }: { data: LoadedData }) {
           onAddPc={addCircleChord}
         />
         <p className="small muted center">
-          Big letters = chords you can add · colored rim dots = Muse’s next-chord picks (tap to hear) ·
+          Big letters = chords you can add (brighter = stronger next pick) · colored rim dots = Muse’s next-chord picks (tap to hear) ·
           +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
           plays on <b>{INSTRUMENTS[instrument].label}</b>
         </p>

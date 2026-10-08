@@ -209,6 +209,7 @@ export interface CircleProps {
   tonicPc: number;
   scalePcs: number[];
   currentPc?: number;
+  /** Best-first next picks (score-desc). Used for rim dots and node brightness. */
   others: Array<{ pc: number; color: string; id: string }>;
   selected?: { pc: number; color: string; label: string };
   spellPc: (p: number) => string;
@@ -216,6 +217,50 @@ export interface CircleProps {
   onPick?: (id: string) => void;
   /** Tap a pitch-class node to add that root (chord or melody note) to the timeline. */
   onAddPc?: (pitchClass: number) => void;
+}
+
+/**
+ * Visibility 0..1 for each pitch class from best-first suggestion order.
+ * Top-ranked roots stay near 1; unranked roots dim so the circle reads as a gradient of next-pick strength.
+ */
+export function cofPcVisibility(others: Array<{ pc: number }>): Map<number, number> {
+  const best = new Map<number, number>();
+  others.forEach((o, i) => { if (!best.has(o.pc)) best.set(o.pc, i); });
+  const ranked = [...best.values()];
+  const maxRank = ranked.length ? Math.max(...ranked) : 0;
+  const out = new Map<number, number>();
+  for (let p = 0; p < 12; p++) {
+    const r = best.get(p);
+    if (r === undefined) {
+      out.set(p, others.length ? 0.22 : 1);
+      continue;
+    }
+    // Rank 0 (best) → 1; worst ranked among suggestions → ~0.45 (still above unranked).
+    const t = maxRank <= 0 ? 1 : 1 - r / maxRank;
+    out.set(p, 0.45 + 0.55 * (0.25 + 0.75 * t * t));
+  }
+  return out;
+}
+
+function lerpChannel(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
+
+/** Lift a dark node fill toward a brighter tint by visibility t (0..1). */
+function cofNodeFill(inKey: boolean, t: number): string {
+  const lo = inKey ? [0x2e, 0x2a, 0x40] : [0x1d, 0x1c, 0x24];
+  const hi = inKey ? [0x6a, 0x62, 0x98] : [0x4a, 0x46, 0x5c];
+  const u = Math.max(0, Math.min(1, t));
+  return `rgb(${lerpChannel(lo[0], hi[0], u)} ${lerpChannel(lo[1], hi[1], u)} ${lerpChannel(lo[2], hi[2], u)})`;
+}
+
+function cofNodeStroke(inKey: boolean, t: number, isTonic: boolean, hit: boolean): string {
+  if (hit) return '#ECEAF4';
+  if (isTonic) return '#fff';
+  const lo = inKey ? [0x5d, 0x56, 0x80] : [0x33, 0x31, 0x3d];
+  const hi = inKey ? [0xb0, 0xa8, 0xd8] : [0x7a, 0x74, 0x90];
+  const u = Math.max(0, Math.min(1, t));
+  return `rgb(${lerpChannel(lo[0], hi[0], u)} ${lerpChannel(lo[1], hi[1], u)} ${lerpChannel(lo[2], hi[2], u)})`;
 }
 
 export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
@@ -226,6 +271,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
     return { x: c + Math.cos(a) * r, y: c + Math.sin(a) * r };
   };
   const counts = new Map<number, number>();
+  const visibility = useMemo(() => cofPcVisibility(others), [others]);
   const arrow = useMemo(() => {
     if (currentPc === undefined || !selected) return null;
     const a = pos(currentPc, R - 18), b = pos(selected.pc, R - 18);
@@ -246,7 +292,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
   const fromName = currentPc !== undefined ? spellPc(currentPc) : spellPc(tonicPc);
   const toName = selected ? spellPc(selected.pc) : null;
   return (
-    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — neighbors are close harmonic moves">
+    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — brighter letters are stronger next picks">
       <defs>
         <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill={selected?.color ?? '#fff'} />
@@ -276,10 +322,19 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         const tag = fifthsStepTag(refPc, p);
         const tagClass = steps > 0 ? 'cw' : steps < 0 ? 'ccw' : 'home';
         const hit = pressed === p;
+        const isSel = selected?.pc === p;
+        const vis = isCur || isSel ? 1 : (visibility.get(p) ?? 1);
+        const fill = isCur ? CURRENT_COLOR : cofNodeFill(inKey, vis);
+        const stroke = isCur
+          ? (hit ? '#ECEAF4' : '#8FA8C8')
+          : isSel
+            ? (hit ? '#ECEAF4' : (selected?.color ?? '#ECEAF4'))
+            : cofNodeStroke(inKey, vis, isTonic, hit);
         return (
           <g
             key={p}
             className={onAddPc ? 'cnode-hit' : undefined}
+            opacity={isCur || isSel ? 1 : 0.35 + 0.65 * vis}
             onPointerDown={(e) => {
               if (!onAddPc) return;
               e.preventDefault();
@@ -292,14 +347,18 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
             role={onAddPc ? 'button' : undefined}
             aria-label={onAddPc ? `Add ${label}` : label}
           >
-            <title>{onAddPc ? `Tap to add ${label}` : `${label}: ${fifthsMoveLabel(refPc, p)}`}</title>
+            <title>
+              {onAddPc
+                ? `Tap to add ${label}${others.length ? ` · next-pick strength ${Math.round(vis * 100)}%` : ''}`
+                : `${label}: ${fifthsMoveLabel(refPc, p)}`}
+            </title>
             {/* Large invisible hit target for fingers */}
             {onAddPc && <circle cx={x} cy={y} r={26} fill="transparent" />}
             <circle
               cx={x} cy={y} r={hit ? 19 : 17}
-              fill={isCur ? CURRENT_COLOR : inKey ? '#2E2A40' : '#1d1c24'}
-              stroke={hit ? '#ECEAF4' : isTonic ? '#fff' : inKey ? '#5d5680' : '#33313d'}
-              strokeWidth={hit || isTonic ? 2.5 : 1}
+              fill={fill}
+              stroke={stroke}
+              strokeWidth={hit || isTonic || isSel || vis > 0.85 ? 2.5 : vis > 0.55 ? 1.6 : 1}
             />
             <text x={x} y={y + 1} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
             <text x={x} y={y + 12} className={'cstep ' + tagClass}>{tag}</text>
