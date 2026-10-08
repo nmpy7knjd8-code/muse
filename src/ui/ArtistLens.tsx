@@ -1,7 +1,7 @@
 // Artist Lens: how artists use musical polarities, with technique chips linked to Muse's theory KB
 // and "Try it" exercises that load into the progression (pedal / held bass applied).
 import { useState } from 'react';
-import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, loadTryIt, tryItText } from '../core';
+import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, loadTryIt, timeSigLabel, tryItText } from '../core';
 import type { KbItemInfo } from './data';
 
 interface Props {
@@ -110,7 +110,10 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
             <div className="tryit-head">
               <div>
                 <b>{t.label}</b>
-                <div className="small muted">{t.key.tonic} {t.key.mode.replace(/([A-Z])/g, ' $1').toLowerCase()}{t.meter ? ` · ${t.meter}` : ''}</div>
+                <div className="small muted">
+                  {t.key.tonic} {t.key.mode.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                  {l?.timeSig && <span className="meter-badge" title={t.meter || timeSigLabel(l.timeSig)}>{timeSigLabel(l.timeSig)}</span>}
+                </div>
               </div>
               <div className="row gap">
                 <button onClick={() => onPreview(t)} aria-label="Preview">▶</button>
@@ -118,6 +121,7 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
               </div>
             </div>
             {l && <div className="tryit-chords">{tryItText(l)}</div>}
+            {t.meter && <div className="small muted">Meter: {t.meter}{l?.timeSig ? ` → loads as ${timeSigLabel(l.timeSig)}` : ''}</div>}
             {t.bassPedal && <div className="small muted">Pedal / held bass: {t.bassPedal}</div>}
             {t.melodyDegrees && <div className="small muted">Melody degrees: {t.melodyDegrees.join(' ')}</div>}
             {t.howToPlay && <p className="small">{t.howToPlay}</p>}

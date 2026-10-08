@@ -26,3 +26,4 @@ export * as tensionModel from './tension';
 export * from './noteRelation';
 export * from './timeline';
 export * from './palette';
+export * from './meter';

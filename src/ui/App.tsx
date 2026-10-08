@@ -10,6 +10,8 @@ import {
   nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtTag, rootMotion,
+  TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, beatsPerBar, clampSlotsToMeter, parseMeter,
+  timeSigLabel,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -45,8 +47,22 @@ function Composer({ data }: { data: LoadedData }) {
   const [tonic, setTonic] = useState('C');
   const [mode, setMode] = useState<ModeId>('major');
   const [auto, setAuto] = useState(true);
+  const [timeSig, setTimeSig] = useState<TimeSig>(() => {
+    try {
+      const v = localStorage.getItem('muse.timeSig');
+      const p = v ? parseMeter(v) : null;
+      return p ?? DEFAULT_TIME_SIG;
+    } catch { return DEFAULT_TIME_SIG; }
+  });
+  const chooseTimeSig = (ts: TimeSig) => {
+    setTimeSig(ts);
+    try { localStorage.setItem('muse.timeSig', timeSigLabel(ts)); } catch { /* private mode */ }
+    setSlots((s) => clampSlotsToMeter(s, beatsPerBar(ts)));
+  };
+  const [meterNote, setMeterNote] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimelineSlot[]>([]);
   const [history, setHistory] = useState<Snapshot[]>([]);
+  const beats = beatsPerBar(timeSig);
   const [tab, setTab] = useState<Tab>('chords');
   const [visTab, setVisTab] = useState<VisTab>('piano');
   const [adventure, setAdventure] = useState(0.35);
@@ -79,7 +95,7 @@ function Composer({ data }: { data: LoadedData }) {
   const pendingHarm = !slots[chordTarget]?.chord && (slots[chordTarget]?.notes.length ?? 0) > 0 ? slots[chordTarget] : null;
   const noteSlot = slots[activeSlotIndex(slots)] ?? null;
   const noteChord = noteSlot?.chord ?? slots.filter((s) => s.chord).at(-1)?.chord ?? null;
-  const noteBeat = nextNoteBeat(slots);
+  const noteBeat = nextNoteBeat(slots, beats);
   const picked: Key = { tonic: parseNote(tonic)!, mode };
   const detected = useMemo(() => (auto && (chords.length >= 2 || melody.length >= 4) ? detectKeys(chords, melody)[0] : null), [auto, slots]); // eslint-disable-line react-hooks/exhaustive-deps
   // auto-detect only chooses between major/minor keys; a modal pick (e.g. Dorian) is kept as-is
@@ -104,8 +120,8 @@ function Composer({ data }: { data: LoadedData }) {
     return steps.length ? progressionTension(steps, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null;
   }, [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
   const noteSugs: NoteSuggestion[] = useMemo(
-    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat }) : []),
-    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure], // eslint-disable-line react-hooks/exhaustive-deps
+    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat, timeSig }) : []),
+    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, timeSig.num, timeSig.den], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
   const selNote = noteSugs.find((s) => s.id === selectedId) ?? noteSugs[0];
@@ -175,7 +191,7 @@ function Composer({ data }: { data: LoadedData }) {
   const playAll = () => {
     synth.unlock();
     synth.stopAll();
-    const ev = timelineEvents(slots);
+    const ev = timelineEvents(slots, { timeSig });
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
@@ -196,12 +212,12 @@ function Composer({ data }: { data: LoadedData }) {
   const dropChord = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => clearSlotChord(s, i)); };
   const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
-  const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setSelectedId(null); };
+  const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
   const addNote = (m: number) => {
     synth.unlock();
     synth.playNotes([m], { dur: 0.6 });
     snapshot();
-    setSlots((s) => insertNote(s, m).slots);
+    setSlots((s) => insertNote(s, m, undefined, beats).slots);
     setSelectedId(null);
   };
   const submitTyped = () => {
@@ -246,11 +262,11 @@ function Composer({ data }: { data: LoadedData }) {
 
   // ---- export ----
   const copyText = async () => {
-    const txt = timelineText(k, slots);
+    const txt = timelineText(k, slots, timeSig) + (meterNote ? `\nMeter note: ${meterNote}` : '');
     try { await navigator.clipboard.writeText(txt); flash('Copied timeline'); } catch { flash(txt); }
   };
   const downloadMidi = () => {
-    const bytes = toMidiTimeline(slots);
+    const bytes = toMidiTimeline(slots, 90, timeSig);
     const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'audio/midi' }));
     const a = document.createElement('a');
     a.href = url;
@@ -277,6 +293,7 @@ function Composer({ data }: { data: LoadedData }) {
     if (!journey) return;
     snapshot();
     setSlots(journey.map((x) => ({ chord: x.chord, notes: [], locked: false })));
+    setMeterNote(null);
     setTab('chords');
     setSelectedId(null);
     flash('Journey loaded — undo to go back');
@@ -289,14 +306,21 @@ function Composer({ data }: { data: LoadedData }) {
     if (!l) return flash('Could not read that exercise');
     snapshot();
     setTonic(l.tonic); setMode(l.mode); setAuto(false);
-    setSlots(l.chords.map((chord) => ({ chord, notes: [], locked: false })));
+    const nextSlots = l.chords.map((chord) => ({ chord, notes: [] as TimelineSlot['notes'], locked: false }));
+    if (l.timeSig) {
+      setTimeSig(l.timeSig);
+      try { localStorage.setItem('muse.timeSig', timeSigLabel(l.timeSig)); } catch { /* private mode */ }
+      setSlots(clampSlotsToMeter(nextSlots, beatsPerBar(l.timeSig)));
+    } else setSlots(nextSlots);
+    setMeterNote(l.meterNote ?? null);
     setTab('chords');
     setSelectedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     synth.unlock();
     const v = voiceProgression(l.chords);
     synth.playSequence(l.chords.map((c, i) => withBass(c, v[i])), 0.8, 0.75);
-    flash(`Loaded "${t.label}" (${artist.name} style) — undo to go back`);
+    const meterBit = l.timeSig ? ` · ${timeSigLabel(l.timeSig)}` : l.meterNote ? ` · ${l.meterNote}` : '';
+    flash(`Loaded "${t.label}" (${artist.name} style)${meterBit} — undo to go back`);
   };
   const previewTryIt = (t: ArtistTryIt) => {
     const l = loadTryIt(t);
@@ -308,8 +332,8 @@ function Composer({ data }: { data: LoadedData }) {
 
   // ---- Listen (live mic: melody notes via YIN, chords via chroma templates) ----
   // callbacks run outside React's render cycle, so they read the latest state through refs
-  const live = useRef({ tab, k, slots });
-  live.current = { tab, k, slots };
+  const live = useRef({ tab, k, slots, timeSig });
+  live.current = { tab, k, slots, timeSig };
   const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots }]);
   const heardChord = (root: number, quality: string): Chord => ({ root: spellInKey(live.current.k, root), quality: quality as Chord['quality'] });
   const toggleListen = async () => {
@@ -321,7 +345,7 @@ function Composer({ data }: { data: LoadedData }) {
         isPaused: () => synth.isPlaying(),
         onNote: (m) => {
           snapshotLive();
-          setSlots((x) => insertNote(x, m).slots);
+          setSlots((x) => insertNote(x, m, undefined, beatsPerBar(live.current.timeSig)).slots);
           setSelectedId(null);
           setLastHeard(midiName(m, spellInKey(live.current.k, m)));
         },
@@ -474,9 +498,28 @@ function Composer({ data }: { data: LoadedData }) {
       </header>
       <div className="keyline small">
         Key: <b>{keyName(k)}</b>
+        <span className="muted"> · </span>
+        <label className="meter-pick">
+          <span className="muted">Meter</span>
+          <select
+            aria-label="Time signature"
+            value={timeSigLabel(timeSig)}
+            onChange={(e) => {
+              const p = TIME_SIG_PRESETS.find((x) => timeSigLabel(x) === e.target.value);
+              if (p) chooseTimeSig(p);
+            }}
+          >
+            {TIME_SIG_PRESETS.map((p) => (
+              <option key={p.label} value={p.label}>{p.label}{p.hint ? ` (${p.hint})` : ''}</option>
+            ))}
+          </select>
+        </label>
         {detected && auto && <span className="muted"> · detected ({Math.round(detected.confidence * 100)}%)</span>}
         {data.kb.meta.isSeed && <span className="warn"> · using seed theory data</span>}
       </div>
+      {meterNote && meterNote !== timeSigLabel(timeSig) && (
+        <p className="meter-note small muted" title="From Artist Lens try-it">Meter note: {meterNote}</p>
+      )}
 
       {/* Unified timeline: melody lane above, chords below */}
       <section className="strip" aria-label="Timeline">
@@ -485,7 +528,7 @@ function Composer({ data }: { data: LoadedData }) {
         ) : (
           <div className="timeline" role="list">
             {slots.map((s, i) => {
-              const labeled = labelSlot(s, data.kb);
+              const labeled = labelSlot(s, data.kb, beats);
               return (
                 <div key={i} className={'tbar' + (s.locked ? ' locked' : '') + (!s.chord ? ' nc' : '')} role="listitem">
                   <div className="tmel" aria-label={`Bar ${i + 1} melody`}>

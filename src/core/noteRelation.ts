@@ -127,8 +127,15 @@ export function noteRelation(midi: number, chord: Chord, kb?: TheoryKB | null): 
 }
 
 export interface MelodyFitNote { midi: number; beat: number; dur?: number }
-/** Beat weight: downbeat counts most, beat 3 next (simple 4/4 metric hierarchy). */
-export const beatWeight = (beat: number) => (beat === 0 ? 1.5 : beat === 2 ? 1.2 : Number.isInteger(beat) ? 1 : 0.75);
+/**
+ * Beat weight for ranking: downbeat strongest; secondary accents follow the meter
+ * (beat 3 in 4/4, beat 4 in 5/4, dotted-quarter groups in x/8).
+ */
+export function beatWeight(beat: number, strong: number[] = [0, 2]): number {
+  if (beat === strong[0]) return 1.5;
+  if (strong.includes(beat)) return 1.2;
+  return Number.isInteger(beat) ? 1 : 0.75;
+}
 
 /** How well `chord` harmonizes `notes` (−1..1): duration × metric-weighted mean of relation fits. */
 export function melodyFit(notes: MelodyFitNote[], chord: Chord): number {

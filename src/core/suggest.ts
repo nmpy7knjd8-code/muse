@@ -9,6 +9,7 @@ import { Key, MODE_BY_ID, diatonicChords, inScale, keyName, spellInKey } from '.
 import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } from './voicing';
 import { neoRiemannianPath } from './relations';
 import { NoteRelation, beatWeight, melodyFit, noteRelation } from './noteRelation';
+import { TimeSig, strongBeats } from './meter';
 import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension } from './harmonyTension';
 import { MoodDimensions, MoodProfile, ProfileMatch, characteristicOffsets, chordFeatures, chordFitsMode, isEmptyProfile, matchProfile, noteFeatures, profileFromMoods } from './profile';
 
@@ -98,8 +99,10 @@ export interface NoteSuggestOptions {
   profile?: MoodProfile | null;
   adventure?: number;
   limit?: number;
-  /** beat position (0..3) the note will land on: strong beats favour chord tones, weak beats tolerate tensions */
+  /** beat position the note will land on: strong beats favour chord tones, weak beats tolerate tensions */
   beat?: number;
+  /** meter used to decide which beats are strong (default 4/4 accents) */
+  timeSig?: TimeSig;
 }
 
 // Functional-harmony transition priors (offset of chord root above tonic → next offset).
@@ -488,7 +491,7 @@ export class SuggestionEngine {
       // chord tones; tensions are freer on weak beats / with more adventure. Resolutions (e.g. leading
       // tone → tonic over V7) keep their existing evidence boost and are not re-penalized here.
       if (relation && opts.beat !== undefined && !ev.some((e) => e.category === 'resolution')) {
-        const bw = beatWeight(opts.beat);
+        const bw = beatWeight(opts.beat, opts.timeSig ? strongBeats(opts.timeSig) : [0, 2]);
         if (relation.kind === 'chord') quality += 0.1 * bw;
         else if (relation.kind === 'tension') quality += 0.15 * a - 0.05 * bw;
         else if (relation.kind === 'avoid') quality -= (0.35 - 0.15 * a) * bw;
