@@ -1005,8 +1005,7 @@ function Composer({ data }: { data: LoadedData }) {
               {selChord.moodShift && <span className="shift">{selChord.moodShift.arrow} {selChord.moodShift.text}</span>}
             </div>
             <div className="row gap">
-              <button onClick={() => playMove(selChord)}>▶ Play move</button>
-              <button onClick={() => { playChord(selChord.chord, prevVoicing); }}>Chord only</button>
+              <button onClick={() => playMove(selChord)}>▶ Hear</button>
               <button className="add" onClick={() => { addChord(selChord.chord); setDetail(false); }}>＋ Add</button>
             </div>
             <Dims s={selChord} />
