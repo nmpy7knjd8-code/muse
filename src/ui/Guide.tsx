@@ -89,6 +89,12 @@ const SECTIONS: Section[] = [
     tip: 'Switch instruments under the circle — taps play on the sound you chose (including bass).',
   },
   {
+    id: 'tension',
+    title: 'Tension curve',
+    use: 'Above the suggestion board, the Tension panel tracks how tense your progression feels for a style (pop/jazz/…). Tap a column to highlight that timeline bar; melody chips use the same colours as the timeline (in the chord / colour / rub / clash). Blue ring = melody rubs that chord.',
+    musicality: 'Songs breathe between tension and release. Watching debt stack tells you when a cadence home will feel earned — and when a colour note is creating the rub you hear.',
+  },
+  {
     id: 'visuals',
     title: 'Visuals (Piano, Guitar, Moves, Mood, Map)',
     use: 'With a chord selected: Piano / Guitar show where to put your hands; Moves shows how each voice travels; Mood places candidates by dark↔bright and calm↔tense; Map (Tonnetz) shows nearby major/minor triads.',

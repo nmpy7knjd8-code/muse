@@ -15,7 +15,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Harmonize banner when a bar has melody waiting; NextPickBoard switches to clash→fit × calm→tense.
 - Timeline ↻ clears a chord and re-opens chord suggestions for that melody (reharm).
 - Suggestion cards ranked with piano/guitar/bass hand placements; 2–3 step paths with connecting melody; CoF tap-to-add on piano & guitar views (plays current instrument); Artist Lens request copy + optional song analysis; Polyphia/Collier removed (classic rock LZ/Beatles/Rush remain); melody Hear previews only the next note.
-- Tension graph UI removed (core tension model still ranks chord suggestions quietly).
+- Tension curve restored with clearer hierarchy, REL_COLORS melody chips matching the timeline, and curve↔timeline selection sync.
 - Bass guitar: `fitMidiToInstrument` folds melody/CoF/timeline/path notes into the bass sample range; AudioEngine applies it on every `playNotes` so bass sounds on melody + circle, not only chords.
 - CoF + paths for laypeople: feel-first move labels (right=brighter / left=opens), rim dots explained as next picks, ready-made progression/melody-run copy instead of CW/V jargon.
 - Novice-friendly copy: relation tags (in the chord / colour note), palette roles (home / pulls home), “no chord” + Find a chord, glossed terms on cards and visuals.

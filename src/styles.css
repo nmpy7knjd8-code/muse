@@ -311,6 +311,54 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .guide li, .sources li { margin-bottom: 4px; }
 .linkish { background: none; border: none; padding: 0; color: #b9a7ff; text-decoration: underline; cursor: pointer; }
 
+/* Tension curve */
+.tension { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; margin: 10px 0; }
+.tension-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tension-head-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.tension-title {
+  margin: 0; font-size: 15px; font-weight: 800; color: var(--text);
+  text-transform: none; letter-spacing: 0.01em;
+}
+.tension-head select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; font-size: 13px; }
+.tmsg { margin: 2px 0 6px; color: #cfcbe0; }
+.tension-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tension svg { display: block; }
+.tlabel { font-size: 10px; fill: #bdb8d4; }
+.tlabel.ghost { font-weight: 700; }
+.tmel-cols { display: flex; align-items: flex-start; margin: 2px 0 0; }
+.tmel-col {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 2px 1px; cursor: pointer; min-height: 4px;
+}
+.tmel-col.on { background: rgba(255, 255, 255, 0.04); border-radius: 6px; }
+.tbreak { margin-top: 6px; }
+.tbreak-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.tbreak-top b { font-size: 14px; margin-right: 2px; }
+.tmetric-row { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+.tmetric {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel2); color: #cfcbe0;
+}
+.tmetric.rub { border-color: #3a5a6b; color: #7fd3ff; background: rgba(127, 211, 255, 0.12); }
+.tmetric.ok { border-color: #2f5a48; color: #7fd0a8; background: rgba(127, 208, 168, 0.1); }
+.tdetails-btn { font-size: 12px; padding: 2px 8px; }
+.tdetails { margin: 4px 0 0; line-height: 1.35; }
+.tmel-link { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.tmel-chip {
+  display: inline-block; padding: 1px 6px; border-radius: 999px; border: 1px solid #3a5a6b;
+  background: rgba(127, 211, 255, 0.12); color: #7fd3ff; font-size: 11px; font-weight: 600;
+}
+.tlegend i.band { background: rgba(79, 209, 165, 0.35); }
+.tlegend i.debt { background: rgba(240, 160, 80, 0.55); }
+.tlegend i.ceil { height: 0; border-top: 2px dashed #ef5b5b; border-radius: 0; width: 12px; }
+.tlegend i.melring {
+  width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #7fd3ff;
+  background: transparent; display: inline-block; vertical-align: -1px; margin-right: 4px;
+}
+.tbar.on { outline: 2px solid rgba(127, 208, 168, 0.65); outline-offset: 2px; border-radius: 12px; }
+.tbar.on .tchord { border-color: #7fd0a8; }
+
 /* How-to Guide */
 .guide-page { margin-top: 4px; }
 .guide-hero h2 { margin: 4px 0 6px; font-size: 22px; font-weight: 800; letter-spacing: 0.01em; }
