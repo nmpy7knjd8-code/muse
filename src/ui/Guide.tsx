@@ -130,7 +130,7 @@ const SECTIONS: Section[] = [
   {
     id: 'instruments',
     title: 'Instrument sounds',
-    use: 'Assign instruments per part: Chords, Melody, and Bass (Off keeps auto-root-only bass silent as its own part). Piano, nylon/steel/metal guitar, Rhodes, pad, or bass — metal is clean electric guitar through a high-gain amp/cab. When Bass is on, chords stay upper voices; use the Bass tab to write a composed line instead of only the automatic root.',
+    use: 'Assign instruments per part: Chords, Melody, and Bass (Off keeps auto-root-only bass silent as its own part). Piano, nylon/steel/metal guitar, Rhodes, pad, Electronic (saw lead), or bass — metal is clean electric guitar through a high-gain amp/cab. When Bass is on, chords stay upper voices; use the Bass tab to write a composed line instead of only the automatic root.',
     musicality: 'Register and timbre change meaning: pad chords under a bright melody (or a separate bass line) already feels like an arrangement. Hear options in the texture you’ll actually write in.',
   },
   {
