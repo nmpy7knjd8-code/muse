@@ -880,7 +880,7 @@ function Composer({ data }: { data: LoadedData }) {
                           type="button"
                           className={'ticon' + (s.locked ? ' on lock' : ' lock')}
                           aria-label={s.locked ? 'Unlock chord' : 'Lock chord'}
-                          aria-pressed={s.locked}
+                          aria-pressed={s.locked ? 'true' : 'false'}
                           title={s.locked ? 'Unlock — Clear can remove this bar' : 'Lock — keep this bar when you Clear'}
                           onClick={(e) => { e.stopPropagation(); toggleLock(i); }}
                         >
