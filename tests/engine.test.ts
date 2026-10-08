@@ -99,6 +99,25 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     const wids = new Set(wild.map((x) => x.id));
     expect(['Db7', 'G7b9', 'G7#9', 'B7'].filter((id) => wids.has(id)).length).toBeGreaterThanOrEqual(2);
   });
+  it('demotes a chord that just appeared so loops do not stay on top', () => {
+    // C–Am–F–Am would otherwise love F again; variety should prefer a fresher move.
+    const looped = eng.suggestChords({ key: key('C'), progression: prog('C Am F Am'), adventure: 0.2, limit: 12 });
+    const fresh = eng.suggestChords({ key: key('C'), progression: prog('C Am'), adventure: 0.2, limit: 12 });
+    expect(looped[0].id).not.toBe('F');
+    expect(looped[0].id).not.toBe('Fmaj7');
+    const fLooped = looped.findIndex((x) => x.id === 'F');
+    const fFresh = fresh.findIndex((x) => x.id === 'F');
+    // F is either lower than on the short path, or pushed off the shortlist entirely.
+    if (fFresh >= 0 && fLooped >= 0) expect(fLooped).toBeGreaterThan(fFresh);
+    else if (fFresh >= 0) expect(fLooped).toBe(-1);
+  });
+  it('after a secondary dominant, ranks the resolution target family highly', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C D7'), adventure: 0.3, limit: 12 });
+    expect(s[0].id === 'G' || s[0].id === 'G7').toBe(true);
+    // V7 on the target should sit near the top once resolution is rewarded
+    const g7 = s.find((x) => x.id === 'G7');
+    if (g7) expect(s.indexOf(g7)).toBeLessThan(6);
+  });
 });
 
 describe('melody suggestions', () => {

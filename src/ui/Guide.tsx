@@ -1,7 +1,7 @@
 // How-to guide: each Muse feature with a plain “how to use it” and why it matters musically.
 import type { ReactNode } from 'react';
 
-export type GuideJump = 'chords' | 'melody' | 'artists' | 'moods';
+export type GuideJump = 'chords' | 'melody' | 'bass' | 'artists' | 'moods';
 
 interface Props {
   onJump: (tab: GuideJump) => void;
@@ -33,16 +33,16 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'timeline',
-    title: 'The timeline (two lanes)',
-    use: 'Each bar has a chord underneath (staff of its notes above the name) and optional melody notes on top. Tap a chord to hear it; tap a melody note’s label to hear that pitch. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
-    musicality: 'Harmony and melody are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are.',
-    tip: '▶ Play hears chords and melody together in time. Use the BPM control next to Play (or beside Meter) to slow down or speed up.',
+    title: 'The timeline (three lanes)',
+    use: 'Each bar can hold melody on top, a chord in the middle (staff of its notes above the name), and optional bass notes underneath. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
+    musicality: 'Harmony, melody, and bass are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are. Composed bass replaces the automatic root for that bar when you write one.',
+    tip: '▶ Play layers chords, melody, and bass together. Use the BPM control next to Play (or beside Meter) to slow down or speed up.',
   },
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano of the chord notes); timeline bars show the chord on a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
-    musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
+    use: 'Use In this key / 7ths / Open colour / Extra colour / Secondaries for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano of the chord notes); timeline bars show the chord on a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
+    musicality: 'In-key chords feel like family. 7ths and Open colour (sus / add9 / 6) enrich home without leaving it. Extra colour is borrowed modal surprise; Secondaries aim at another chord, then resolve.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
   },
@@ -56,9 +56,18 @@ const SECTIONS: Section[] = [
     tip: 'Hear on a suggestion previews only the next note — not the whole line — so you judge the step itself.',
   },
   {
+    id: 'bass',
+    title: 'Bass tab — low line under the chords',
+    use: 'Switch to Bass next to Melody. Tap the low piano, Listen, or MIDI to place bass notes beat-by-beat under each bar (same packing as melody). The Bass instrument turns on when you add a note if it was Off. Empty bass bars still get an automatic root when Bass isn’t Off.',
+    musicality: 'Bass is the floor: roots and fifths feel solid; walks and approaches glue chord changes. Writing a composed line is how you turn a sketch into an arrangement without leaving Muse.',
+    jump: 'bass',
+    jumpLabel: 'Open Bass',
+    tip: '▶ Play prefers your composed bass notes for bars that have them, and keeps the auto root elsewhere.',
+  },
+  {
     id: 'fit',
     title: 'Which notes & chords will work — and why',
-    use: 'Tags on melody notes and suggestion cards use the same four relations: in the chord (sits on a chord tone), colour note (adds spice that usually still fits), rubby if held (fine while moving, harsh if sustained), and clashes (fights the chord’s quality). When harmonizing a melody, Muse ranks chords by how many melody notes sit well over them. On the Chords tab, in-key family chords are safest; Extra colour and Adventurous open the door to borrowed / secondary moves.',
+    use: 'Tags on melody notes and suggestion cards use the same four relations: in the chord (sits on a chord tone), colour note (adds spice that usually still fits), rubby if held (fine while moving, harsh if sustained), and clashes (fights the chord’s quality). When harmonizing a melody, Muse ranks chords by how many melody notes sit well over them. On the Chords tab, in-key family chords are safest; Open colour stays at home with texture; Extra colour, Secondaries, and Adventurous open the door to borrowed and aiming moves.',
     musicality: '“Works” means the ear can follow a path of tension and release. Chord tones on strong beats feel like home; colour notes create interest; rubs and clashes want to resolve. Muse scores that fit so the top of the list is usually the most singable or convincing next step — your ear still gets the final vote.',
     tip: 'Green “in the chord” + high rank ≈ safe. Orange/red tags are not forbidden — use them on purpose, then resolve.',
     jump: 'chords',
@@ -67,7 +76,7 @@ const SECTIONS: Section[] = [
   {
     id: 'midi',
     title: 'Mic Listen & MIDI keyboard',
-    use: 'Above the palettes, switch Mic ↔ MIDI, then start. Mic hears sung/played notes (YIN) or chords (chroma). MIDI reads a USB/Bluetooth keyboard: press keys for melody, hold a chord ~¼ s on the Chords tab to add it. Stop when you’re done typing.',
+    use: 'Above the palettes, switch Mic ↔ MIDI, then start. Mic hears sung/played notes (YIN) or chords (chroma) — on Bass it favours lower frequencies. MIDI reads a USB/Bluetooth keyboard: press keys for melody or bass, hold a chord ~¼ s on the Chords tab to add it. Stop when you’re done typing.',
     musicality: 'Playing in from a real keyboard keeps your hands in musician space — Muse becomes a notepad that understands pitches and harmony, not just a click-to-add form.',
     tip: 'Web MIDI works best in Chrome/Edge (desktop) and newer Safari. Grant MIDI permission when asked.',
     jump: 'melody',
@@ -104,7 +113,7 @@ const SECTIONS: Section[] = [
     title: 'Circle of fifths',
     use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking (strongest suggestions glow most). Rim chips are Muse’s next picks — variants of the same root stack outward on that spoke so nothing overlaps; each pill shows rank + a short quality (Δ7, m, 7…); brighter / lower number = better. Tap a chip to hear. Same-root colour (e.g. C→Cmaj7) shows “same root” instead of a looping arrow. +1/−1 under letters = steps from where you are. Ranked “Best fit first” cards sit directly under the circle.',
     musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
-    tip: 'Switch instruments under the circle — taps play on the sound you chose (including bass).',
+    tip: 'Under the timeline, set Chords / Melody / Bass instruments separately — ▶ Play layers them.',
   },
   {
     id: 'tension',
@@ -121,8 +130,8 @@ const SECTIONS: Section[] = [
   {
     id: 'instruments',
     title: 'Instrument sounds',
-    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, Electronic (saw lead), or bass. Muse voices chords for that instrument (bass plays a single low root; metal is clean electric guitar through a high-gain amp/cab). Melody notes fold into each instrument’s playable range.',
-    musicality: 'Register and timbre change meaning: the same progression on bass vs pad feels like different arrangements. Hear options in the texture you’ll actually write in.',
+    use: 'Assign instruments per part: Chords, Melody, and Bass (Off keeps auto-root-only bass silent as its own part). Piano, nylon/steel/metal guitar, Rhodes, pad, Electronic (saw lead), or bass — metal is clean electric guitar through a high-gain amp/cab. When Bass is on, chords stay upper voices; use the Bass tab to write a composed line instead of only the automatic root.',
+    musicality: 'Register and timbre change meaning: pad chords under a bright melody (or a separate bass line) already feels like an arrangement. Hear options in the texture you’ll actually write in.',
   },
   {
     id: 'moods-chords',
@@ -152,8 +161,9 @@ const WORKFLOW: Array<{ step: string; detail: string }> = [
   { step: 'Set key & mood', detail: 'Pick home, type a mood, leave Safe near the middle.' },
   { step: 'Lay a spine', detail: 'Add 2–4 in-key chords (or a ready-made progression). Hear each one.' },
   { step: 'Sing a line', detail: 'Switch to Melody; place a short phrase. Watch in-the-chord vs colour tags.' },
+  { step: 'Add bass', detail: 'Switch to Bass; plant roots (or a short walk) under a few bars.' },
   { step: 'Harmonize gaps', detail: 'On “no chord” bars, Find a chord and pick by melody fit.' },
-  { step: 'Colour on purpose', detail: 'Nudge Adventurous or Extra colour when you want a lift — then resolve home.' },
+  { step: 'Colour on purpose', detail: 'Nudge Adventurous, Open colour, Extra colour, or Secondaries when you want a lift — then resolve home.' },
   { step: 'Export', detail: '▶ Play the whole thing, then MIDI or Copy into your other tools.' },
 ];
 

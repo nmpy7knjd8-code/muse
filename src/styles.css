@@ -113,9 +113,10 @@ section { margin-top: 10px; }
 .chip-actions button { padding: 0 6px; border: none; background: transparent; font-size: 13px; color: var(--muted); }
 .melchips { align-self: center; color: var(--muted); font-size: 13px; white-space: nowrap; }
 
-.timeline { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; align-items: stretch; min-height: 104px; scrollbar-width: none; }
+.timeline { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; align-items: stretch; min-height: 140px; scrollbar-width: none; }
 .tbar { flex: 0 0 auto; min-width: 92px; display: flex; flex-direction: column; gap: 6px; }
-.tmel { display: flex; gap: 5px; min-height: 42px; align-items: flex-end; justify-content: center; flex-wrap: nowrap; }
+.tmel, .tbass { display: flex; gap: 5px; min-height: 36px; align-items: flex-end; justify-content: center; flex-wrap: nowrap; }
+.tbass { min-height: 32px; }
 .tnote {
   display: inline-flex; align-items: stretch; gap: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -124,6 +125,10 @@ section { margin-top: 10px; }
   overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: border-color 0.18s ease, transform 0.12s ease;
+}
+.tnote.bass {
+  background: linear-gradient(180deg, #243038 0%, #1a2228 100%);
+  border-color: rgba(111, 176, 168, 0.35);
 }
 .tnote:active { transform: scale(0.97); }
 .tnote-play {
@@ -457,6 +462,13 @@ svg .mlabel.sel { font-size: 12px; }
 .listen .added { font-size: 12px; color: #7cd992; }
 button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 
+.instr-parts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.instr-part { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.instr-part-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: #8fa8c8;
+}
+.instr-part .instr { margin-top: 0; }
 .instr { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .instr .pill { padding: 6px 11px; font-size: 13px; }
 .instr .loading { position: relative; color: var(--muted); padding-left: 2px; display: inline-flex; align-items: center; gap: 6px; }
@@ -467,6 +479,8 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 
 .legend i.bar { width: 14px; height: 5px; border-radius: 3px; vertical-align: 2px; }
 .legend i.dot { width: 10px; height: 10px; border-radius: 50%; background: #FFD54F; border: 1px solid #111; }
+.legend i.dot.bass { background: #6fb0a8; }
+.bass-input { border-top: 1px solid rgba(111, 176, 168, 0.18); padding-top: 4px; }
 .instr-status { min-height: 18px; line-height: 18px; margin-top: 6px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .instr-status .loading { color: #b9b4d6; }
 /* Artist Lens */

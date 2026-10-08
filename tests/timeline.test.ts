@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { loadKB } from './helpers';
 import {
   SuggestionEngine, parseChord, key, noteRelation, melodyFit, REL_FIT,
-  insertNote, setSlotChord, chordTargetIndex, activeSlotIndex, nextNoteBeat,
-  labelSlot, timelineEvents, harmPreviewEvents, melodyOf, chordsOf, removeNoteAt, clearSlotChord,
-  toMidiTimeline, timelineText, noteDurations,
+  insertNote, insertBassNote, setSlotChord, chordTargetIndex, activeSlotIndex, activeBassSlotIndex,
+  nextNoteBeat, nextBassBeat, labelSlot, labelBassSlot, timelineEvents, harmPreviewEvents,
+  melodyOf, bassOf, chordsOf, removeNoteAt, removeBassAt, clearSlotChord,
+  toMidiTimeline, timelineText, noteDurations, slotBass,
 } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
@@ -84,6 +85,32 @@ describe('timeline slots', () => {
     expect(ev.total).toBe(4); // 2 bars × 4 beats × 0.5s
     expect(noteDurations(slots[0].notes)[0]).toBe(4);
   });
+  it('inserts bass notes on a separate lane without touching melody', () => {
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = insertNote(slots, 72).slots;
+    for (const m of [36, 43, 48]) slots = insertBassNote(slots, m).slots;
+    expect(slots[0].notes.map((n) => n.midi)).toEqual([72]);
+    expect(slotBass(slots[0]).map((n) => n.midi)).toEqual([36, 43, 48]);
+    expect(slotBass(slots[0]).map((n) => n.beat)).toEqual([0, 1, 2]);
+    expect(bassOf(slots)).toEqual([36, 43, 48]);
+    expect(activeBassSlotIndex(slots)).toBe(0);
+    expect(nextBassBeat(slots)).toBe(3);
+    const labeled = labelBassSlot(slots[0], kb);
+    expect(labeled[0].relation?.kind).toBe('chord'); // C root
+    expect(labeled[1].relation?.kind).toBe('chord'); // G = 5
+  });
+  it('bass spills into the next bar and removeBassAt prunes empty N.C.', () => {
+    let slots = setSlotChord([], 0, ch('Am'));
+    for (const m of [33, 40, 45, 52, 57]) slots = insertBassNote(slots, m).slots;
+    expect(slots).toHaveLength(2);
+    expect(slots[1].chord).toBeNull();
+    expect(slotBass(slots[1])).toHaveLength(1);
+    slots = removeBassAt(slots, 1, 0);
+    expect(slots).toHaveLength(1);
+    const ev = timelineEvents(slots, { beatSec: 0.5 });
+    expect(ev.bass).toHaveLength(4);
+    expect(ev.bass[0].at).toBe(0);
+  });
   it('harmPreviewEvents overlays melody on one pending bar', () => {
     const notes = [{ midi: 64, beat: 0 }, { midi: 67, beat: 2 }];
     const prev = harmPreviewEvents(notes, { beatSec: 0.5 });
@@ -125,5 +152,14 @@ describe('harmonize + export', () => {
     expect(txt).toContain('Bar 1: C');
     expect(txt).toMatch(/C\d@1/);
     expect(txt).toContain('Bar 2: G');
+  });
+  it('MIDI export adds a third track when a bass lane is present', () => {
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = insertNote(slots, 72).slots;
+    slots = insertBassNote(slots, 36).slots;
+    const bytes = toMidiTimeline(slots);
+    expect(bytes[10]).toBe(0); expect(bytes[11]).toBe(3); // chords + melody + bass
+    const txt = timelineText(key('C'), slots);
+    expect(txt).toMatch(/bass .*C\d@1/);
   });
 });

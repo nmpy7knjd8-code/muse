@@ -92,6 +92,13 @@ describe('roman numerals', () => {
     expect(analyzeRoman(ch('E7'), Am).text).toBe('V7');
     expect(analyzeRoman(ch('Dm'), Am).text).toBe('iv');
   });
+  it('labels minor borrowed majors as modal colour, not false secondaries', () => {
+    const Ebm = key('Eb', 'minor');
+    expect(romanOf(ch('Ab'), Ebm)).toBe('IV'); // not V/♭VII
+    expect(romanOf(ch('Eb'), Ebm)).toBe('I'); // Picardy, not V/iv
+    expect(romanOf(ch('Fb'), Ebm)).toBe('♭II');
+    expect(romanOf(ch('D7'), C)).toBe('V7/V'); // true secondaries still win
+  });
   it('realises roman numerals as chords', () => {
     const sym = (r: string, k = C) => chordSymbol(parseRoman(r, k)!);
     expect(sym('bVI')).toBe('Ab');

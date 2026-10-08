@@ -67,6 +67,17 @@ describe('pleasant voicing', () => {
       expect(v[0] % 12).toBe(pc(c.bass ?? c.root));
     }
   });
+  it('omitBass drops the low bass from keys/guitar so a separate bass part can cover it', () => {
+    const c = ch('C');
+    const upper = pianoVoicing(c);
+    const full = chordMidis(c, upper, INSTRUMENTS.piano);
+    const noBass = chordMidis(c, upper, INSTRUMENTS.piano, { omitBass: true });
+    expect(Math.min(...noBass)).toBeGreaterThan(Math.min(...full));
+    const gFull = chordMidis(c, upper, INSTRUMENTS.nylon);
+    const gNo = chordMidis(c, upper, INSTRUMENTS.nylon, { omitBass: true });
+    expect(gNo.length).toBe(gFull.length - 1);
+    expect(Math.min(...gNo)).toBeGreaterThan(Math.min(...gFull));
+  });
   it('fitMidiToInstrument folds melody-range notes into bass samples (same pitch class)', () => {
     const bass = INSTRUMENTS.bass;
     for (const m of [60, 67, 72, 84, 48, 55, 28, 24]) {

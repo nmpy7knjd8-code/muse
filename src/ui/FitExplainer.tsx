@@ -9,9 +9,9 @@ import {
 const REL_ORDER: RelKind[] = ['chord', 'tension', 'avoid', 'clash'];
 
 interface Props {
-  mode: 'melody' | 'chords';
+  mode: 'melody' | 'chords' | 'bass';
   keyInfo: Key;
-  /** Chord under the active melody bar (or last chord), when known. */
+  /** Chord under the active melody/bass bar (or last chord), when known. */
   underChord?: Chord | null;
 }
 
@@ -104,14 +104,18 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
   const scale = degreeLabels(keyInfo);
   const chars = characteristicNames(keyInfo);
 
-  if (mode === 'melody') {
+  if (mode === 'melody' || mode === 'bass') {
     const chordBit = underChord
       ? <>Over <b>{chordSymbol(underChord, true)}</b>, note tags show how each pitch sits on that harmony:</>
       : <>Once a chord is under the bar, note tags show how each pitch sits on that harmony:</>;
+    const isBass = mode === 'bass';
     return (
-      <aside className="fit-explainer" aria-label="How to play melodies in this key">
+      <aside className="fit-explainer" aria-label={isBass ? 'How to play bass in this key' : 'How to play melodies in this key'}>
         <p>
-          <b>Melody in {keyLabel}.</b> {tip.vibe}
+          <b>{isBass ? 'Bass' : 'Melody'} in {keyLabel}.</b>{' '}
+          {isBass
+            ? 'Low roots and fifths lock the harmony; scale walks and approaches colour the groove without stealing the tune.'
+            : tip.vibe}
         </p>
         <p className="fit-scale">
           <span className="fit-label">Scale</span>
@@ -126,10 +130,20 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
           ))}
           <span className="muted"> — {md.characteristic}</span>
         </p>
-        <p><b>How to play it.</b> {tip.lean}</p>
-        <p className="fit-why">{tip.colour}{tip.avoid ? ` ${tip.avoid}` : ''}</p>
         <p>
-          Purple keys are in <b>{keyLabel}</b> (safest for a singable line). Outside keys add colour or friction on purpose.
+          <b>How to play it.</b>{' '}
+          {isBass
+            ? 'Plant the root (or slash bass) on beat 1; use 5ths and stepwise walks between chords. Keep leaps small unless you want a hooky riff.'
+            : tip.lean}
+        </p>
+        {!isBass && <p className="fit-why">{tip.colour}{tip.avoid ? ` ${tip.avoid}` : ''}</p>}
+        {isBass && (
+          <p className="fit-why">
+            Empty bass bars still get an automatic root when the Bass part isn’t Off — write notes only where you want a composed line.
+          </p>
+        )}
+        <p>
+          Purple keys are in <b>{keyLabel}</b> ({isBass ? 'safest for a solid low end' : 'safest for a singable line'}). Outside keys add colour or friction on purpose.
           {' '}{chordBit}
         </p>
         <ul className="fit-rel">
@@ -148,7 +162,8 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
     <aside className="fit-explainer" aria-label="Which chords will work">
       <p>
         <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (home / builds / pulls home).
-        <b> 7ths</b> = same family, richer colour. <b>Extra colour</b> = borrowed or secondary moves for surprise.
+        <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture at home.
+        <b> Extra colour</b> = borrowed modal surprise. <b>Secondaries</b> = aim at another chord, then resolve.
       </p>
       <p className="fit-why">
         Muse ranks next chords by key fit, voice-leading from where you are, mood, and (when harmonizing) how well they sit under your melody.
