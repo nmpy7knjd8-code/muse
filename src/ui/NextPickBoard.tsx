@@ -145,7 +145,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
                 role="listitem"
                 className={'nprank' + (on ? ' on' : '')}
                 style={{ borderColor: on ? color : undefined }}
-                title={isChord(s) ? undefined : `Best-fit rank #${i + 1} (mood is a tag, not the sort)`}
+                title={isChord(s) ? undefined : `Best-fit rank #${i + 1}`}
                 onClick={() => onSelect(s.id)}
               >
                 <span className="nprank-i">{i + 1}</span>
