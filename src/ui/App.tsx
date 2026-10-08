@@ -18,6 +18,7 @@ import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
 import { TensionCurve } from './TensionCurve';
+import { NextPickBoard } from './NextPickBoard';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 
 type Tab = 'chords' | 'melody' | 'artists';
@@ -806,6 +807,35 @@ function Composer({ data }: { data: LoadedData }) {
               ? `Next note after ${spellMidi(melody[melody.length - 1])}${noteChord ? ` over ${chordSymbol(noteChord, true)}` : ''}`
               : 'First melody note'}
         </h3>
+        <NextPickBoard
+          mode={tab === 'melody' ? 'melody' : 'chords'}
+          items={tab === 'chords' ? chordSugs : noteSugs}
+          selectedId={tab === 'chords' ? (selChord?.id ?? null) : (selNote?.id ?? null)}
+          colorOf={(id) => lex.color(id)}
+          labelOf={(id) => lex.label(id)}
+          fromLabel={tab === 'chords'
+            ? (cur ? chordSymbol(cur, true) : undefined)
+            : (melody.length ? spellMidi(melody[melody.length - 1]) : undefined)}
+          onSelect={(id) => {
+            setSelectedId(id);
+            if (tab === 'chords') {
+              const s = chordSugs.find((x) => x.id === id);
+              if (s) playMove(s);
+            } else {
+              const s = noteSugs.find((x) => x.id === id);
+              if (s) playNoteMove(s);
+            }
+          }}
+          onAdd={(id) => {
+            if (tab === 'chords') {
+              const s = chordSugs.find((x) => x.id === id);
+              if (s) addChord(s.chord);
+            } else {
+              const s = noteSugs.find((x) => x.id === id);
+              if (s) addNote(s.midi);
+            }
+          }}
+        />
         {groups.map(([mood, items]) => (
           <div key={mood} className="group">
             <div className="ghead"><i style={{ background: lex.color(mood) }} />{lex.label(mood)}</div>

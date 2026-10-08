@@ -263,3 +263,23 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .tlegend i.ceil { height: 0; border-top: 2px dashed #ef5b5b; border-radius: 0; }
 .treason { font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #1f3d35; color: #a5e8cf; }
 .treason.warn { background: #45261f; color: #f3b49f; }
+
+/* Next pick board — scatter + rank strip (sibling of tension curve) */
+.nextpick { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; margin: 8px 0 12px; }
+.nextpick-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.nextpick-svg { display: block; width: 100%; height: auto; max-height: 180px; }
+.nextpick .nplabel { font-size: 10px; fill: #8f8aa3; }
+.nextpick .nplabel.on { font-weight: 700; font-size: 11px; }
+.nextpick-ranks { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.nprank { display: grid; grid-template-columns: 18px minmax(36px, auto) 1fr minmax(28px, auto); align-items: center; gap: 6px; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 4px 6px; cursor: pointer; color: var(--text); font: inherit; }
+.nprank:hover { background: rgba(255, 255, 255, 0.03); }
+.nprank.on { background: rgba(255, 255, 255, 0.05); border-color: var(--line); }
+.nprank-i { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nprank-name { font-weight: 700; font-size: 14px; white-space: nowrap; }
+.nprank-bar { display: block; height: 6px; background: #2a2736; border-radius: 3px; overflow: hidden; }
+.nprank-bar i { display: block; height: 100%; border-radius: 3px; }
+.nprank-meta { font-size: 11px; text-align: right; white-space: nowrap; }
+.nextpick-break { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.nextpick-break-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.nextpick-break-top b { font-size: 18px; }
+.nextpick-break .why { margin: 4px 0 2px; line-height: 1.35; }
