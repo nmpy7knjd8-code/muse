@@ -236,7 +236,20 @@ function Composer({ data }: { data: LoadedData }) {
     if (tensionPick !== null && tensionPick >= chordedSlotIndices.length) setTensionPick(chordedSlotIndices.length ? chordedSlotIndices.length - 1 : null);
   }, [chordedSlotIndices.length, tensionPick]);
   const noteSugs: NoteSuggestion[] = useMemo(
-    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat, timeSig }) : []),
+    () => (tab === 'melody'
+      ? engine.suggestNotes({
+        key: k,
+        melody,
+        chord: noteChord,
+        // Last few chords so ranking / why text respect the arrival of the sequence.
+        progression: chords.slice(-4),
+        profile,
+        adventure,
+        limit: 12,
+        beat: noteBeat,
+        timeSig,
+      })
+      : []),
     [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, timeSig.num, timeSig.den], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const [pathLen, setPathLen] = useState<2 | 3>(2);
@@ -250,7 +263,7 @@ function Composer({ data }: { data: LoadedData }) {
   const notePaths: NotePath[] = useMemo(() => {
     if (tab !== 'melody') return [];
     return suggestNotePaths(engine, {
-      key: k, melody, chord: noteChord, profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
+      key: k, melody, chord: noteChord, progression: chords.slice(-4), profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
     });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
