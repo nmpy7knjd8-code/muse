@@ -41,8 +41,8 @@ const SECTIONS: Section[] = [
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano of the chord notes); timeline bars show the chord on a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
-    musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
+    use: 'Use In this key / 7ths / Open colour / Extra colour / Secondaries for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano of the chord notes); timeline bars show the chord on a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
+    musicality: 'In-key chords feel like family. 7ths and Open colour (sus / add9 / 6) enrich home without leaving it. Extra colour is borrowed modal surprise; Secondaries aim at another chord, then resolve.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
   },
@@ -58,7 +58,7 @@ const SECTIONS: Section[] = [
   {
     id: 'fit',
     title: 'Which notes & chords will work — and why',
-    use: 'Tags on melody notes and suggestion cards use the same four relations: in the chord (sits on a chord tone), colour note (adds spice that usually still fits), rubby if held (fine while moving, harsh if sustained), and clashes (fights the chord’s quality). When harmonizing a melody, Muse ranks chords by how many melody notes sit well over them. On the Chords tab, in-key family chords are safest; Extra colour and Adventurous open the door to borrowed / secondary moves.',
+    use: 'Tags on melody notes and suggestion cards use the same four relations: in the chord (sits on a chord tone), colour note (adds spice that usually still fits), rubby if held (fine while moving, harsh if sustained), and clashes (fights the chord’s quality). When harmonizing a melody, Muse ranks chords by how many melody notes sit well over them. On the Chords tab, in-key family chords are safest; Open colour stays at home with texture; Extra colour, Secondaries, and Adventurous open the door to borrowed and aiming moves.',
     musicality: '“Works” means the ear can follow a path of tension and release. Chord tones on strong beats feel like home; colour notes create interest; rubs and clashes want to resolve. Muse scores that fit so the top of the list is usually the most singable or convincing next step — your ear still gets the final vote.',
     tip: 'Green “in the chord” + high rank ≈ safe. Orange/red tags are not forbidden — use them on purpose, then resolve.',
     jump: 'chords',
@@ -153,7 +153,7 @@ const WORKFLOW: Array<{ step: string; detail: string }> = [
   { step: 'Lay a spine', detail: 'Add 2–4 in-key chords (or a ready-made progression). Hear each one.' },
   { step: 'Sing a line', detail: 'Switch to Melody; place a short phrase. Watch in-the-chord vs colour tags.' },
   { step: 'Harmonize gaps', detail: 'On “no chord” bars, Find a chord and pick by melody fit.' },
-  { step: 'Colour on purpose', detail: 'Nudge Adventurous or Extra colour when you want a lift — then resolve home.' },
+  { step: 'Colour on purpose', detail: 'Nudge Adventurous, Open colour, Extra colour, or Secondaries when you want a lift — then resolve home.' },
   { step: 'Export', detail: '▶ Play the whole thing, then MIDI or Copy into your other tools.' },
 ];
 

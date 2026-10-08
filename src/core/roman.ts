@@ -4,7 +4,7 @@
 // identical to how the theory KB expresses key-relative moves (root = semitones above tonic).
 import { Chord, QUALITY_BY_ID, QualityId, chordPcs, parseQuality, triadClass } from './chords';
 import { MAJOR_STEPS, NoteName, accidentalString, mod, parseAccidentals, pc, spell } from './notes';
-import { Key, diatonicChords, scalePcs } from './scales';
+import { Key, MODE_BY_ID, diatonicChords, scalePcs } from './scales';
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 
@@ -42,9 +42,13 @@ export function analyzeRoman(chord: Chord, k: Key): RomanNumeral {
   const scale = scalePcs(k);
   const diatonic = chordPcs(chord).every((p) => scale.includes(p));
   const rn: RomanNumeral = { degree, acc, quality: chord.quality, offset, text: numeralText(degree, acc, chord.quality), diatonic };
-  // Secondary dominant: non-diatonic major/dominant chord whose root is a P5 above a diatonic, non-diminished chord (not the tonic).
+  // Secondary dominant: non-diatonic major/dominant chord whose root is a P5 above a diatonic,
+  // non-diminished non-tonic chord. Plain major triads on common minor borrowed degrees
+  // (I Picardy, ♭II Neapolitan, IV, VI) keep their modal labels — not V/x.
   const cls = triadClass(chord.quality);
-  if (!diatonic && cls === 'maj' && (chord.quality === 'maj' || chord.quality === '7' || chord.quality === '9' || chord.quality === '7b9')) {
+  const isDomQuality = chord.quality === '7' || chord.quality === '9' || chord.quality === '7b9';
+  const minorBorrowedMaj = MODE_BY_ID[k.mode].family === 'minor' && chord.quality === 'maj' && [0, 1, 5, 9].includes(offset);
+  if (!diatonic && !minorBorrowedMaj && cls === 'maj' && (chord.quality === 'maj' || isDomQuality)) {
     const targetPc = mod(pc(chord.root) - 7, 12);
     const dia = diatonicChords(k);
     const idx = dia.findIndex((c) => pc(c.root) === targetPc);
