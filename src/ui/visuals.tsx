@@ -143,9 +143,11 @@ function noteFromSpell(midi: number, spell: (m: number) => string): NoteName {
 /**
  * Compact treble-staff strip for suggestion cards — chord tones on the staff
  * instead of a sparse mini-piano with empty keys.
+ * Optional `priorMidis` draws the previous chord as hollow heads (now → next).
  */
 export function StaffChordViz({
   midis,
+  priorMidis = [],
   color = '#9C7CF4',
   spell,
   scalePcs = [],
@@ -153,15 +155,28 @@ export function StaffChordViz({
   label,
 }: {
   midis: number[];
+  /** Previous chord tones — hollow heads so next stays the solid colour. */
+  priorMidis?: number[];
   color?: string;
   spell: (midi: number) => string;
   scalePcs?: number[];
   tonicPc?: number;
   label?: string;
 }) {
-  const notes = [...midis].sort((a, b) => a - b);
+  type Role = 'prior' | 'next' | 'both';
+  const nextSet = new Set(midis);
+  const priorSet = new Set(priorMidis);
+  const merged = new Map<number, Role>();
+  for (const m of priorMidis) merged.set(m, nextSet.has(m) ? 'both' : 'prior');
+  for (const m of midis) if (!merged.has(m)) merged.set(m, 'next');
+  const notes = [...merged.keys()].sort((a, b) => a - b);
   if (!notes.length) return null;
-  const spelled = notes.map((m) => ({ midi: m, n: noteFromSpell(m, spell), step: staffStep(m, noteFromSpell(m, spell)) }));
+  const spelled = notes.map((m) => ({
+    midi: m,
+    role: merged.get(m)!,
+    n: noteFromSpell(m, spell),
+    step: staffStep(m, noteFromSpell(m, spell)),
+  }));
   const TREBLE_BOTTOM = staffStep(64, { letter: 2, acc: 0 }); // E4
   const gap = 5; // px between staff lines
   const staffTop = 10;
@@ -177,6 +192,7 @@ export function StaffChordViz({
   const W = startX + notes.length * noteGap + 10;
   const scaleSet = new Set(scalePcs);
   const showScale = scalePcs.length > 0;
+  const hasPrior = priorSet.size > 0;
 
   return (
     <svg className="staff-card" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label ? `Staff: ${label}` : 'Chord on staff'}>
@@ -193,13 +209,15 @@ export function StaffChordViz({
       ))}
       {/* Simple treble-clef mark */}
       <text x={clefX + 2} y={staffTop + padTop + 3.6 * gap} className="staff-clef">𝄞</text>
-      {/* Chord noteheads */}
+      {/* Chord noteheads — prior = hollow “now”, next = solid colour */}
       {spelled.map((s, i) => {
         const y = yOf(s.step) + padTop;
         const x = startX + i * noteGap;
         const acc = s.n.acc;
         const inScale = !showScale || scaleSet.has(mod(s.midi, 12));
         const isTonic = tonicPc !== undefined && mod(s.midi, 12) === mod(tonicPc, 12);
+        const priorOnly = s.role === 'prior';
+        const shared = s.role === 'both';
         // Ledger lines
         const bottomY = staffTop + padTop + 4 * gap;
         const topY = staffTop + padTop;
@@ -226,15 +244,18 @@ export function StaffChordViz({
               rx={5.2}
               ry={3.8}
               transform={`rotate(-18 ${x} ${y})`}
-              fill={color}
-              stroke={isTonic ? '#ECEAF4' : inScale ? '#121117' : '#f0a070'}
-              strokeWidth={isTonic ? 1.4 : 1}
+              fill={priorOnly ? 'none' : color}
+              stroke={priorOnly || shared ? CURRENT_COLOR : isTonic ? '#ECEAF4' : inScale ? '#121117' : '#f0a070'}
+              strokeWidth={priorOnly || shared ? 2 : isTonic ? 1.4 : 1}
               opacity={inScale ? 1 : 0.85}
             />
-            <text x={x} y={H - 2} className="staff-name">{spell(s.midi)}</text>
+            <text x={x} y={H - 2} className={'staff-name' + (priorOnly ? ' prior' : '')}>{spell(s.midi)}</text>
           </g>
         );
       })}
+      {hasPrior && (
+        <title>{label ? `${label} (hollow = previous chord)` : 'Hollow = previous chord'}</title>
+      )}
     </svg>
   );
 }
