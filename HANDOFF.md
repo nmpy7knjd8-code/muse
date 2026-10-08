@@ -28,8 +28,10 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 
 ## Artist Lens band requests
 - UI: Artist Lens → Request a band opens a prefilled GitHub issue (`Artist Lens request: …`, label `enhancement`). User must tap **Create** on GitHub.
-- Agent watch: process open issues with that title prefix; add to `public/artists.json` + update `tests/artists.test.ts`.
+- Agent watch: process open issues with that title prefix via `parseArtistLensIssue` / `scripts/list-artist-requests.sh`; add to `public/artists.json` + update `tests/artists.test.ts`.
+- Workflow `.github/workflows/artist-lens-request.yml` acknowledges new requests and closes smoke-test placeholders.
 - Device-only queue: `localStorage.muse.bandRequests` (not visible to the agent until an issue exists).
+- Skip bands matching `isSmokeArtistRequest` (e.g. `PIPELINE-SMOKE-TEST`).
 
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).
