@@ -29,3 +29,4 @@ export * from './timeline';
 export * from './palette';
 export * from './meter';
 export * from './paths';
+export * from './connections';

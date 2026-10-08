@@ -16,6 +16,7 @@ import {
   beatsPerBar, clampSlotsToMeter, parseMeter,
   timeSigLabel,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
+  type ChordBridge,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -26,6 +27,7 @@ import { FitExplainer } from './FitExplainer';
 import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { MoodChordRef } from './MoodChordRef';
+import { ChordConnections } from './ChordConnections';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
@@ -469,6 +471,27 @@ function Composer({ data }: { data: LoadedData }) {
       return;
     }
     synth.playNotes([fitMidi(n.midi)], { dur: 0.65, vel: 0.92, instrument: melodyInst });
+  };
+  const playBridge = (b: ChordBridge) => {
+    synth.unlock();
+    synth.stopAll();
+    void synth.ensureLoaded(chordInst);
+    const from = slots[b.fromIndex]?.chord;
+    const to = slots[b.toIndex]?.chord;
+    if (!from || !to) return;
+    const va = b.voiceLines.map((l) => l.from);
+    const vb = b.voiceLines.map((l) => l.to);
+    // Prefer unique pitches (voiceLeading may repeat on split/merge).
+    const uniq = (ms: number[]) => [...new Set(ms)].sort((a, c) => a - c);
+    playChordParts(from, uniq(va).length ? uniq(va) : pianoVoicing(from), { dur: 0.85, vel: 0.72 });
+    playChordParts(to, uniq(vb).length ? uniq(vb) : pianoVoicing(to), { at: 0.95, dur: 1.0, vel: 0.78 });
+    if (b.melodyBridge) {
+      synth.playNotes([fitMidi(b.melodyBridge.from)], { at: 0.35, dur: 0.4, vel: 0.88, instrument: melodyInst });
+      synth.playNotes([fitMidi(b.melodyBridge.to)], { at: 1.15, dur: 0.45, vel: 0.9, instrument: melodyInst });
+    } else if (b.linkHintMidi !== null) {
+      synth.playNotes([fitMidi(b.linkHintMidi)], { at: 0.55, dur: 0.35, vel: 0.7, instrument: melodyInst });
+    }
+    flash(`${b.fromSymbol} → ${b.toSymbol} · ${b.commonToneCount} held · ${b.totalMotion} st`);
   };
   const playAll = () => {
     synth.unlock();
@@ -1272,6 +1295,19 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
         )}
+        <ChordConnections
+          slots={slots}
+          keyInfo={k}
+          kb={data.kb}
+          beats={beats}
+          spell={spellMidi}
+          focusIndex={tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? null) : null}
+          onFocusBar={(si) => {
+            const ci = chordedSlotIndices.indexOf(si);
+            if (ci >= 0) setTensionPick(ci);
+          }}
+          onHearBridge={playBridge}
+        />
         <div className="row gap play-row">
           <button onClick={playAll} disabled={!slots.length}>▶ Play</button>
           <label className="meter-pick bpm-inline">
