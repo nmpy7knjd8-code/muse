@@ -82,7 +82,7 @@ function metalDriveCurve(drive = 18): Float32Array<ArrayBuffer> {
  */
 function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number): AudioNode {
   const pre = ctx.createGain();
-  pre.gain.value = 1.05 + vel * 0.35;
+  pre.gain.value = 0.95 + vel * 0.28;
   // Keep low body — only shed sub rumble, not the guitar's thickness.
   const hpf = ctx.createBiquadFilter();
   hpf.type = 'highpass';
@@ -119,7 +119,7 @@ function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number):
   fizz.frequency.value = 6200;
   fizz.Q.value = 0.55;
   const post = ctx.createGain();
-  post.gain.value = 0.48;
+  post.gain.value = 0.44;
   source.connect(pre).connect(hpf).connect(drive).connect(body).connect(scoop).connect(presence).connect(air).connect(fizz).connect(post);
   return post;
 }
