@@ -5,7 +5,7 @@ import {
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
   spellInKey, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
-  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
+  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
   TimelineSlot, activeSlotIndex, chordTargetIndex, chordsOf, clearSlotChord, insertNote, labelSlot, melodyOf,
   nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents,
@@ -227,14 +227,8 @@ function Composer({ data }: { data: LoadedData }) {
   };
   // chords are voiced per instrument: voice-led keyboard voicing with a warm bass, or a real guitar shape
   const withBass = (c: Chord, v: number[]) => chordMidis(c, v, INSTRUMENTS[instrument]);
-  /** Keep a melody MIDI inside the active instrument's sample range (esp. bass). */
-  const fitMidi = (m: number, id: InstrumentId = instrument) => {
-    const { from: lo, to: hi } = INSTRUMENTS[id].samples;
-    let x = m;
-    while (x < lo) x += 12;
-    while (x > hi) x -= 12;
-    return x;
-  };
+  /** Keep a melody MIDI inside the active instrument's sample range (esp. bass). Engine also fits on play. */
+  const fitMidi = (m: number, id: InstrumentId = instrument) => fitMidiToInstrument(m, INSTRUMENTS[id]);
   // iOS: the ring/silent switch can mute Web Audio — hint once, and whenever audio is not running after a tap
   useEffect(() => {
     const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -325,7 +319,7 @@ function Composer({ data }: { data: LoadedData }) {
     p.chords.forEach((c, i) => {
       const at = i * 0.9;
       synth.playNotes(withBass(c, voiced[base + i] ?? pianoVoicing(c)), { at, dur: 0.85, vel: 0.68 });
-      if (p.links[i] !== undefined) synth.playNotes([p.links[i]], { at: at + 0.18, dur: 0.5, vel: 0.92 });
+      if (p.links[i] !== undefined) synth.playNotes([fitMidi(p.links[i])], { at: at + 0.18, dur: 0.5, vel: 0.92 });
     });
   };
   const addChordPath = (p: ChordPath) => {
@@ -526,7 +520,9 @@ function Composer({ data }: { data: LoadedData }) {
     if (tab === 'melody') {
       const underV = noteChord === cur ? prevVoicing : noteChord ? pianoVoicing(noteChord) : [];
       const addMelodyPc = (p: number) => {
-        const anchor = melody.length ? melody[melody.length - 1]! : fitMidi(60);
+        // Pick the octave nearest the last melody note, then fold into the instrument range
+        // so bass (and other narrow instruments) get a real sample instead of extreme pitch-shift.
+        const anchor = fitMidi(melody.length ? melody[melody.length - 1]! : 60);
         let best = fitMidi(p + 60);
         for (let oct = 1; oct <= 6; oct++) {
           const m = fitMidi(p + 12 * (oct + 1));
@@ -737,7 +733,7 @@ function Composer({ data }: { data: LoadedData }) {
                           style={kind ? { borderColor: REL_COLORS[kind], color: REL_COLORS[kind] } : undefined}
                           title={tip}
                         >
-                          <button type="button" className="tnote-play" onClick={() => { synth.unlock(); synth.playNotes([n.midi], { dur: 0.45 }); }}>
+                          <button type="button" className="tnote-play" onClick={() => { synth.unlock(); synth.playNotes([fitMidi(n.midi)], { dur: 0.45 }); }}>
                             <span>{spellMidi(n.midi)}</span>
                             {n.relation && <small>{n.relation.label}</small>}
                           </button>

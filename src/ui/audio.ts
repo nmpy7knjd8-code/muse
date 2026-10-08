@@ -2,7 +2,7 @@
 // velocity, humanized strums, a generated convolution reverb, and a compressor + limiter master bus.
 // Works on any BaseAudioContext, so the offline preview renderer uses exactly the same code.
 // Realtime use must be unlocked from a user gesture (iOS Safari autoplay rules).
-import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, nearestSample, rng, sampleNotes } from '../core';
+import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument, nearestSample, rng, sampleNotes } from '../core';
 
 type AudioSessionNav = Navigator & { audioSession?: { type: string } };
 export type LoadState = { state: 'idle' | 'loading' | 'ready' | 'error'; progress: number };
@@ -302,8 +302,13 @@ export class AudioEngine {
   /** Play notes together (a chord is strummed/rolled per instrument, with slight humanization). */
   playNotes(midis: number[], opts: { at?: number; dur?: number; vel?: number } = {}): void {
     if (!this.ctx) return;
+    // Kick sample load on first play if unlock already attached the graph.
+    if (this.loadState().state === 'idle') void this.ensureLoaded();
+    const def = this.def;
+    // Fold every note into the active instrument range (critical for bass melody / CoF taps).
+    const fitted = midis.map((m) => fitMidiToInstrument(m, def));
     const t = (opts.at ?? 0) + this.now();
-    for (const e of chordEvents(midis, t, opts.dur ?? 1.1, opts.vel ?? 0.75, this.def, this.rand)) this.voice(e.midi, e.time, e.dur, e.vel);
+    for (const e of chordEvents(fitted, t, opts.dur ?? 1.1, opts.vel ?? 0.75, def, this.rand)) this.voice(e.midi, e.time, e.dur, e.vel);
   }
 
   /** Play note-groups one after another (e.g. previous chord → suggestion). */

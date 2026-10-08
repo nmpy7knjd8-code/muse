@@ -15,6 +15,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Harmonize banner when a bar has melody waiting; NextPickBoard switches to clash→fit × calm→tense.
 - Timeline ↻ clears a chord and re-opens chord suggestions for that melody (reharm).
 - Tension curve: plain-language tips + melody-over-chord chips; suggestion cards ranked with piano/guitar/bass hand placements; 2–3 step paths with connecting melody; CoF tap-to-add on piano & guitar views (plays current instrument); Artist Lens request copy + optional song analysis; Polyphia/Collier removed (classic rock LZ/Beatles/Rush remain); melody Hear previews only the next note.
+- Bass guitar: `fitMidiToInstrument` folds melody/CoF/timeline/path notes into the bass sample range; AudioEngine applies it on every `playNotes` so bass sounds on melody + circle, not only chords.
 
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).

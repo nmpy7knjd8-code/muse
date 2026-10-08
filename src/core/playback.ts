@@ -52,6 +52,21 @@ export function nearestSample(midi: number, available: number[]): { sample: numb
 }
 
 /**
+ * Fold a MIDI note into an instrument's sample range by octaves (same pitch class).
+ * Bass samples only cover ~E1–G3; melody UI notes sit much higher, so without this
+ * the engine extreme-pitch-shifts (or barely sounds) instead of playing a real bass tone.
+ */
+export function fitMidiToInstrument(midi: number, def: InstrumentDef): number {
+  const { from: lo, to: hi } = def.samples;
+  let x = Math.round(midi);
+  // Range is always ≥ an octave for our instruments; one direction then the other is enough.
+  while (x < lo) x += 12;
+  while (x > hi) x -= 12;
+  if (x < lo) x += 12; // tiny ranges (< octave) — pull back up once
+  return x;
+}
+
+/**
  * Low-interval limits: close intervals sound muddy in the bass. Below ~C3 keep ≥ a 5th between
  * adjacent notes, below ~G3 ≥ a minor 3rd; offending upper notes move up an octave (or are dropped
  * when that note is already present higher up). The bass note itself is kept.
@@ -86,11 +101,7 @@ export function chordMidis(chord: Chord, upper: number[], def: InstrumentDef): n
   }
   if (def.voicing === 'bass') {
     // Single low root (or slash-bass) in the sample range — bass guitar, not a full chord stack.
-    const lo = def.samples.from, hi = def.samples.to;
-    let m = bassNote(chord, lo);
-    while (m < lo) m += 12;
-    while (m > hi) m -= 12;
-    return [m];
+    return [fitMidiToInstrument(bassNote(chord, def.samples.from), def)];
   }
   return keysVoicing(chord, upper);
 }

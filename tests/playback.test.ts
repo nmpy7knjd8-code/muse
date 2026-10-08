@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, statSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { INSTRUMENTS, INSTRUMENT_IDS, avoidMud, chordEvents, chordMidis, keysVoicing, nearestSample, parseChord, pianoVoicing, pc, rng, sampleNotes, chordPcs } from '../src/core';
+import { INSTRUMENTS, INSTRUMENT_IDS, avoidMud, chordEvents, chordMidis, fitMidiToInstrument, keysVoicing, nearestSample, parseChord, pianoVoicing, pc, rng, sampleNotes, chordPcs } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
 
@@ -66,6 +66,21 @@ describe('pleasant voicing', () => {
       expect(v[0]).toBeLessThanOrEqual(55);
       expect(v[0] % 12).toBe(pc(c.bass ?? c.root));
     }
+  });
+  it('fitMidiToInstrument folds melody-range notes into bass samples (same pitch class)', () => {
+    const bass = INSTRUMENTS.bass;
+    for (const m of [60, 67, 72, 84, 48, 55, 28, 24]) {
+      const f = fitMidiToInstrument(m, bass);
+      expect(f).toBeGreaterThanOrEqual(bass.samples.from);
+      expect(f).toBeLessThanOrEqual(bass.samples.to);
+      expect(f % 12).toBe(((m % 12) + 12) % 12);
+    }
+    // Piano melody C5 → bass C2/C3 in range
+    expect(fitMidiToInstrument(72, bass)).toBe(48);
+    // Already in range stays put
+    expect(fitMidiToInstrument(40, bass)).toBe(40);
+    // Piano instrument leaves mid-range melody alone
+    expect(fitMidiToInstrument(72, INSTRUMENTS.piano)).toBe(72);
   });
 });
 
