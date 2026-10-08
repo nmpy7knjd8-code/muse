@@ -1,7 +1,8 @@
 // SVG visualisations: piano, guitar diagram, voice leading, circle of fifths, Tonnetz.
 import { useMemo, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
 import {
-  Chord, GuitarShape, VoiceLine, asTriad, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsMovePlain, fifthsStepTag, midiOctave, mod, pc as pcOf, tonnetzPc, layoutMoodMap,
+  Chord, GuitarShape, VoiceLine, asTriad, defaultSpelling, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsMovePlain, fifthsStepTag,
+  midiOctave, mod, parseNote, pc as pcOf, tonnetzPc, layoutMoodMap, type NoteName,
 } from '../core';
 
 const isBlack = (m: number) => [1, 3, 6, 8, 10].includes(mod(m, 12));
@@ -121,6 +122,116 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
             {card && lit(m) && <text x={x + BW / 2} y={BH - 4} className="kname black on card-k">{spell(m)}</text>}
             {fingerOf.has(m) && <FingerBadge x={x + BW / 2} y={BH - 22} n={fingerOf.get(m)!} small />}
             {mel.has(m) && <circle cx={x + BW / 2} cy={12} r={card ? 3 : 4.5} className="meldot" />}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/** Diatonic staff step: C0=0, D0=1, … B0=6, C1=7, … (E4 = bottom treble line = 30). */
+function staffStep(midi: number, spelling?: NoteName): number {
+  const n = spelling ?? defaultSpelling(midi);
+  return n.letter + midiOctave(midi) * 7;
+}
+
+function noteFromSpell(midi: number, spell: (m: number) => string): NoteName {
+  const raw = spell(midi).replace(/♯/g, '#').replace(/♭/g, 'b').replace(/\d+$/, '');
+  return parseNote(raw) ?? defaultSpelling(midi);
+}
+
+/**
+ * Compact treble-staff strip for suggestion cards — chord tones on the staff
+ * instead of a sparse mini-piano with empty keys.
+ */
+export function StaffChordViz({
+  midis,
+  color = '#9C7CF4',
+  spell,
+  scalePcs = [],
+  tonicPc,
+  label,
+}: {
+  midis: number[];
+  color?: string;
+  spell: (midi: number) => string;
+  scalePcs?: number[];
+  tonicPc?: number;
+  label?: string;
+}) {
+  const notes = [...midis].sort((a, b) => a - b);
+  if (!notes.length) return null;
+  const spelled = notes.map((m) => ({ midi: m, n: noteFromSpell(m, spell), step: staffStep(m, noteFromSpell(m, spell)) }));
+  const TREBLE_BOTTOM = staffStep(64, { letter: 2, acc: 0 }); // E4
+  const gap = 5; // px between staff lines
+  const staffTop = 10;
+  const yOf = (step: number) => staffTop + (TREBLE_BOTTOM - step) * (gap / 2);
+  const minY = Math.min(...spelled.map((s) => yOf(s.step)));
+  const maxY = Math.max(...spelled.map((s) => yOf(s.step)));
+  const padTop = Math.max(0, staffTop - minY + 6);
+  const padBot = Math.max(0, maxY - (staffTop + 4 * gap) + 8);
+  const H = staffTop + 4 * gap + padTop + padBot + 2;
+  const clefX = 4;
+  const startX = 28;
+  const noteGap = Math.min(22, Math.max(14, 140 / Math.max(notes.length, 1)));
+  const W = startX + notes.length * noteGap + 10;
+  const scaleSet = new Set(scalePcs);
+  const showScale = scalePcs.length > 0;
+
+  return (
+    <svg className="staff-card" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label ? `Staff: ${label}` : 'Chord on staff'}>
+      {/* Staff lines */}
+      {Array.from({ length: 5 }, (_, i) => (
+        <line
+          key={i}
+          x1={clefX + 2}
+          x2={W - 4}
+          y1={staffTop + padTop + i * gap}
+          y2={staffTop + padTop + i * gap}
+          className="staff-line"
+        />
+      ))}
+      {/* Simple treble-clef mark */}
+      <text x={clefX + 2} y={staffTop + padTop + 3.6 * gap} className="staff-clef">𝄞</text>
+      {/* Chord noteheads */}
+      {spelled.map((s, i) => {
+        const y = yOf(s.step) + padTop;
+        const x = startX + i * noteGap;
+        const acc = s.n.acc;
+        const inScale = !showScale || scaleSet.has(mod(s.midi, 12));
+        const isTonic = tonicPc !== undefined && mod(s.midi, 12) === mod(tonicPc, 12);
+        // Ledger lines
+        const bottomY = staffTop + padTop + 4 * gap;
+        const topY = staffTop + padTop;
+        const ledgers: number[] = [];
+        if (y > bottomY + 0.5) {
+          for (let ly = bottomY + gap; ly <= y + 0.1; ly += gap) ledgers.push(ly);
+        }
+        if (y < topY - 0.5) {
+          for (let ly = topY - gap; ly >= y - 0.1; ly -= gap) ledgers.push(ly);
+        }
+        return (
+          <g key={`${s.midi}-${i}`}>
+            {ledgers.map((ly) => (
+              <line key={ly} x1={x - 7} x2={x + 7} y1={ly} y2={ly} className="staff-line ledger" />
+            ))}
+            {acc !== 0 && (
+              <text x={x - 9} y={y + 3.2} className="staff-acc">
+                {acc > 0 ? '♯'.repeat(acc) : '♭'.repeat(-acc)}
+              </text>
+            )}
+            <ellipse
+              cx={x}
+              cy={y}
+              rx={5.2}
+              ry={3.8}
+              transform={`rotate(-18 ${x} ${y})`}
+              fill={color}
+              stroke={isTonic ? '#ECEAF4' : inScale ? '#121117' : '#f0a070'}
+              strokeWidth={isTonic ? 1.4 : 1}
+              opacity={inScale ? 1 : 0.85}
+            />
+            <text x={x} y={H - 2} className="staff-name">{spell(s.midi)}</text>
           </g>
         );
       })}

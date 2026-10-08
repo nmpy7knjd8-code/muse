@@ -41,7 +41,7 @@ const SECTIONS: Section[] = [
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano graphic of the chord notes); the next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
+    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with the chord on a staff); the next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
     musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
     jump: 'chords',
     jumpLabel: 'Open Chords',

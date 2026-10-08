@@ -17,7 +17,7 @@ import {
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
-import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
+import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, StaffChordViz, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
 import { Guide } from './Guide';
 import { FitExplainer } from './FitExplainer';
@@ -628,14 +628,13 @@ function Composer({ data }: { data: LoadedData }) {
               </div>
               <div className="why">{s.why}</div>
               {midis.length > 0 && (
-                <div className="card-piano" aria-label={cs ? `Piano notes for ${cs.symbol}` : `Piano note ${(ns as NoteSuggestion).name}`}>
-                  <PianoViz
-                    variant="card"
-                    suggested={midis}
-                    fingers={[]}
+                <div className="card-staff" aria-label={cs ? `Staff notes for ${cs.symbol}` : `Staff note ${(ns as NoteSuggestion).name}`}>
+                  <StaffChordViz
+                    midis={midis}
                     color={color}
                     spell={spell}
-                    height={44}
+                    scalePcs={scale}
+                    tonicPc={pc(k.tonic)}
                     label={cs ? cs.symbol : (ns as NoteSuggestion).name}
                   />
                 </div>
