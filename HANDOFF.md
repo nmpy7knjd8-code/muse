@@ -25,6 +25,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - MIDI keyboard input: Mic ↔ MIDI toggle beside Listen; Web MIDI note-on fills melody, held notes → `chromaFromMidis` + `matchChord` for chords (same templates as mic).
 - Guide: “Which notes & chords will work” (relation tags + ranking) and Mic/MIDI section.
 - In-context FitExplainer under Melody piano / Chords palettes (key tint + relation chips + ranking why).
+- “Best fit first” suggestion cards sit directly under the Circle of Fifths (not below the next-pick board).
 
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).

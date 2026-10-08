@@ -183,6 +183,8 @@ svg .tcap { fill: #aaa; font-size: 11px; }
 svg .cnote { fill: #bbb; font-size: 10px; text-anchor: middle; }
 
 .suggestions .group { margin-bottom: 8px; }
+.best-fit-under-cof { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
+.best-fit-under-cof .ghead { margin-top: 8px; }
 .ghead { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin: 12px 0 6px; text-transform: capitalize; }
 .ghead i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .card { display: flex; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-left: 5px solid; border-radius: 12px; padding: 9px 10px; margin-bottom: 7px; cursor: pointer; }
