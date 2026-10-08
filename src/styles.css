@@ -90,7 +90,6 @@ section { margin-top: 10px; }
 
 .timeline { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; align-items: stretch; min-height: 104px; scrollbar-width: none; }
 .tbar { flex: 0 0 auto; min-width: 92px; display: flex; flex-direction: column; gap: 6px; }
-.tbar.on .tchord { border-color: rgba(156, 124, 244, 0.55); box-shadow: 0 0 0 1px rgba(156, 124, 244, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
 .tmel { display: flex; gap: 5px; min-height: 42px; align-items: flex-end; justify-content: center; flex-wrap: nowrap; }
 .tnote {
   display: inline-flex; align-items: stretch; gap: 0;
