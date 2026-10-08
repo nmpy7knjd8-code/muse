@@ -30,6 +30,7 @@ import { MoodChordRef } from './MoodChordRef';
 import { ChordConnections } from './ChordConnections';
 import { PlaybackRibbon, ribbonNotesFromEvents } from './PlaybackRibbon';
 import { PartMeterPanel } from './PartMeterPanel';
+import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
@@ -176,6 +177,8 @@ function Composer({ data }: { data: LoadedData }) {
   const melBeats = beatsPerBar(melMeter.timeSig);
   const bassBeats = beatsPerBar(bassMeter.timeSig);
   const [drawer, setDrawer] = useState<DrawerPage | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const openTutorial = () => { setDrawer(null); setTutorialOpen(true); };
   /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
   const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
   const [playSec, setPlaySec] = useState(0);
@@ -1305,7 +1308,12 @@ function Composer({ data }: { data: LoadedData }) {
       {/* Unified timeline: melody lane above, chords below (hidden on Guide) */}
       <section className="strip" aria-label="Timeline">
         {slots.length === 0 ? (
-          <p className="muted small">Tap chords below to start, or switch to Melody / Bass — all share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
+          <p className="muted small">
+            Tap chords below to start, or switch to Melody / Bass — all share this timeline.
+            New here?{' '}
+            <button type="button" className="pill tutorial-launch" onClick={openTutorial}>Tutorial</button>
+            {' '}or open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.
+          </p>
         ) : (
           <>
           <div className="strip-tools">
@@ -2010,6 +2018,7 @@ function Composer({ data }: { data: LoadedData }) {
       <details className="about">
         <summary>About &amp; credits</summary>
         <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.
+          {' '}<button type="button" className="linkish" onClick={openTutorial}>Tutorial</button> plays a short video intro.
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('guide')}>Open the Guide</button> for how each feature connects to musicality.
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('moods')}>Moods &amp; chords</button> lists every mood tag and the moves that carry it.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
@@ -2041,6 +2050,10 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
             {drawer === 'menu' && (
               <nav className="drawer-nav" aria-label="More">
+                <button type="button" className="drawer-link" onClick={openTutorial}>
+                  <b>Tutorial</b>
+                  <span className="muted">Short video intro to Muse’s main features</span>
+                </button>
                 <button type="button" className="drawer-link" onClick={() => setDrawer('moods')}>
                   <b>Moods &amp; chords</b>
                   <span className="muted">Every mood tag and the chord moves that carry it</span>
@@ -2153,6 +2166,7 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
+      <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </div>
   );
 }
