@@ -11,7 +11,8 @@ import {
   harmPreviewEvents,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, rootMotion,
-  TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, beatsPerBar, clampSlotsToMeter, parseMeter,
+  TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, BPM_PRESETS, DEFAULT_BPM, beatSecFromBpm, clampBpm,
+  beatsPerBar, clampSlotsToMeter, parseMeter,
   timeSigLabel,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
 } from '../core';
@@ -123,6 +124,18 @@ function Composer({ data }: { data: LoadedData }) {
     try { localStorage.setItem('muse.timeSig', timeSigLabel(ts)); } catch { /* private mode */ }
     setSlots((s) => clampSlotsToMeter(s, beatsPerBar(ts)));
   };
+  const [bpm, setBpm] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem('muse.bpm'));
+      return Number.isFinite(v) && v > 0 ? clampBpm(v) : DEFAULT_BPM;
+    } catch { return DEFAULT_BPM; }
+  });
+  const chooseBpm = (n: number) => {
+    const next = clampBpm(n);
+    setBpm(next);
+    try { localStorage.setItem('muse.bpm', String(next)); } catch { /* private mode */ }
+  };
+  const beatSec = beatSecFromBpm(bpm);
   const [meterNote, setMeterNote] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimelineSlot[]>([]);
   const [history, setHistory] = useState<Snapshot[]>([]);
@@ -328,7 +341,7 @@ function Composer({ data }: { data: LoadedData }) {
     synth.unlock();
     synth.stopAll();
     if (pendingHarm?.notes.length) {
-      const prev = harmPreviewEvents(pendingHarm.notes, { timeSig });
+      const prev = harmPreviewEvents(pendingHarm.notes, { timeSig, beatSec });
       synth.playNotes(withBass(s.chord, s.voicing), { dur: prev.chordDur, vel: 0.62 });
       prev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], { at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85 }));
     } else {
@@ -356,7 +369,7 @@ function Composer({ data }: { data: LoadedData }) {
   const playAll = () => {
     synth.unlock();
     synth.stopAll();
-    const ev = timelineEvents(slots, { timeSig });
+    const ev = timelineEvents(slots, { timeSig, beatSec });
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
@@ -389,10 +402,11 @@ function Composer({ data }: { data: LoadedData }) {
     synth.stopAll();
     const voiced = voiceProgression([...chords, ...p.chords]);
     const base = chords.length;
+    const step = beatSec * 2.14;
     p.chords.forEach((c, i) => {
-      const at = i * 0.9;
-      synth.playNotes(withBass(c, voiced[base + i] ?? pianoVoicing(c)), { at, dur: 0.85, vel: 0.68 });
-      if (p.links[i] !== undefined) synth.playNotes([fitMidi(p.links[i])], { at: at + 0.18, dur: 0.5, vel: 0.92 });
+      const at = i * step;
+      synth.playNotes(withBass(c, voiced[base + i] ?? pianoVoicing(c)), { at, dur: step * 0.94, vel: 0.68 });
+      if (p.links[i] !== undefined) synth.playNotes([fitMidi(p.links[i])], { at: at + step * 0.2, dur: step * 0.55, vel: 0.92 });
     });
   };
   const addChordPath = (p: ChordPath) => {
@@ -412,11 +426,12 @@ function Composer({ data }: { data: LoadedData }) {
   const playNotePath = (p: NotePath) => {
     synth.unlock();
     synth.stopAll();
+    const noteStep = Math.max(0.22, beatSec * 1.05);
     if (noteChord) {
       const v = noteChord === cur && prevVoicing ? prevVoicing : pianoVoicing(noteChord);
-      synth.playNotes(withBass(noteChord, v), { dur: 0.5 + p.midis.length * 0.45, vel: 0.35 });
+      synth.playNotes(withBass(noteChord, v), { dur: 0.4 + p.midis.length * noteStep, vel: 0.35 });
     }
-    p.midis.forEach((m, i) => synth.playNotes([fitMidi(m)], { at: 0.05 + i * 0.45, dur: 0.4, vel: 0.92 }));
+    p.midis.forEach((m, i) => synth.playNotes([fitMidi(m)], { at: 0.05 + i * noteStep, dur: noteStep * 0.9, vel: 0.92 }));
   };
   const addNotePath = (p: NotePath) => {
     snapshot();
@@ -474,7 +489,7 @@ function Composer({ data }: { data: LoadedData }) {
     try { await navigator.clipboard.writeText(txt); flash('Copied timeline'); } catch { flash(txt); }
   };
   const downloadMidi = () => {
-    const bytes = toMidiTimeline(slots, 90, timeSig);
+    const bytes = toMidiTimeline(slots, bpm, timeSig);
     const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'audio/midi' }));
     const a = document.createElement('a');
     a.href = url;
@@ -489,13 +504,15 @@ function Composer({ data }: { data: LoadedData }) {
     const j = moodJourney(engine, k, jFrom, jTo, { length: jLen, adventure });
     setJourney(j);
     const v = voiceProgression(j.map((x) => x.chord));
-    synth.playSequence(j.map((x, i) => withBass(x.chord, v[i])), 0.8, 0.75);
+    const step = beatSec * 1.9;
+    synth.playSequence(j.map((x, i) => withBass(x.chord, v[i])), step, step * 0.94);
   };
   const playJourney = () => {
     if (!journey) return;
     synth.unlock();
     const v = voiceProgression(journey.map((x) => x.chord));
-    synth.playSequence(journey.map((x, i) => withBass(x.chord, v[i])), 0.8, 0.75);
+    const step = beatSec * 1.9;
+    synth.playSequence(journey.map((x, i) => withBass(x.chord, v[i])), step, step * 0.94);
   };
   const useJourney = () => {
     if (!journey) return;
@@ -877,6 +894,22 @@ function Composer({ data }: { data: LoadedData }) {
             ))}
           </select>
         </label>
+        <span className="muted"> · </span>
+        <label className="meter-pick">
+          <span className="muted">BPM</span>
+          <select
+            aria-label="Tempo"
+            value={bpm}
+            onChange={(e) => chooseBpm(Number(e.target.value))}
+          >
+            {!(BPM_PRESETS as readonly number[]).includes(bpm) && (
+              <option value={bpm}>{bpm}</option>
+            )}
+            {BPM_PRESETS.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        </label>
         {detected && auto && <span className="muted"> · detected ({Math.round(detected.confidence * 100)}%)</span>}
         {data.kb.meta.isSeed && <span className="warn"> · using seed theory data</span>}
       </div>
@@ -1004,8 +1037,23 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
         )}
-        <div className="row gap">
+        <div className="row gap play-row">
           <button onClick={playAll} disabled={!slots.length}>▶ Play</button>
+          <label className="meter-pick bpm-inline">
+            <span className="muted">BPM</span>
+            <select
+              aria-label="Playback tempo"
+              value={bpm}
+              onChange={(e) => chooseBpm(Number(e.target.value))}
+            >
+              {!(BPM_PRESETS as readonly number[]).includes(bpm) && (
+                <option value={bpm}>{bpm}</option>
+              )}
+              {BPM_PRESETS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
           <button onClick={undo} disabled={!history.length}>↶ Undo</button>
           <button onClick={clearAll} disabled={!slots.length}>Clear</button>
           <button onClick={copyText} disabled={!slots.length}>Copy</button>
