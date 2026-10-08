@@ -348,8 +348,15 @@ section { margin-top: 10px; }
 .mchip { border: 1.5px solid; border-radius: 999px; padding: 2px 4px; font-size: 13px; display: inline-flex; align-items: center; gap: 2px; }
 .mchip button { border: none; background: transparent; padding: 0 6px; font-size: 15px; color: inherit; }
 .dchip { border-radius: 999px; padding: 3px 9px; font-size: 12.5px; }
-.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.preset { border: 1.5px solid; border-radius: 999px; padding: 4px 10px; font-size: 13px; background: transparent; }
+.presets {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px;
+  max-height: none;
+}
+.preset {
+  border: 1.5px solid; border-radius: 999px;
+  padding: 3px 8px; font-size: 12px; line-height: 1.25;
+  background: transparent; white-space: nowrap;
+}
 .slider { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
 .slider input { flex: 1; padding: 0; accent-color: var(--accent); }
 
@@ -781,14 +788,15 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .guide-page { margin-top: 4px; }
 .guide-hero h2 { margin: 4px 0 6px; font-size: 22px; font-weight: 800; letter-spacing: 0.01em; }
 .guide-hero p { margin: 0 0 12px; line-height: 1.45; }
-.guide-toc {
-  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0;
+.guide-toc, .guide-theory-toc {
+  display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 14px; padding: 0;
 }
-.guide-toc a {
-  font-size: 12px; color: var(--muted); text-decoration: none;
-  border: 1px solid var(--line); background: var(--panel2); border-radius: 999px; padding: 4px 9px;
+.guide-toc a, .guide-theory-toc a {
+  font-size: 11.5px; color: var(--muted); text-decoration: none;
+  border: 1px solid var(--line); background: var(--panel2); border-radius: 999px;
+  padding: 3px 8px; line-height: 1.3;
 }
-.guide-toc a:hover { color: var(--text); border-color: #5d5680; }
+.guide-toc a:hover, .guide-theory-toc a:hover { color: var(--text); border-color: #5d5680; }
 .guide-workflow {
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
   padding: 10px 12px; margin-bottom: 12px;
@@ -809,6 +817,35 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .guide-kicker.mus { color: #9ecbff; }
 .guide-tip { margin: 0 0 8px; }
 .guide-card .pill { margin-top: 2px; }
+.guide-theory {
+  margin: 18px 0 8px;
+  padding: 14px 12px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(158, 203, 255, 0.28);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(127, 208, 168, 0.08), transparent 55%),
+    radial-gradient(100% 70% at 100% 0%, rgba(158, 203, 255, 0.1), transparent 50%),
+    var(--panel);
+}
+.guide-theory-head h2 {
+  margin: 0 0 6px; font-size: 20px; font-weight: 800; letter-spacing: 0.01em;
+}
+.guide-theory-head p { margin: 0 0 10px; line-height: 1.45; font-size: 13.5px; }
+.guide-theory-group {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 11px 8px;
+  margin: 0 0 8px;
+}
+.guide-theory-group h3 {
+  margin: 0 0 6px; font-size: 15px; font-weight: 700;
+  color: #cfe4ff; text-transform: none; letter-spacing: 0;
+}
+.guide-theory-intro { margin: 0 0 8px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.guide-theory-list { margin: 0; padding-left: 1.15em; }
+.guide-theory-list li { margin: 5px 0; font-size: 13.5px; line-height: 1.42; }
+.guide-theory-list b { color: var(--text); font-weight: 700; }
 .guide-foot { margin: 16px 0 8px; }
 .card-rank { font-size: 11px; font-weight: 700; color: #7fd0a8; min-width: 1.4em; }
 .path-block { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; margin: 8px 0 12px; }
