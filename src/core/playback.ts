@@ -94,16 +94,35 @@ export function keysVoicing(chord: Chord, upper: number[]): number[] {
   return avoidMud([bass, ...upper.filter((m) => m !== bass)]);
 }
 
+/** Upper chord tones only (no added low bass) — used when a separate bass part is playing. */
+export function keysVoicingUpper(upper: number[]): number[] {
+  return avoidMud([...upper].sort((a, b) => a - b));
+}
+
+/** Single low root/slash-bass folded into an instrument's range (for a dedicated bass part). */
+export function bassLineMidi(chord: Chord, def: InstrumentDef): number {
+  return fitMidiToInstrument(bassNote(chord, def.samples.from), def);
+}
+
 /** MIDI notes to sound for a chord on an instrument (keys: voice-led + bass; guitar: shape; bass: low root). */
-export function chordMidis(chord: Chord, upper: number[], def: InstrumentDef): number[] {
+export function chordMidis(
+  chord: Chord,
+  upper: number[],
+  def: InstrumentDef,
+  opts: { omitBass?: boolean } = {},
+): number[] {
   if (def.voicing === 'guitar') {
     const shape = guitarVoicings(chord, 1)[0];
-    if (shape) return shapeMidi(shape).sort((a, b) => a - b);
+    if (!shape) return [];
+    const midis = shapeMidi(shape).sort((a, b) => a - b);
+    // Drop the lowest string when a separate bass line covers the root.
+    return opts.omitBass && midis.length > 1 ? midis.slice(1) : midis;
   }
   if (def.voicing === 'bass') {
     // Single low root (or slash-bass) in the sample range — bass guitar, not a full chord stack.
-    return [fitMidiToInstrument(bassNote(chord, def.samples.from), def)];
+    return [bassLineMidi(chord, def)];
   }
+  if (opts.omitBass) return keysVoicingUpper(upper);
   return keysVoicing(chord, upper);
 }
 
