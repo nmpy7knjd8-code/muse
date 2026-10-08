@@ -556,7 +556,7 @@ function Composer({ data }: { data: LoadedData }) {
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
-      <div className="ghead">Best fit first <span className="muted" style={{ fontWeight: 500 }}>· mood is a tag, not the sort</span></div>
+      <div className="ghead">Best fit first</div>
       {ranked.map((s, i) => {
         const isChord = 'chord' in s;
         const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
