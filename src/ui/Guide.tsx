@@ -42,7 +42,7 @@ const SECTIONS: Section[] = [
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
     use: 'Use In this key / 7ths / Open colour / Extra colour / Secondaries for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano of the chord notes); timeline bars show the chord on a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
-    musicality: 'In-key chords feel like family. 7ths and Open colour (sus / add9 / 6) enrich home without leaving it. Extra colour is borrowed modal surprise; Secondaries aim at another chord, then resolve.',
+    musicality: 'Muse ranks next chords by key fit, voice leading, cadence grammar (V→I, deceptive vi), secondary setup/resolve, bass motion, common pop/jazz skeletons, mood, and tension style. In-key family first; 7ths and Open colour enrich home; Extra colour and Secondaries open the door when you ask for adventure.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
   },

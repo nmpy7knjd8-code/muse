@@ -340,6 +340,176 @@ function fallingFifthBonus(cur: Chord | undefined, chord: Chord): number {
   return 0;
 }
 
+/** Sounding bass PC (slash bass when present, else root). */
+function bassPcOf(c: Chord): number {
+  return c.bass ? pc(c.bass) : pc(c.root);
+}
+
+function isDomQuality(q: QualityId): boolean {
+  return q === 'maj' || q === '7' || q === '9' || q === '7b9' || q === '7#9' || q === '7sus4';
+}
+
+/** V / V7 / vii°(7) in the key — the dominant-function pillars of a cadence. */
+function isKeyDominant(chord: Chord, k: Key): boolean {
+  const off = mod(pc(chord.root) - pc(k.tonic), 12);
+  if (off === 7 && isDomQuality(chord.quality)) return true;
+  if (off === 11 && (chord.quality === 'dim' || chord.quality === 'dim7' || chord.quality === 'm7b5')) return true;
+  return false;
+}
+
+/**
+ * Cadence grammar (mokuren / Common-Practice / pop practice):
+ * after a key dominant, prefer authentic I/i, then deceptive vi/♭VI.
+ * Caps stay small so adventure / mood / harmonize can still override. HEURISTIC.
+ */
+function cadenceBonus(cur: Chord | undefined, chord: Chord, k: Key, adventure: number): number {
+  if (!cur || !isKeyDominant(cur, k)) return 0;
+  const fam = MODE_BY_ID[k.mode].family;
+  const nextOff = mod(pc(chord.root) - pc(k.tonic), 12);
+  const plain = chord.quality === 'maj' || chord.quality === 'min';
+  const softTonic = plain || chord.quality === 'maj7' || chord.quality === 'm7' || chord.quality === '6' || chord.quality === 'add9';
+  // Authentic: V → I / i (Picardy maj in minor still counts as home).
+  if (nextOff === 0 && softTonic) return plain ? 0.38 : 0.26;
+  // Deceptive: V → vi (major) or ♭VI (minor) — classic misdirection.
+  const dec = fam === 'major' ? 9 : 8;
+  if (nextOff === dec && (chord.quality === 'min' || chord.quality === 'maj' || chord.quality === 'm7' || chord.quality === 'maj7')) {
+    return adventure >= 0.2 ? 0.18 : 0.1;
+  }
+  return 0;
+}
+
+/**
+ * Predominant → dominant: IV / ii (and minor iv / ii°) naturally aim at V.
+ * Priors already help; a light lift makes the grammar audible in the top ranks. HEURISTIC.
+ */
+function predominantToDominantBonus(cur: Chord | undefined, chord: Chord, k: Key): number {
+  if (!cur) return 0;
+  const t = pc(k.tonic);
+  const from = mod(pc(cur.root) - t, 12);
+  const to = mod(pc(chord.root) - t, 12);
+  if (to !== 7 || !isDomQuality(chord.quality)) return 0;
+  if (from === 5 || from === 2) return 0.14; // IV/ii → V
+  if (MODE_BY_ID[k.mode].family === 'minor' && (from === 5 || from === 3)) return 0.12;
+  return 0;
+}
+
+/**
+ * Launch applied dominants from stable homes (I, IV, vi…) — V/V and V/ii are the workhorses
+ * (Hooktheory secondary practice; Scaler-style “tension before resolve”). HEURISTIC.
+ */
+function secondaryPrepareBonus(cur: Chord | undefined, chord: Chord, k: Key, adventure: number): number {
+  if (!cur || adventure < 0.15) return 0;
+  const rn = analyzeRoman(chord, k);
+  if (!rn.secondary || !rn.secondary.startsWith('V')) return 0;
+  const curOff = mod(pc(cur.root) - pc(k.tonic), 12);
+  // Good launch pads: tonic, subdominant, submediant (and minor ♭VI / ♭III colour).
+  if (![0, 5, 9, 8, 3].includes(curOff)) return 0;
+  if (/\/V$/.test(rn.secondary)) return 0.22; // V/V
+  if (/\/(ii|II|i|I)$/.test(rn.secondary)) return 0.18; // V/ii (or V/i in minor labelling)
+  if (/\/(vi|VI)$/.test(rn.secondary)) return 0.14;
+  return 0.1;
+}
+
+/**
+ * Bass-line motion (slash-aware): stepwise and 4th/5th basses glue changes; big leaps tax.
+ * Complements root fallingFifthBonus when inversion / slash differs from root. HEURISTIC.
+ */
+function bassMotionBonus(cur: Chord | undefined, chord: Chord): number {
+  if (!cur) return 0;
+  const from = bassPcOf(cur);
+  const to = bassPcOf(chord);
+  const asc = mod(to - from, 12);
+  const step = Math.min(asc, 12 - asc);
+  if (step === 0) return 0.05; // pedal / shared bass
+  if (step === 1 || step === 2) return 0.14; // stepwise
+  if (asc === 5 || asc === 7) return 0.1; // fourth / fifth
+  if (step >= 6) return -0.06; // tritone-or-worse leap in the bass
+  return 0;
+}
+
+/**
+ * Jazz guide-tone continuity: reward when 3rds/7ths of adjacent chords connect by step
+ * (shell-voicing / guide-tone line practice). Gated to tensionStyle === 'jazz'. HEURISTIC.
+ */
+function guideToneBonus(cur: Chord | undefined, chord: Chord, style: TensionStyleId | null | undefined): number {
+  if (!cur || style !== 'jazz') return 0;
+  const guidePcs = (c: Chord): number[] => {
+    const r = pc(c.root);
+    return chordPcs(c).filter((p) => {
+      const d = mod(p - r, 12);
+      return d === 3 || d === 4 || d === 10 || d === 11;
+    });
+  };
+  const a = guidePcs(cur);
+  const b = guidePcs(chord);
+  if (!a.length || !b.length) return 0;
+  let hits = 0;
+  for (const from of a) {
+    for (const to of b) {
+      const d = Math.min(mod(to - from, 12), mod(from - to, 12));
+      if (d <= 2) hits++;
+    }
+  }
+  return hits >= 2 ? 0.16 : hits === 1 ? 0.08 : 0;
+}
+
+/**
+ * Tiny boosts for ubiquitous pop / jazz skeletons (Hookpad “Magic Chord” spirit —
+ * corpus-common continuations) without overriding functional priors. HEURISTIC.
+ */
+function stockProgressionBonus(prog: Chord[], chord: Chord, k: Key): number {
+  if (prog.length < 2) return 0;
+  const t = pc(k.tonic);
+  const a = mod(pc(prog[prog.length - 2]!.root) - t, 12);
+  const b = mod(pc(prog[prog.length - 1]!.root) - t, 12);
+  const c = mod(pc(chord.root) - t, 12);
+  const fam = MODE_BY_ID[k.mode].family;
+  // Axis / pop: I–V–vi → IV
+  if (a === 0 && b === 7 && c === 5) return 0.2;
+  // I–vi–IV → V
+  if (a === 0 && b === 9 && c === 7) return 0.2;
+  // vi–IV–I → V
+  if (a === 9 && b === 5 && c === 0) return 0.12;
+  if (a === 9 && b === 5 && c === 7) return 0.18;
+  // Jazz turnaround fragment: ii–V → I
+  if (a === 2 && b === 7 && c === 0) return 0.22;
+  // Andalusian / natural-minor cascade: i–♭VII–♭VI → V or ♭VII
+  if (fam === 'minor') {
+    if (a === 0 && b === 10 && c === 8) return 0.16;
+    if (a === 10 && b === 8 && c === 7) return 0.14;
+  }
+  return 0;
+}
+
+/**
+ * Mode-characteristic chords (Mixolydian ♭VII, Dorian IV, Phrygian ♭II, Lydian II)
+ * get a light lift when the key is that mode — priors are maj/min-family only. HEURISTIC.
+ */
+function modalColourBonus(chord: Chord, k: Key): number {
+  const mode = k.mode;
+  if (mode === 'major' || mode === 'minor' || mode === 'harmonicMinor' || mode === 'melodicMinor') return 0;
+  const off = mod(pc(chord.root) - pc(k.tonic), 12);
+  if (mode === 'mixolydian' && off === 10 && (chord.quality === 'maj' || chord.quality === '7')) return 0.2;
+  if (mode === 'dorian' && off === 5 && (chord.quality === 'maj' || chord.quality === '7')) return 0.16;
+  if ((mode === 'phrygian' || mode === 'phrygianDominant') && off === 1) return 0.18;
+  if ((mode === 'lydian' || mode === 'lydianDominant') && off === 2 && (chord.quality === 'maj' || chord.quality === '7')) return 0.14;
+  return 0;
+}
+
+/**
+ * Mild exact-symbol cooldown on top of family variety — Cmaj7 after Cmaj7 is more loop-y
+ * than C after Cmaj7. Tonic home still lightly taxed only. HEURISTIC.
+ */
+function exactRepeatAdjust(chord: Chord, prog: Chord[], k: Key): number {
+  if (prog.length < 1) return 0;
+  const sym = chordSymbol(chord);
+  const last = chordSymbol(prog[prog.length - 1]!);
+  if (sym !== last) return 0;
+  // suggestChords already skips equal-to-current; this catches near-repeat via enharmonic / when harmonizing.
+  const tonicHome = pc(chord.root) === pc(k.tonic);
+  return tonicHome ? -0.08 : -0.18;
+}
+
 const CHORD_PAIR_RE = /\b[A-G][#b♭♯]?[a-z0-9#b♭♯°ø+]*\s*(?:→|->)\s*[A-G][#b♭♯]?[a-z0-9#b♭♯°ø+]*/;
 
 export class SuggestionEngine {
@@ -561,16 +731,34 @@ export class SuggestionEngine {
       const startBias = !cur && plainTriad && off === 0 ? 1.1 : 0;
       const nrt = cur ? neoRiemannianPath(cur, chord) : null;
       // Light grammar / variety terms — additive only; do not replace priors, KB, or tension.
-      const variety = recentVarietyAdjust(chord, prog, k);
+      // Cadence / secondary / bass / stock / modal / jazz guide-tones: theory-solid nudges
+      // inspired by Common-Practice scoring (mokuren), Genkhord FUNCTION mode, Hookpad Magic Chord.
+      const variety = recentVarietyAdjust(chord, prog, k) + exactRepeatAdjust(chord, prog, k);
       const resolveSec = secondaryResolveBonus(cur, chord, k);
+      const prepareSec = secondaryPrepareBonus(cur, chord, k, a);
       const nrtBonus = nrtSmoothBonus(nrt);
       const fifths = fallingFifthBonus(cur, chord);
-      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + simplicity + startBias + variety + resolveSec + nrtBonus + fifths + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0) + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
+      const cadence = cadenceBonus(cur, chord, k, a);
+      const predDom = predominantToDominantBonus(cur, chord, k);
+      const bass = bassMotionBonus(cur, chord);
+      const stock = stockProgressionBonus(prog, chord, k);
+      const modal = modalColourBonus(chord, k);
+      const guides = guideToneBonus(cur, chord, opts.tensionStyle);
+      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6
+        + moodBonus + simplicity + startBias + variety + resolveSec + prepareSec + nrtBonus + fifths
+        + cadence + predDom + bass + stock + modal + guides
+        + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0)
+        + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
       let why = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
         : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
+      if (cadence >= 0.26) why = `Cadence home — ${why}`;
+      else if (cadence >= 0.1) why = `Deceptive turn — ${why}`;
+      else if (stock >= 0.18) why = `Common continuation — ${why}`;
+      else if (prepareSec >= 0.18) why = `Secondary setup — ${why}`;
+      else if (predDom >= 0.12) why = `Toward the dominant — ${why}`;
       if (harmony) {
         const n = harmony.relations.length, ct = harmony.relations.filter((r) => r.kind === 'chord').length;
         const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
@@ -711,6 +899,13 @@ export class SuggestionEngine {
       if (before !== undefined && last !== undefined) {
         const prevIv = last - before;
         if (Math.abs(prevIv) >= 5 && Math.sign(iv) === -Math.sign(prevIv) && absIv <= 2 && absIv > 0) quality += 0.4; // gap fill
+      }
+      // Approach from below/above into a chord tone (common melodic practice).
+      if (last !== undefined && isChordTone && absIv > 0 && absIv <= 2) quality += 0.12;
+      // Neighbor tone: step away from a chord tone then back is handled by gap-fill; reward landing back.
+      if (before !== undefined && last !== undefined && isChordTone) {
+        const left = last - before;
+        if (Math.abs(left) <= 2 && left !== 0 && iv === -left) quality += 0.1;
       }
       if (absIv > 9) quality -= 0.3;
       // Stretch-aware ranking: favour notes that belong to the arrival (final) chord of the recent sequence,
