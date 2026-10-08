@@ -5,7 +5,7 @@ import {
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
   spellInKey, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
-  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
+  INSTRUMENTS, INSTRUMENT_IDS, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, type TensionStyleId, type ArtistTryIt, type Artist,
   TimelineSlot, activeSlotIndex, chordTargetIndex, chordsOf, clearSlotChord, insertNote, labelSlot, melodyOf,
   nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents,
@@ -19,7 +19,6 @@ import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
-import { TensionCurve } from './TensionCurve';
 import { NextPickBoard } from './NextPickBoard';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 
@@ -122,11 +121,11 @@ function Composer({ data }: { data: LoadedData }) {
   const [tab, setTab] = useState<Tab>('chords');
   const [visTab, setVisTab] = useState<VisTab>('piano');
   const [adventure, setAdventure] = useState(0.35);
-  const [tStyle, setTStyle] = useState<TensionStyleId>(() => {
+  // Silent default for suggestion ranking (tension model still scores chords; graph UI removed).
+  const [tStyle] = useState<TensionStyleId>(() => {
     const v = typeof localStorage !== 'undefined' ? localStorage.getItem('muse.tensionStyle') : null;
     return v === 'pop' || v === 'classical' || v === 'jazz' || v === 'film' ? v : 'pop';
   });
-  const chooseTStyle = (s: TensionStyleId) => { setTStyle(s); try { localStorage.setItem('muse.tensionStyle', s); } catch { /* private mode */ } };
   const [moodText, setMoodText] = useState('');
   const [profile, setProfile] = useState<MoodProfile | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -171,10 +170,6 @@ function Composer({ data }: { data: LoadedData }) {
       : undefined;
     return engine.suggestChords({ key: k, progression, profile, adventure, limit: 28, tensionStyle: tStyle, harmonize });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, beats]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tState = useMemo(() => {
-    const steps = slots.filter((s) => s.chord).map((s) => ({ chord: s.chord as Chord, melody: s.notes.map((n) => n.midi) }));
-    return steps.length ? progressionTension(steps, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null;
-  }, [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
   const noteSugs: NoteSuggestion[] = useMemo(
     () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat, timeSig }) : []),
     [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, timeSig.num, timeSig.den], // eslint-disable-line react-hooks/exhaustive-deps
@@ -812,17 +807,6 @@ function Composer({ data }: { data: LoadedData }) {
             : <span className="muted">Tap anything to start sound</span>}
         </div>
       </section>
-
-      {tab !== 'artists' && tState && (
-        <TensionCurve
-          state={tState}
-          labels={chords.map((c) => chordSymbol(c, true))}
-          melodyLabels={slots.filter((s) => s.chord).map((s) => labelSlot(s, data.kb, beats).map((n) => spellMidi(n.midi) + (n.relation ? ` (${n.relation.label})` : '')))}
-          style={tStyle}
-          onStyle={chooseTStyle}
-          ghost={tab === 'chords' && selChord?.tension ? { level: selChord.tension.level, debtAfter: selChord.tension.debtAfter, label: selChord.symbol, color: lex.color(selChord.primaryMood) } : null}
-        />
-      )}
 
       {/* Input */}
       <section className="input">

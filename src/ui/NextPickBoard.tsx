@@ -1,5 +1,4 @@
-// Next-pick board: compare suggested chords or notes the way the tension graph compares bars —
-// a 2D map of options + a status strip for the selection + Hear / Add. Tap a dot to preview.
+// Next-pick board: compare suggested chords or notes on a 2D map + rank strip, with Hear / Add.
 // When harmonizing a pending melody, the x-axis becomes clash → fit instead of familiar → colourful.
 import { useMemo } from 'react';
 import {
@@ -87,7 +86,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
       <div className="nextpick-head">
         <span className="tstatus"><i style={{ background: selLaid.color }} />{title}</span>
         <span className="small muted">
-          {harmMode ? 'tap a dot to hear chord + melody' : 'tap a dot to hear · compare like the tension graph'}
+          {harmMode ? 'tap a dot to hear chord + melody' : 'tap a dot to hear · closer to calm/fit is easier'}
         </span>
       </div>
 

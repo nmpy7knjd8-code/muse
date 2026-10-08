@@ -3,7 +3,7 @@
 Live: https://nmpy7knjd8-code.github.io/muse/ (GitHub Pages; every push to `main` runs tests, builds, and deploys via `.github/workflows/pages.yml`).
 
 ## What it is
-Mobile-first PWA (Vite + React + TypeScript) that suggests the next chord or melody note and labels each option by mood. All music logic lives in `src/core/` (no DOM imports) so it can be ported to Swift later. Data files in `public/`: `theory_kb.json`, `mood_lexicon.json`, `lore.json`, `artists.json`, plus the tension model.
+Mobile-first PWA (Vite + React + TypeScript) that suggests the next chord or melody note and labels each option by mood. All music logic lives in `src/core/` (no DOM imports) so it can be ported to Swift later. Data files in `public/`: `theory_kb.json`, `mood_lexicon.json`, `lore.json`, `artists.json` (tension model still used for ranking, not shown as a graph).
 
 Run: `npm install && npm run dev`. Test: `npx vitest run`. Build: `npm run build`.
 
@@ -14,7 +14,8 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Hear a suggested chord under a pending N.C. melody plays chord + that bar’s notes together (`harmPreviewEvents`).
 - Harmonize banner when a bar has melody waiting; NextPickBoard switches to clash→fit × calm→tense.
 - Timeline ↻ clears a chord and re-opens chord suggestions for that melody (reharm).
-- Tension curve: plain-language tips + melody-over-chord chips; suggestion cards ranked with piano/guitar/bass hand placements; 2–3 step paths with connecting melody; CoF tap-to-add on piano & guitar views (plays current instrument); Artist Lens request copy + optional song analysis; Polyphia/Collier removed (classic rock LZ/Beatles/Rush remain); melody Hear previews only the next note.
+- Suggestion cards ranked with piano/guitar/bass hand placements; 2–3 step paths with connecting melody; CoF tap-to-add on piano & guitar views (plays current instrument); Artist Lens request copy + optional song analysis; Polyphia/Collier removed (classic rock LZ/Beatles/Rush remain); melody Hear previews only the next note.
+- Tension graph UI removed (core tension model still ranks chord suggestions quietly).
 - Bass guitar: `fitMidiToInstrument` folds melody/CoF/timeline/path notes into the bass sample range; AudioEngine applies it on every `playNotes` so bass sounds on melody + circle, not only chords.
 - CoF + paths for laypeople: feel-first move labels (right=brighter / left=opens), rim dots explained as next picks, ready-made progression/melody-run copy instead of CW/V jargon.
 
