@@ -361,7 +361,7 @@ export const COF_MAX_VARIANTS_PER_PC = 3;
 /** Only the top-N suggestions appear as rim chips (best-first). */
 export const COF_MAX_RIM_DOTS = 12;
 /** Radial gap between stacked augmentations on one root’s spoke (center-to-center). */
-export const COF_VARIANT_RADIAL_STEP = 30;
+export const COF_VARIANT_RADIAL_STEP = 32;
 /** Clearance from pitch-class node center to the first (best) rim chip. */
 export const COF_VARIANT_INNER_GAP = 40;
 
@@ -394,11 +394,16 @@ export function cofVariantTag(label?: string): string {
   if (!q) return '';
   return q
     .replace(/maj7/i, 'Δ7')
+    .replace(/maj9/i, 'Δ9')
     .replace(/maj/i, 'Δ')
     .replace(/min/i, 'm')
     .replace(/dim/i, '°')
     .replace(/aug/i, '+')
-    .slice(0, 4);
+    .replace(/add9/i, '+9')
+    .replace(/add11/i, '+11')
+    .replace(/sus2/i, 's2')
+    .replace(/sus4/i, 's4')
+    .slice(0, 3);
 }
 
 /**
@@ -613,15 +618,15 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         const hit = pressedDot === s.id;
         const isBestLocal = s.localRank === 0;
         const rankLabel = s.rank + 1;
-        // Quality tag sits just off the spoke (tangential) so radial neighbors stay clear.
-        const tagOff = s.r + 11;
-        const tx = s.x + Math.cos(s.angle + Math.PI / 2) * tagOff;
-        const ty = s.y + Math.sin(s.angle + Math.PI / 2) * tagOff;
+        // Pill on the spoke: rank · quality (or rank alone for plain triads). On-axis → no neighbor collisions.
+        const face = s.tag ? `${rankLabel}·${s.tag}` : String(rankLabel);
+        const pillW = Math.max(22, 10 + face.length * 6.1) + (hit ? 2 : 0);
+        const pillH = 17 + (hit ? 1 : 0);
         return (
           <g
             key={s.id}
             className="cdot-hit"
-            opacity={0.5 + 0.5 * s.strength}
+            opacity={0.55 + 0.45 * s.strength}
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -637,23 +642,21 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
             <title>
               {`#${rankLabel}${s.label ? ` ${s.label}` : ''} — ${isBestLocal ? 'best' : 'weaker'} for this root · tap to hear`}
             </title>
-            {/* Finger-sized hit target (visual chip is smaller so ranks stay readable). */}
-            <circle cx={s.x} cy={s.y} r={15} fill="transparent" />
-            <circle
-              cx={s.x} cy={s.y}
-              r={hit ? s.r + 1.5 : s.r}
+            {/* Finger-sized hit target around the pill. */}
+            <circle cx={s.x} cy={s.y} r={16} fill="transparent" />
+            <rect
+              x={s.x - pillW / 2}
+              y={s.y - pillH / 2}
+              width={pillW}
+              height={pillH}
+              rx={pillH / 2}
               fill={s.color}
               stroke={isBestLocal ? '#ECEAF4' : '#121117'}
-              strokeWidth={isBestLocal ? 2.2 : 1}
+              strokeWidth={isBestLocal ? 2 : 1}
             />
-            {rankLabel <= 9 && (
-              <text x={s.x} y={s.y + 3.4} className={'cdot-rank' + (s.strength > 0.55 ? ' dark' : '')}>
-                {rankLabel}
-              </text>
-            )}
-            {s.tag ? (
-              <text x={tx} y={ty + 3} className={'cdot-tag' + (isBestLocal ? ' best' : '')}>{s.tag}</text>
-            ) : null}
+            <text x={s.x} y={s.y + 3.5} className={'cdot-pill' + (s.strength > 0.45 ? ' dark' : '')}>
+              {face}
+            </text>
           </g>
         );
       })}

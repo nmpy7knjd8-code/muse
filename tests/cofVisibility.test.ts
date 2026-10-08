@@ -38,6 +38,7 @@ describe('cofVariantTag', () => {
     expect(cofVariantTag('G7')).toBe('7');
     expect(cofVariantTag('Bdim')).toBe('°');
     expect(cofVariantTag('F♯aug')).toBe('+');
+    expect(cofVariantTag('Cadd9')).toBe('+9');
     expect(cofVariantTag('C')).toBe('');
   });
 });
@@ -73,6 +74,8 @@ describe('cofVariantSlots', () => {
     }
     expect(atC[1].tag).toBe('Δ7');
     expect(atC[2].tag).toBe('6');
+    // Pills are ≤17px tall; radial step must clear them.
+    expect(COF_VARIANT_RADIAL_STEP).toBeGreaterThan(17);
   });
 
   it('marks best overall / best-of-root larger and stronger than worse variants', () => {
