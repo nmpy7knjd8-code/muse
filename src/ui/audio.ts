@@ -288,6 +288,19 @@ export class AudioEngine {
 
   /** True while our own playback (plus a short room tail) could reach the microphone (Listen mode pauses). */
   isPlaying(): boolean { return performance.now() < this.busyUntil; }
+
+  /** AudioContext clock (seconds), or null before unlock. Used to drive the playhead UI. */
+  audioTime(): number | null {
+    return this.ctx ? this.ctx.currentTime : null;
+  }
+
+  /**
+   * Same scheduling origin `playNotes({ at: 0 })` uses — slight lookahead so the first
+   * attack isn’t late. Call immediately before scheduling a Play sequence.
+   */
+  scheduleOrigin(): number {
+    return this.now();
+  }
   private markBusy(endCtxTime: number) {
     if (!this.ctx) return;
     const ms = (endCtxTime - this.ctx.currentTime) * 1000 + 400;

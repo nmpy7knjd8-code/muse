@@ -131,6 +131,86 @@ section { margin-top: 10px; }
   border-color: rgba(111, 176, 168, 0.35);
 }
 .tnote:active { transform: scale(0.97); }
+.tnote.playing {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.55), 0 0 18px rgba(255, 213, 79, 0.35);
+  z-index: 2;
+}
+.tbar.playing .tchord {
+  border-color: rgba(255, 213, 79, 0.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 2px rgba(255, 213, 79, 0.35),
+    0 8px 22px rgba(0, 0, 0, 0.28);
+}
+.tbar.playing .tchord .sym { color: #ffe082; }
+
+/* ▶ Play — scrolling note ribbon (fixed playhead, world slides left) */
+.play-ribbon {
+  margin: 8px 0 10px;
+  padding: 8px 10px 10px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #2a2436 0%, #1a1722 100%);
+  border: 1px solid rgba(255, 213, 79, 0.28);
+  overflow: hidden;
+}
+.play-ribbon-head {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;
+}
+.play-ribbon-live {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #111; background: #ffd54f; border-radius: 999px; padding: 2px 7px;
+}
+.play-ribbon-time { margin-left: auto; font-variant-numeric: tabular-nums; }
+.play-ribbon-view {
+  position: relative; height: 78px; overflow: hidden;
+  border-radius: 8px; background: rgba(0, 0, 0, 0.28);
+}
+.play-ribbon-playhead {
+  position: absolute; left: 72px; top: 0; bottom: 0; width: 2px;
+  background: #ffd54f; box-shadow: 0 0 10px rgba(255, 213, 79, 0.7);
+  z-index: 3; pointer-events: none;
+}
+.play-ribbon-playhead::before {
+  content: '';
+  position: absolute; top: 0; left: -4px;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 7px solid #ffd54f;
+}
+.play-ribbon-world {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  will-change: transform;
+}
+.play-ribbon-chord {
+  position: absolute; top: 6px; height: 18px;
+  padding: 0 6px; border-radius: 6px;
+  background: rgba(196, 176, 255, 0.18); color: #d8ccff;
+  font-size: 11px; font-weight: 700; line-height: 18px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: 1px solid rgba(196, 176, 255, 0.25);
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+.play-ribbon-chord.on {
+  background: rgba(255, 213, 79, 0.28); color: #ffe082;
+  border-color: rgba(255, 213, 79, 0.55);
+  box-shadow: 0 0 12px rgba(255, 213, 79, 0.35);
+}
+.play-ribbon-note {
+  position: absolute; height: 22px;
+  padding: 0 6px; border-radius: 8px;
+  background: rgba(42, 39, 51, 0.95);
+  border: 1px solid; font-size: 11px; font-weight: 700; line-height: 20px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0.72;
+  transition: opacity 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
+}
+.play-ribbon-note.on {
+  opacity: 1;
+  transform: scale(1.06);
+  box-shadow: 0 0 0 1px var(--glow, #ffd54f), 0 0 14px rgba(255, 213, 79, 0.45);
+  background: #322c40;
+}
+.play-ribbon-note.bass { background: rgba(36, 48, 56, 0.95); }
 .tnote-play {
   border: none; background: transparent; color: inherit;
   padding: 5px 7px 4px; display: flex; flex-direction: column; align-items: center;

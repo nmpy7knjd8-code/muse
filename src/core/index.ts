@@ -30,3 +30,4 @@ export * from './palette';
 export * from './meter';
 export * from './paths';
 export * from './connections';
+export * from './playbackCursor';

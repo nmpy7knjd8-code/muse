@@ -36,7 +36,7 @@ const SECTIONS: Section[] = [
     title: 'The timeline (three lanes)',
     use: 'Each bar can hold melody on top, a chord in the middle (staff of its notes above the name), and optional bass notes underneath. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
     musicality: 'Harmony, melody, and bass are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are. Composed bass replaces the automatic root for that bar when you write one.',
-    tip: '▶ Play layers chords, melody, and bass together. Use the BPM control next to Play (or beside Meter) to slow down or speed up.',
+    tip: '▶ Play scrolls a note ribbon under the timeline and lights each bar/note as it sounds. Use BPM next to Play to change tempo; ■ Stop ends early.',
   },
   {
     id: 'chords',

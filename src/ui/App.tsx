@@ -16,7 +16,7 @@ import {
   beatsPerBar, clampSlotsToMeter, parseMeter,
   timeSigLabel,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
-  type ChordBridge,
+  type ChordBridge, activeAt, type TimelineEvents,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -28,6 +28,7 @@ import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { MoodChordRef } from './MoodChordRef';
 import { ChordConnections } from './ChordConnections';
+import { PlaybackRibbon, ribbonNotesFromEvents } from './PlaybackRibbon';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
@@ -145,6 +146,11 @@ function Composer({ data }: { data: LoadedData }) {
   const beats = beatsPerBar(timeSig);
   const [tab, setTab] = useState<Tab>('chords');
   const [drawer, setDrawer] = useState<DrawerPage | null>(null);
+  /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
+  const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
+  const [playSec, setPlaySec] = useState(0);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
+  const barRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
   useEffect(() => {
     let x0 = 0, y0 = 0, tracking = false;
@@ -493,16 +499,25 @@ function Composer({ data }: { data: LoadedData }) {
     }
     flash(`${b.fromSymbol} → ${b.toSymbol} · ${b.commonToneCount} held · ${b.totalMotion} st`);
   };
+  const stopPlayback = () => {
+    synth.stopAll();
+    setTransport(null);
+    setPlaySec(0);
+  };
   const playAll = () => {
     synth.unlock();
     synth.stopAll();
     for (const id of activeParts) void synth.ensureLoaded(id);
     const ev = timelineEvents(slots, { timeSig, beatSec });
+    const origin = synth.scheduleOrigin();
+    setTransport({ origin, events: ev });
+    setPlaySec(0);
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
     const bassInstId = bassInst === 'off' ? null : bassInst;
     const composedBassBars = new Set(ev.bass.map((b) => b.index));
+    // playNotes({ at }) is relative to scheduleOrigin(); playhead = audioTime − origin.
     ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
       at: c.at, dur: c.dur, vel: 0.7,
       // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
@@ -517,6 +532,52 @@ function Composer({ data }: { data: LoadedData }) {
       }));
     }
   };
+  const togglePlay = () => {
+    if (transport) stopPlayback();
+    else playAll();
+  };
+
+  // Drive playhead from the audio clock; scroll the timeline to the sounding bar.
+  useEffect(() => {
+    if (!transport) return;
+    let raf = 0;
+    const tick = () => {
+      const now = synth.audioTime();
+      if (now === null) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const t = now - transport.origin;
+      if (t >= transport.events.total) {
+        setTransport(null);
+        setPlaySec(0);
+        return;
+      }
+      setPlaySec(t);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [transport]);
+
+  const playActive = transport ? activeAt(transport.events, playSec) : null;
+  useEffect(() => {
+    if (!playActive || playActive.chordIndex === null) return;
+    const el = barRefs.current.get(playActive.chordIndex);
+    const scroller = timelineRef.current;
+    if (!el || !scroller) return;
+    const left = el.offsetLeft - (scroller.clientWidth - el.clientWidth) / 2;
+    scroller.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }, [playActive?.chordIndex]);
+
+  const ribbonBits = useMemo(() => {
+    if (!transport) return null;
+    return ribbonNotesFromEvents(
+      transport.events,
+      spellMidi,
+      (i) => (slots[i]?.chord ? chordSymbol(slots[i]!.chord!, true) : ''),
+    );
+  }, [transport, slots, k.tonic.letter, k.tonic.acc, k.mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- editing ----
   const addChord = (c: Chord) => {
@@ -531,7 +592,7 @@ function Composer({ data }: { data: LoadedData }) {
   const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
   const dropBass = (si: number, ni: number) => { snapshot(); setSlots((s) => removeBassAt(s, si, ni)); };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
-  const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
+  const clearAll = () => { stopPlayback(); synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
   const addNote = (m: number) => {
     synth.unlock();
     synth.playNotes([fitMidi(m)], { dur: 0.6, instrument: melodyInst });
@@ -1150,17 +1211,19 @@ function Composer({ data }: { data: LoadedData }) {
         {slots.length === 0 ? (
           <p className="muted small">Tap chords below to start, or switch to Melody / Bass — all share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
         ) : (
-          <div className="timeline" role="list">
+          <div className="timeline" role="list" ref={timelineRef}>
             {slots.map((s, i) => {
               const labeled = labelSlot(s, data.kb, beats);
               const bassLabeled = labelBassSlot(s, data.kb, beats);
               const chordedIdx = s.chord ? chordedSlotIndices.indexOf(i) : -1;
               const tensionOn = chordedIdx >= 0 && (tensionPick ?? chordedSlotIndices.length - 1) === chordedIdx;
+              const playOn = playActive?.chordIndex === i;
               const bassPlayId = bassInst === 'off' ? 'bass' : bassInst;
               return (
                 <div
                   key={i}
-                  className={'tbar' + (s.locked ? ' locked' : '') + (!s.chord ? ' nc' : '') + (tensionOn ? ' on' : '')}
+                  ref={(el) => { if (el) barRefs.current.set(i, el); else barRefs.current.delete(i); }}
+                  className={'tbar' + (s.locked ? ' locked' : '') + (!s.chord ? ' nc' : '') + (tensionOn || playOn ? ' on' : '') + (playOn ? ' playing' : '')}
                   role="listitem"
                 >
                   <div className="tmel" aria-label={`Bar ${i + 1} melody`}>
@@ -1168,10 +1231,11 @@ function Composer({ data }: { data: LoadedData }) {
                     {labeled.map((n, j) => {
                       const kind = n.relation?.kind;
                       const tip = n.relation ? `${REL_LABEL[n.relation.kind]} · ${n.relation.label} — ${n.relation.why}` : 'no chord yet';
+                      const noteOn = !!playActive?.melodies.some((a) => a.index === i && a.beat === n.beat && a.midi === n.midi);
                       return (
                         <div
                           key={j}
-                          className={'tnote' + (kind ? ` ${kind}` : '')}
+                          className={'tnote' + (kind ? ` ${kind}` : '') + (noteOn ? ' playing' : '')}
                           style={kind ? { borderColor: REL_COLORS[kind], color: REL_COLORS[kind] } : undefined}
                           title={tip}
                         >
@@ -1249,10 +1313,11 @@ function Composer({ data }: { data: LoadedData }) {
                     {bassLabeled.map((n, j) => {
                       const kind = n.relation?.kind;
                       const tip = n.relation ? `Bass · ${REL_LABEL[n.relation.kind]} · ${n.relation.label}` : 'bass note';
+                      const noteOn = !!playActive?.basses.some((a) => a.index === i && a.beat === n.beat && a.midi === n.midi);
                       return (
                         <div
                           key={j}
-                          className={'tnote bass' + (kind ? ` ${kind}` : '')}
+                          className={'tnote bass' + (kind ? ` ${kind}` : '') + (noteOn ? ' playing' : '')}
                           style={kind ? { borderColor: REL_COLORS[kind], color: REL_COLORS[kind] } : undefined}
                           title={tip}
                         >
@@ -1282,6 +1347,14 @@ function Composer({ data }: { data: LoadedData }) {
             <span key={r}><i style={{ background: REL_COLORS[r] }} />{REL_LABEL[r]}</span>
           ))}
         </div>
+        {transport && ribbonBits && (
+          <PlaybackRibbon
+            events={transport.events}
+            playSec={playSec}
+            notes={ribbonBits.notes}
+            chords={ribbonBits.chords}
+          />
+        )}
         {pendingHarm && (
           <div className="harm-banner" role="status">
             <div className="harm-banner-text">
@@ -1309,7 +1382,9 @@ function Composer({ data }: { data: LoadedData }) {
           onHearBridge={playBridge}
         />
         <div className="row gap play-row">
-          <button onClick={playAll} disabled={!slots.length}>▶ Play</button>
+          <button onClick={togglePlay} disabled={!slots.length} aria-pressed={!!transport}>
+            {transport ? '■ Stop' : '▶ Play'}
+          </button>
           <label className="meter-pick bpm-inline">
             <span className="muted">BPM</span>
             <select
