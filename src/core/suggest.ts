@@ -8,6 +8,8 @@ import { RomanNumeral, analyzeRoman, parseRoman } from './roman';
 import { Key, MODE_BY_ID, diatonicChords, inScale, keyName, spellInKey } from './scales';
 import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } from './voicing';
 import { neoRiemannianPath } from './relations';
+import { NoteRelation, beatWeight, melodyFit, noteRelation } from './noteRelation';
+import { TimeSig, strongBeats } from './meter';
 import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension } from './harmonyTension';
 import { MoodDimensions, MoodProfile, ProfileMatch, characteristicOffsets, chordFeatures, chordFitsMode, isEmptyProfile, matchProfile, noteFeatures, profileFromMoods } from './profile';
 
@@ -48,6 +50,8 @@ export interface ChordSuggestion {
   match: ProfileMatch | null;
   /** tension model: level of this chord after the progression, debt after it, ranking adjustment + reasons */
   tension: CandidateTension | null;
+  /** when harmonizing melody notes: fit (−1..1) and each note's relation to this chord */
+  harmony: { fit: number; relations: NoteRelation[] } | null;
 }
 
 export interface NoteSuggestion {
@@ -68,6 +72,8 @@ export interface NoteSuggestion {
   moodMatch: number;
   features: MoodDimensions;
   match: ProfileMatch | null;
+  /** relation to the current chord (chord tone / tension / avoid / clash) */
+  relation: NoteRelation | null;
 }
 
 export interface ChordSuggestOptions {
@@ -81,6 +87,8 @@ export interface ChordSuggestOptions {
   limit?: number;
   /** tension budget style (default pop); null disables the tension advisor */
   tensionStyle?: TensionStyleId | null;
+  /** melody notes the chord must harmonize (reharmonization): ranked by fit + mood + context */
+  harmonize?: Array<{ midi: number; beat: number; dur?: number }>;
 }
 
 export interface NoteSuggestOptions {
@@ -91,6 +99,10 @@ export interface NoteSuggestOptions {
   profile?: MoodProfile | null;
   adventure?: number;
   limit?: number;
+  /** beat position the note will land on: strong beats favour chord tones, weak beats tolerate tensions */
+  beat?: number;
+  /** meter used to decide which beats are strong (default 4/4 accents) */
+  timeSig?: TimeSig;
 }
 
 // Functional-harmony transition priors (offset of chord root above tonic → next offset).
@@ -135,6 +147,88 @@ function rarityOf(c: number): Rarity {
   return c >= 0.55 ? 'common' : c >= 0.3 ? 'colorful' : 'adventurous';
 }
 
+type AddChord = (c: Chord, ev?: Evidence) => void;
+
+/** Heuristic evidence so pool-only colour chords still get a short "why" line (kept low so they don't outrank solid functional moves when adventure is safe). */
+function colourEv(id: string, name: string, description: string, moods: string[]): Evidence {
+  return { id, name, description, consensus: 'low', strength: 'heuristic', moods, category: 'colour' };
+}
+
+/**
+ * Richer next-chord candidates: diatonic extensions, secondary dominants, borrowed modal
+ * colour, and (with more adventure) altered / tritone-sub / leading-tone options.
+ */
+function addComplexCandidates(add: AddChord, k: Key, fam: 'major' | 'minor', adventure: number): void {
+  const t = pc(k.tonic);
+  const R = (off: number, q: QualityId): Chord => ({ root: spellInKey(k, mod(t + off, 12)), quality: q });
+  const put = (c: Chord, ev?: Evidence) => add(c, ev);
+
+  // Core colour always available (ranking still prefers common moves when adventure is low)
+  put(R(7, '7'), colourEv('ext_V7', 'V7', 'The dominant seventh — the classic pull home.', ['tense', 'hopeful']));
+  if (fam === 'minor') put(R(7, 'maj'), colourEv('ext_V', 'V major', 'Raised leading-tone dominant in minor.', ['tense', 'hopeful']));
+
+  if (fam === 'major') {
+    put(R(0, 'maj7'), colourEv('ext_Imaj7', 'Imaj7', 'Major seventh on the tonic — dreamy rest.', ['dreamy', 'warm']));
+    put(R(0, '6'), colourEv('ext_I6', 'I6', 'Added sixth — warm, nostalgic tonic colour.', ['warm', 'nostalgic']));
+    put(R(0, 'add9'), colourEv('ext_Iadd9', 'Iadd9', 'Add9 keeps the triad open and bright.', ['bright', 'floating']));
+    put(R(2, 'm7'), colourEv('ext_iim7', 'ii7', 'Supertonic seventh — soft pre-dominant.', ['hopeful', 'warm']));
+    put(R(2, 'm9'), colourEv('ext_iim9', 'ii9', 'ii9 — jazzier pre-dominant colour.', ['dreamy', 'jazzy']));
+    put(R(5, 'maj7'), colourEv('ext_IVmaj7', 'IVmaj7', 'IV major seventh — open, hopeful.', ['hopeful', 'dreamy']));
+    put(R(5, 'add9'), colourEv('ext_IVadd9', 'IVadd9', 'IV add9 — wide, ringing subdominant.', ['bright', 'floating']));
+    put(R(7, '9'), colourEv('ext_V9', 'V9', 'Dominant ninth — richer pull than V7.', ['tense', 'bright']));
+    put(R(7, '7sus4'), colourEv('ext_V7sus', 'V7sus4', 'Suspended dominant — holds the third back.', ['floating', 'tense']));
+    put(R(9, 'm7'), colourEv('ext_vim7', 'vi7', 'Relative-minor seventh — soft, reflective.', ['melancholy', 'warm']));
+    put(R(9, 'm9'), colourEv('ext_vim9', 'vi9', 'vi9 — bittersweet minor colour.', ['bittersweet', 'dreamy']));
+    // Borrowed / modal
+    put(R(10, 'maj'), colourEv('ext_bVII', '♭VII', 'Borrowed ♭VII — rock and Mixolydian colour.', ['earthy', 'epic']));
+    put(R(10, '7'), colourEv('ext_bVII7', '♭VII7', '♭VII7 — bluesy pull back toward I.', ['earthy', 'tense']));
+    put(R(8, 'maj'), colourEv('ext_bVI', '♭VI', 'Borrowed ♭VI — dark, cinematic lift.', ['dark', 'epic']));
+    put(R(8, 'maj7'), colourEv('ext_bVImaj7', '♭VImaj7', '♭VI major seventh — filmic warmth.', ['dreamy', 'bittersweet']));
+    put(R(5, 'min'), colourEv('ext_iv', 'iv', 'Minor iv in major — bittersweet borrowed colour.', ['bittersweet', 'melancholy']));
+    put(R(3, 'maj'), colourEv('ext_bIII', '♭III', 'Borrowed ♭III — parallel-minor sunshine.', ['warm', 'epic']));
+    // Secondaries
+    put(R(2, '7'), colourEv('ext_V7ofV', 'V7/V', 'Secondary dominant into V — brightens the approach.', ['tense', 'hopeful']));
+    put(R(4, '7'), colourEv('ext_V7ofvi', 'V7/vi', 'Secondary dominant into vi.', ['tense', 'yearning']));
+    put(R(9, '7'), colourEv('ext_V7ofii', 'V7/ii', 'Secondary dominant into ii.', ['tense', 'hopeful']));
+    put(R(11, '7'), colourEv('ext_V7ofiii', 'V7/iii', 'Secondary dominant into iii.', ['tense', 'bright']));
+    put(R(0, '7'), colourEv('ext_I7', 'I7', 'Tonic dominant seventh — blues / gospel turnaround fuel.', ['earthy', 'warm']));
+  } else {
+    put(R(0, 'm7'), colourEv('ext_im7', 'i7', 'Minor seventh tonic — soft, settled.', ['melancholy', 'warm']));
+    put(R(0, 'm9'), colourEv('ext_im9', 'i9', 'i9 — darker minor colour.', ['dark', 'dreamy']));
+    put(R(0, 'mMaj7'), colourEv('ext_imMaj7', 'i(maj7)', 'Minor-major seventh — noir tonic.', ['dark', 'tense']));
+    put(R(2, 'm7b5'), colourEv('ext_iiø7', 'iiø7', 'Half-diminished ii — classic minor pre-dominant.', ['tense', 'melancholy']));
+    put(R(3, 'maj7'), colourEv('ext_IIImaj7', '♭IIImaj7', '♭III major seventh — relative-major warmth.', ['warm', 'hopeful']));
+    put(R(5, 'm7'), colourEv('ext_ivm7', 'iv7', 'iv7 — soft minor subdominant.', ['melancholy', 'peaceful']));
+    put(R(7, '9'), colourEv('ext_V9min', 'V9', 'Dominant ninth in minor — sharp pull home.', ['tense', 'bright']));
+    put(R(8, 'maj7'), colourEv('ext_bVImaj7min', '♭VImaj7', '♭VI major seventh — wide minor colour.', ['dreamy', 'epic']));
+    put(R(10, '7'), colourEv('ext_bVII7min', '♭VII7', '♭VII7 — Mixolydian / rock exit in minor.', ['earthy', 'epic']));
+    put(R(10, 'maj'), colourEv('ext_bVIImin', '♭VII', '♭VII — open modal lift.', ['earthy', 'bright']));
+    put(R(11, 'dim7'), colourEv('ext_viio7', 'vii°7', 'Leading-tone diminished seventh — dense pull to i.', ['tense', 'dark']));
+    put(R(2, '7'), colourEv('ext_V7ofVmin', 'V7/V', 'Secondary dominant into V.', ['tense', 'hopeful']));
+  }
+
+  if (adventure >= 0.2) {
+    put(R(1, '7'), colourEv('ext_bII7', '♭II7', 'Tritone substitute for V7 — jazz side-slip home.', ['jazzy', 'uncanny']));
+    put(R(7, '7b9'), colourEv('ext_V7b9', 'V7♭9', 'Altered dominant — dark tension into the tonic.', ['tense', 'dark']));
+    put(R(7, '7#9'), colourEv('ext_V7s9', 'V7♯9', '♯9 dominant — bluesy / Hendrix colour.', ['tense', 'earthy']));
+    put(R(0, 'sus2'), colourEv('ext_Isus2', 'Isus2', 'Suspended second — open, floating tonic.', ['floating', 'peaceful']));
+    put(R(0, 'sus4'), colourEv('ext_Isus4', 'Isus4', 'Suspended fourth — wants to resolve to the third.', ['floating', 'tense']));
+    if (fam === 'major') put(R(0, 'maj7#11'), colourEv('ext_Imaj7s11', 'Imaj7♯11', 'Lydian tonic — bright sharp-11 shimmer.', ['mystical', 'bright']));
+  }
+  if (adventure >= 0.45) {
+    put(R(6, '7'), colourEv('ext_sIV7', '♯IV7', 'Sharp-IV dominant — distant, searching colour.', ['tense', 'uncanny']));
+    put(R(3, '7'), colourEv('ext_bIII7', '♭III7', '♭III7 — chromatic mediant energy.', ['epic', 'tense']));
+    put(R(8, '7'), colourEv('ext_bVI7', '♭VI7', '♭VI7 — dramatic chromatic colour.', ['dark', 'epic']));
+    put(R(1, 'maj'), colourEv('ext_bII', '♭II', 'Neapolitan flavour — dark pre-dominant.', ['dark', 'solemn']));
+    put(R(6, 'dim7'), colourEv('ext_sIVo7', '♯iv°7', 'Common-tone / passing diminished colour.', ['tense', 'uncanny']));
+    put(R(4, 'aug'), colourEv('ext_IIIaug', 'III+', 'Augmented mediant — unstable lift.', ['uncanny', 'tense']));
+    if (fam === 'major') {
+      put(R(11, 'dim7'), colourEv('ext_viio7maj', 'vii°7', 'Leading-tone diminished seventh into I.', ['tense', 'dark']));
+      put(R(2, '7b9'), colourEv('ext_V7b9ofV', 'V7♭9/V', 'Altered secondary into V.', ['tense', 'jazzy']));
+    }
+  }
+}
+
 export function voiceProgression(chords: Chord[]): number[][] {
   const out: number[][] = [];
   let prev: number[] | undefined;
@@ -147,6 +241,8 @@ export function voiceProgression(chords: Chord[]): number[][] {
 }
 
 /** How strongly an explicit mood target outranks plain functional likelihood. */
+/** weight of melody fit when harmonizing notes (fit is −1..1). HEURISTIC. */
+export const HARMONIZE_GAIN = 2.2;
 const MOOD_GAIN = 3.6;
 /** Absolute fit values cluster (most chords fit a blend a bit), so also reward fit relative to the other candidates. */
 function moodContrast(list: { score: number; moodMatch: number }[]): void {
@@ -275,8 +371,9 @@ export class SuggestionEngine {
     const fam = this.family(k);
 
     const pool = new Map<string, { chord: Chord; evidence: Evidence[] }>();
+    const harm = opts.harmonize?.length ? opts.harmonize : null;
     const add = (c: Chord, ev?: Evidence) => {
-      if (cur && chordsEqual(c, cur)) return;
+      if (cur && !harm && chordsEqual(c, cur)) return;
       const id = chordSymbol(c);
       let e = pool.get(id);
       if (!e) pool.set(id, (e = { chord: c, evidence: [] }));
@@ -284,15 +381,17 @@ export class SuggestionEngine {
     };
 
     diatonicChords(k).forEach((c) => add(c));
-    // dominant seventh on V, and harmonic-minor V in minor-family keys
-    add({ root: spellInKey(k, t + 7), quality: '7' });
-    if (fam === 'minor') add({ root: spellInKey(k, t + 7), quality: 'maj' });
+    // Sevenths, secondaries, borrowed colour, and jazzier extensions — always in the pool so
+    // the adventure slider / mood target can surface them (not only when harmonizing melody).
+    diatonicChords(k, true).forEach((c) => add(c));
+    addComplexCandidates(add, k, fam, a);
     // a requested mode (e.g. "Dorian" while in C major) contributes its borrowed (non-key) triads
     if (profile?.modes.length) {
       const keyPcs = new Set(diatonicChords(k).flatMap((c) => chordPcs(c)));
       for (const m of profile.modes) {
         if (m === k.mode) continue;
         for (const c of diatonicChords({ tonic: k.tonic, mode: m })) if (chordPcs(c).some((p) => !keyPcs.has(p)) && c.quality !== 'dim') add(c);
+        for (const c of diatonicChords({ tonic: k.tonic, mode: m }, true)) if (chordPcs(c).some((p) => !keyPcs.has(p))) add(c);
       }
     }
 
@@ -323,8 +422,22 @@ export class SuggestionEngine {
     const tSettings: TensionSettings | null = opts.tensionStyle === null ? null : { style: opts.tensionStyle ?? 'pop', adventure: a, target: moodTarget(profile) };
     const tState = tSettings ? progressionTension(prog, k, tSettings) : null;
 
+    // Cap scoring work: keep evidenced / diatonic / functional candidates first, then colour.
+    let poolList = [...pool.values()];
+    if (poolList.length > 56) {
+      const dia = new Set(diatonicChords(k, true).map((c) => chordSymbol(c)));
+      poolList.sort((a, b) => {
+        const rank = (e: { chord: Chord; evidence: Evidence[] }) =>
+          (e.evidence.some((x) => x.strength === 'direct') ? 4 : 0)
+          + (e.evidence.length ? 2 : 0)
+          + (dia.has(chordSymbol(e.chord)) ? 1 : 0);
+        return rank(b) - rank(a);
+      });
+      poolList = poolList.slice(0, 56);
+    }
+
     const out: ChordSuggestion[] = [];
-    for (const { chord, evidence } of pool.values()) {
+    for (const { chord, evidence } of poolList) {
       const general = this.generalEvidence(chord, k).filter((g) => !evidence.some((e) => e.id === g.id));
       // key-relative direct moves read best as the headline ("why"), then chord-relative colour moves
       const keyRel = new Set(this.kb.chordMoves.filter((m) => m.relativeTo === 'key').map((m) => m.id));
@@ -346,18 +459,29 @@ export class SuggestionEngine {
       const smooth = ct * 0.08 - vl * 0.015;
       const moods = this.moodsFromEvidence(allEv, chord);
       const features = chordFeatures(chord, k, moods, commonness, rn.diatonic, this.lexicon);
-      const tension = tState ? candidateTension(tState, cur ?? null, chord, k) : null;
+      const tension = tState ? candidateTension(tState, cur ?? null, chord, k, harm?.map((n) => n.midi)) : null;
+      const harmony = harm ? { fit: melodyFit(harm, chord), relations: harm.map((n) => noteRelation(n.midi, chord, this.kb)) } : null;
       // the tension model (context-aware: distance from home, pull, roughness, motion) refines the lookup-table tension
       if (tension) features.tension = clamp01(0.5 * features.tension + 0.5 * clamp01(tension.level / TENSION_MAX));
       const pm = profile ? matchProfile(profile, moods, features, this.lexicon, (m) => chordFitsMode(chord, k, m)) : null;
       const match = pm?.total ?? 0;
       const moodBonus = pm ? MOOD_GAIN * match - MOOD_GAIN * 0.35 : 0;
-      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0);
+      // Safe end of the slider still prefers plain triads as the headline; colour/7ths fill out the list.
+      const plainTriad = chord.quality === 'maj' || chord.quality === 'min' || chord.quality === 'dim';
+      const simplicity = (1 - a) * (plainTriad ? 0.35 : chord.quality === '7' || chord.quality === 'm7' || chord.quality === 'maj7' ? 0.12 : 0);
+      // Empty progression: land on the plain tonic triad first (extensions still appear below).
+      const startBias = !cur && plainTriad && off === 0 ? 1.1 : 0;
+      const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus + simplicity + startBias + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0) + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
-      const why = top
+      let why = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
         : `${rn.diatonic ? 'Diatonic' : 'Chromatic'} ${roman} in ${keyName(k)}.`;
+      if (harmony) {
+        const n = harmony.relations.length, ct = harmony.relations.filter((r) => r.kind === 'chord').length;
+        const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
+        why = `Melody → ${harmony.relations.map((r) => r.label).join(' · ')}: ${ct}/${n} chord tones${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
+      }
       out.push({
         id: chordSymbol(chord),
         chord,
@@ -381,6 +505,7 @@ export class SuggestionEngine {
         features,
         match: pm,
         tension,
+        harmony,
       });
     }
     if (profile) moodContrast(out);
@@ -436,6 +561,7 @@ export class SuggestionEngine {
         for (const m of mm) if (m.fromDegree !== undefined && m.toDegree !== undefined && m.fromDegree === lastOff && m.toDegree === off && (m.intervalSemitones === undefined || Math.abs(m.intervalSemitones) === Math.abs(iv))) push(m);
       }
       // relation to the current chord
+      let quality = 0;
       let isChordTone = false;
       if (chord) {
         const above = mod(midi - pc(chord.root), 12);
@@ -462,10 +588,20 @@ export class SuggestionEngine {
         }
       }
 
+      const relation = chord ? noteRelation(midi, chord, this.kb) : null;
+      // beat-aware colour: only when the UI says where the note will land. Strong beats favour
+      // chord tones; tensions are freer on weak beats / with more adventure. Resolutions (e.g. leading
+      // tone → tonic over V7) keep their existing evidence boost and are not re-penalized here.
+      if (relation && opts.beat !== undefined && !ev.some((e) => e.category === 'resolution')) {
+        const bw = beatWeight(opts.beat, opts.timeSig ? strongBeats(opts.timeSig) : [0, 2]);
+        if (relation.kind === 'chord') quality += 0.1 * bw;
+        else if (relation.kind === 'tension') quality += 0.15 * a - 0.05 * bw;
+        else if (relation.kind === 'avoid') quality -= (0.35 - 0.15 * a) * bw;
+        else quality -= (0.7 - 0.25 * a) * bw;
+      }
       const absIv = Math.abs(iv);
       const ip = last === undefined ? 0.5 : INTERVAL_PRIOR[absIv] ?? 0.05;
       const commonness = clamp01(0.5 * ip + (scaleTone ? 0.3 : 0) + (isChordTone ? 0.2 : chord ? 0 : 0.1));
-      let quality = 0;
       if (ev.some((e) => e.category === 'resolution')) quality += 0.5;
       if (isChordTone) quality += 0.25;
       if (before !== undefined && last !== undefined) {
@@ -514,6 +650,7 @@ export class SuggestionEngine {
         moodMatch: match,
         features,
         match: pm,
+        relation,
       });
     }
     if (profile) moodContrast(out);

@@ -6,6 +6,20 @@ import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, nearestSample, r
 
 type AudioSessionNav = Navigator & { audioSession?: { type: string } };
 export type LoadState = { state: 'idle' | 'loading' | 'ready' | 'error'; progress: number };
+/** iOS Safari AudioSession types we use (WebKit 16.4+). */
+export type AudioSessionType = 'playback' | 'play-and-record' | 'auto';
+
+/**
+ * Set the page-level audio session. iOS rejects getUserMedia while the session is
+ * `playback` ("AudioSession category is not compatible with audio capture") — Listen
+ * must switch to `play-and-record` first; normal play prefers `playback` so sound
+ * still comes through the silent/ringer switch.
+ */
+export function setAudioSession(type: AudioSessionType): void {
+  if (typeof navigator === 'undefined') return;
+  const nav = navigator as AudioSessionNav;
+  try { if (nav.audioSession) nav.audioSession.type = type; } catch { /* unsupported / ignored */ }
+}
 
 const BASE = (import.meta.env?.BASE_URL as string | undefined) ?? '/';
 const sampleUrl = (id: InstrumentId, midi: number) => `${BASE}samples/${id}/${midi}.mp3`;
@@ -113,9 +127,9 @@ export class AudioEngine {
     if (!this.ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AC) return;
-      // iOS 16.4+/17: play through the ringer/silent switch like a media app
-      const nav = navigator as AudioSessionNav;
-      try { if (nav.audioSession) nav.audioSession.type = 'playback'; } catch { /* ignore */ }
+      // iOS 16.4+/17: play through the ringer/silent switch like a media app.
+      // Listen mode temporarily overrides this to play-and-record (see setAudioSession).
+      setAudioSession('playback');
       this.attach(new AC({ latencyHint: 'interactive' }));
       void this.ensureLoaded();
     }
@@ -266,16 +280,16 @@ export class AudioEngine {
       end = off + 3;
     } else {
       // 2-operator FM: modulator index decays → bright "tine" attack mellowing into a sine
-      const guitar = def.voicing === 'guitar';
+      const plucked = def.voicing === 'guitar' || def.voicing === 'bass';
       const car = ctx.createOscillator(); car.frequency.value = f;
-      const mod = ctx.createOscillator(); mod.frequency.value = f * (guitar ? 3 : 1);
+      const mod = ctx.createOscillator(); mod.frequency.value = f * (plucked ? 3 : 1);
       const idx = ctx.createGain();
-      idx.gain.setValueAtTime(f * (guitar ? 1.2 : 2.2) * vel, start);
-      idx.gain.setTargetAtTime(f * 0.15, start, guitar ? 0.08 : 0.25);
+      idx.gain.setValueAtTime(f * (plucked ? 1.2 : 2.2) * vel, start);
+      idx.gain.setTargetAtTime(f * 0.15, start, plucked ? 0.08 : 0.25);
       mod.connect(idx).connect(car.frequency);
       car.connect(out); oscs.push(car, mod);
       const level = 0.22 * (0.35 + 0.65 * vel);
-      const decay = guitar ? 0.5 : 0.9;
+      const decay = plucked ? 0.5 : 0.9;
       g.setValueAtTime(0, start); g.linearRampToValueAtTime(level, start + 0.005);
       g.setTargetAtTime(level * 0.35, start + 0.005, decay);
       g.setTargetAtTime(0, off, def.release);

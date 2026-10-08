@@ -4,12 +4,12 @@ import { Chord } from './chords';
 import { guitarVoicings, shapeMidi } from './guitar';
 import { bassNote } from './voicing';
 
-export type InstrumentId = 'piano' | 'nylon' | 'steel' | 'rhodes' | 'pad';
+export type InstrumentId = 'piano' | 'nylon' | 'steel' | 'electric' | 'rhodes' | 'pad' | 'bass';
 export interface InstrumentDef {
   id: InstrumentId;
   label: string;
-  /** how chords are voiced: keyboard voicing (voice-led) or a real guitar shape */
-  voicing: 'keys' | 'guitar';
+  /** how chords are voiced: keyboard, guitar shape, or bass (root in low register) */
+  voicing: 'keys' | 'guitar' | 'bass';
   /** sampled MIDI notes: from..to step (files at samples/<id>/<midi>.mp3) */
   samples: { from: number; to: number; step: number };
   attack: number; // s
@@ -31,8 +31,10 @@ export const INSTRUMENTS: Record<InstrumentId, InstrumentDef> = {
   piano: { id: 'piano', label: 'Piano', voicing: 'keys', samples: { from: 33, to: 96, step: 3 }, attack: 0.004, release: 0.28, ring: 0.25, strumMs: 6, reverb: 0.22, gain: 0.9, velocityFilter: true, source: SALAMANDER },
   nylon: { id: 'nylon', label: 'Nylon guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.35, ring: 0.6, strumMs: 24, reverb: 0.2, gain: 0.95, velocityFilter: true, source: FLUID },
   steel: { id: 'steel', label: 'Steel guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.35, ring: 0.6, strumMs: 20, reverb: 0.18, gain: 1.0, velocityFilter: true, source: FLUID },
+  electric: { id: 'electric', label: 'Electric guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.002, release: 0.45, ring: 0.85, strumMs: 16, reverb: 0.32, gain: 0.78, velocityFilter: true, source: FLUID },
   rhodes: { id: 'rhodes', label: 'Rhodes', voicing: 'keys', samples: { from: 36, to: 90, step: 3 }, attack: 0.006, release: 0.3, ring: 0.2, strumMs: 5, reverb: 0.28, gain: 0.55, velocityFilter: true, source: FLUID },
   pad: { id: 'pad', label: 'Soft pad', voicing: 'keys', samples: { from: 36, to: 84, step: 3 }, attack: 0.16, release: 0.55, ring: 0.1, strumMs: 0, reverb: 0.4, gain: 0.85, velocityFilter: false, source: FLUID },
+  bass: { id: 'bass', label: 'Bass guitar', voicing: 'bass', samples: { from: 28, to: 55, step: 3 }, attack: 0.004, release: 0.32, ring: 0.45, strumMs: 0, reverb: 0.12, gain: 1.05, velocityFilter: true, source: FLUID },
 };
 export const INSTRUMENT_IDS = Object.keys(INSTRUMENTS) as InstrumentId[];
 
@@ -76,11 +78,19 @@ export function keysVoicing(chord: Chord, upper: number[]): number[] {
   return avoidMud([bass, ...upper.filter((m) => m !== bass)]);
 }
 
-/** MIDI notes to sound for a chord on an instrument (keys: voice-led voicing + bass; guitar: a playable shape). */
+/** MIDI notes to sound for a chord on an instrument (keys: voice-led + bass; guitar: shape; bass: low root). */
 export function chordMidis(chord: Chord, upper: number[], def: InstrumentDef): number[] {
   if (def.voicing === 'guitar') {
     const shape = guitarVoicings(chord, 1)[0];
     if (shape) return shapeMidi(shape).sort((a, b) => a - b);
+  }
+  if (def.voicing === 'bass') {
+    // Single low root (or slash-bass) in the sample range — bass guitar, not a full chord stack.
+    const lo = def.samples.from, hi = def.samples.to;
+    let m = bassNote(chord, lo);
+    while (m < lo) m += 12;
+    while (m > hi) m -= 12;
+    return [m];
   }
   return keysVoicing(chord, upper);
 }

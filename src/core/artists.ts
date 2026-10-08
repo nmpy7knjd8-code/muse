@@ -1,6 +1,7 @@
 // Artist Lens data (research/artists/artists.json): types, tolerant normalisation, and the "Try it"
 // loader that turns an exercise's roman numerals (+ pedal/held bass) into chords in its key.
 import { Chord, chordSymbol } from './chords';
+import { parseMeter, TimeSig, timeSigLabel } from './meter';
 import { parseDegreeLabel, parseNote, pc } from './notes';
 import { parseRoman } from './roman';
 import { Key, MODE_BY_ID, ModeId, spellInKey } from './scales';
@@ -71,7 +72,13 @@ export function normalizeArtists(raw: Json): ArtistsFile | null {
   };
 }
 
-export interface LoadedTryIt { key: Key; tonic: string; mode: ModeId; chords: Chord[]; failed: string[] }
+export interface LoadedTryIt {
+  key: Key; tonic: string; mode: ModeId; chords: Chord[]; failed: string[];
+  /** Parsed from the exercise meter string when possible (first N/D found). */
+  timeSig: TimeSig | null;
+  /** Original free-text meter note from the research data. */
+  meterNote?: string;
+}
 
 /** The key of an exercise (tonic spelling preserved; unknown modes fall back to the major/minor family). */
 export function tryItKey(t: ArtistTryIt): { key: Key; tonic: string; mode: ModeId } | null {
@@ -95,7 +102,17 @@ export function loadTryIt(t: ArtistTryIt): LoadedTryIt | null {
     if (pedalNote && t.pedal!.chordIndices.includes(i) && pc(pedalNote) !== pc(c.root)) chords.push({ ...c, bass: pedalNote });
     else chords.push(c);
   });
-  return { ...kk, chords, failed };
+  return {
+    ...kk,
+    chords,
+    failed,
+    timeSig: parseMeter(t.meter),
+    meterNote: t.meter,
+  };
 }
 
-export const tryItText = (l: LoadedTryIt) => l.chords.map((c) => chordSymbol(c, true)).join(' – ');
+export const tryItText = (l: LoadedTryIt) => {
+  const chords = l.chords.map((c) => chordSymbol(c, true)).join(' – ');
+  const meter = l.timeSig ? timeSigLabel(l.timeSig) : l.meterNote;
+  return meter ? `${chords} · ${meter}` : chords;
+};

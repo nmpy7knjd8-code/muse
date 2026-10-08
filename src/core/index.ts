@@ -23,3 +23,7 @@ export * from './playback';
 export * from './artists';
 export * from './harmonyTension';
 export * as tensionModel from './tension';
+export * from './noteRelation';
+export * from './timeline';
+export * from './palette';
+export * from './meter';

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseChord, pianoVoicing, pianoFingering, voiceLeading, closeVoicings, guitarVoicings, isPlayable, shapeMatchesChord,
-  shapePcs, assignFingers, QUALITIES, parseNote, chordSymbol, neoRiemannianPath, fifthsIndex, fifthsDistance, tonnetzPc, tonnetzCoord,
+  shapePcs, assignFingers, QUALITIES, parseNote, chordSymbol, neoRiemannianPath, fifthsIndex, fifthsDistance, fifthsMoveLabel, fifthsStepTag, tonnetzPc, tonnetzCoord,
 } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
@@ -114,6 +114,13 @@ describe('relationships', () => {
     expect(fifthsDistance(0, 7)).toBe(1);
     expect(fifthsDistance(0, 5)).toBe(-1);
     expect(fifthsDistance(0, 6)).toBe(-6);
+    expect(fifthsMoveLabel(0, 7)).toMatch(/dominant/i);
+    expect(fifthsMoveLabel(0, 5)).toMatch(/subdominant/i);
+    expect(fifthsMoveLabel(0, 0)).toMatch(/same root/i);
+    expect(fifthsStepTag(0, 7)).toBe('+1');
+    expect(fifthsStepTag(0, 5)).toBe('-1');
+    expect(fifthsStepTag(0, 0)).toBe('·');
+    expect(fifthsStepTag(0, 6)).toBe('tt');
   });
   it('tonnetz coordinates', () => {
     const g = tonnetzCoord(7);

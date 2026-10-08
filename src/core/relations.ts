@@ -17,6 +17,32 @@ export function fifthsDistance(a: number, b: number): number {
   return mod(fifthsIndex(b) - fifthsIndex(a) + 6, 12) - 6;
 }
 
+/** Compact signed fifths-step tag for a pitch relative to a reference (tonic or current root). */
+export function fifthsStepTag(from: number, to: number): string {
+  const d = fifthsDistance(from, to);
+  if (d === 0) return '·';
+  if (d === 6 || d === -6) return 'tt';
+  return d > 0 ? `+${d}` : `${d}`;
+}
+
+/**
+ * Plain-language label for a root move on the circle of fifths.
+ * Positive steps = clockwise / sharpward (dominant side); negative = counter-clockwise / flatward (subdominant).
+ */
+export function fifthsMoveLabel(from: number, to: number): string {
+  const d = fifthsDistance(from, to);
+  if (d === 0) return 'same root · no circle move';
+  if (d === 1) return 'CW +1 · dominant side — pulls toward home';
+  if (d === -1) return 'CCW −1 · subdominant — opens / relaxes';
+  if (d === 2) return 'CW +2 · toward V of V — brightens, more pull';
+  if (d === -2) return 'CCW −2 · deeper subdominant — darker open';
+  if (d === 3) return 'CW +3 · sharpward climb — restless / bright';
+  if (d === -3) return 'CCW −3 · flatward sink — earthy / dark';
+  if (d === 6 || d === -6) return 'tritone · opposite — maximum distance / unstable';
+  if (d > 0) return `CW +${d} · sharpward (dominant side of the circle)`;
+  return `CCW ${d} · flatward (subdominant side of the circle)`;
+}
+
 export type Triad = { root: number; minor: boolean };
 
 export function asTriad(c: Chord): Triad | null {
