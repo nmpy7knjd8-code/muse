@@ -6,7 +6,7 @@ import { midiName } from './notes';
 import { voiceProgression } from './suggest';
 import { bassNote } from './voicing';
 import { DEFAULT_TIME_SIG, TimeSig, beatsPerBar, midiTimeSigBytes, timeSigLabel } from './meter';
-import { TimelineSlot, labelSlot, noteDurations } from './timeline';
+import { TimelineSlot, labelSlot, noteDurations, slotBass } from './timeline';
 
 export function progressionText(k: Key, chords: Chord[], melody: number[] = []): string {
   const lines = [`Key: ${keyName(k)}`];
@@ -39,14 +39,16 @@ function track(events: Array<{ tick: number; bytes: number[] }>): number[] {
 }
 
 /**
- * Two-track MIDI of the unified timeline: track 1 = chords (one per bar, voice-led, with bass),
- * track 2 = melody notes at their beat positions. Chordless (N.C.) bars keep their melody.
- * Beat unit follows the time signature denominator (quarter in x/4, eighth in x/8).
+ * MIDI of the unified timeline:
+ * track 1 = chords (voice-led; low root omitted when a composed bass lane exists on that bar),
+ * track 2 = melody, track 3 = composed bass (when any bar has bass notes).
+ * Chordless (N.C.) bars keep their melody/bass. Beat unit follows the time-signature denominator.
  */
 export function toMidiTimeline(slots: TimelineSlot[], bpm = 90, timeSig: TimeSig = DEFAULT_TIME_SIG): Uint8Array<ArrayBuffer> {
   const PPQ = 480;
   const beats = beatsPerBar(timeSig);
   const tempo = Math.round(60000000 / bpm);
+  const hasBassLane = slots.some((s) => slotBass(s).length > 0);
   const t1: Array<{ tick: number; bytes: number[] }> = [
     { tick: 0, bytes: [0xff, 0x51, 0x03, (tempo >> 16) & 255, (tempo >> 8) & 255, tempo & 255] },
     { tick: 0, bytes: midiTimeSigBytes(timeSig) },
@@ -56,7 +58,9 @@ export function toMidiTimeline(slots: TimelineSlot[], bpm = 90, timeSig: TimeSig
   const voicings = voiceProgression(withChord.map((x) => x.s.chord as Chord));
   withChord.forEach(({ s, i }, j) => {
     const start = i * PPQ * beats;
-    for (const n of [bassNote(s.chord as Chord), ...voicings[j]]) {
+    const composed = slotBass(s).length > 0;
+    const notes = composed ? voicings[j] : [bassNote(s.chord as Chord), ...voicings[j]];
+    for (const n of notes) {
       t1.push({ tick: start, bytes: [0x90, n, 80] });
       t1.push({ tick: start + PPQ * beats - 10, bytes: [0x80, n, 0] });
     }
@@ -70,8 +74,22 @@ export function toMidiTimeline(slots: TimelineSlot[], bpm = 90, timeSig: TimeSig
       t2.push({ tick: start + Math.round(d[j] * PPQ) - 10, bytes: [0x81, n.midi, 0] });
     });
   });
-  const header = [0x4d, 0x54, 0x68, 0x64, ...u32(6), ...u16(1), ...u16(2), ...u16(PPQ)];
-  return new Uint8Array([...header, ...track(t1), ...track(t2)]);
+  const tracks = [track(t1), track(t2)];
+  if (hasBassLane) {
+    const t3: Array<{ tick: number; bytes: number[] }> = [{ tick: 0, bytes: [0xc2, 32] }]; // Acoustic Bass
+    slots.forEach((s, i) => {
+      const bass = slotBass(s);
+      const d = noteDurations(bass, beats);
+      bass.forEach((n, j) => {
+        const start = Math.round((i * beats + n.beat) * PPQ);
+        t3.push({ tick: start, bytes: [0x92, n.midi, n.beat === 0 ? 100 : 90] });
+        t3.push({ tick: start + Math.round(d[j] * PPQ) - 10, bytes: [0x82, n.midi, 0] });
+      });
+    });
+    tracks.push(track(t3));
+  }
+  const header = [0x4d, 0x54, 0x68, 0x64, ...u32(6), ...u16(1), ...u16(tracks.length), ...u16(PPQ)];
+  return new Uint8Array([...header, ...tracks.flat()]);
 }
 
 export function toMidiFile(chords: Chord[], melody: number[] = [], bpm = 90): Uint8Array<ArrayBuffer> {
@@ -105,7 +123,9 @@ export function timelineText(k: Key, slots: TimelineSlot[], timeSig: TimeSig = D
   slots.forEach((s, i) => {
     const sym = s.chord ? `${chordSymbol(s.chord, true)} (${romanOf(s.chord, k)})` : 'no chord';
     const notes = labelSlot(s, null, beats).map((n) => `${midiName(n.midi, spellInKey(k, n.midi))}@${n.beat + 1}${n.relation ? `[${n.relation.label}]` : ''}`).join(' ');
-    lines.push(`Bar ${i + 1}: ${sym}${notes ? ` — ${notes}` : ''}`);
+    const bass = slotBass(s).map((n) => `${midiName(n.midi, spellInKey(k, n.midi))}@${n.beat + 1}`).join(' ');
+    const bits = [notes ? `mel ${notes}` : '', bass ? `bass ${bass}` : ''].filter(Boolean).join(' · ');
+    lines.push(`Bar ${i + 1}: ${sym}${bits ? ` — ${bits}` : ''}`);
   });
   return lines.join('\n');
 }

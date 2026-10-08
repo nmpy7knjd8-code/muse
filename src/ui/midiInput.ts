@@ -85,8 +85,8 @@ export async function startMidiInput(o: MidiOptions): Promise<MidiSession> {
     const midis = [...held.keys()];
     const level = midis.length ? Math.min(1, midis.length / 6) : 0;
 
-    if (target === 'melody') {
-      // Melody: HoldTracker emits each pitch once per press; tick keeps feeding until hold clears.
+    if (target === 'melody' || target === 'bass') {
+      // Melody/bass: HoldTracker emits each pitch once per press; tick keeps feeding until hold clears.
       if (!midis.length) {
         notes.push(null, null, now);
         status({ state: inputCount(access) ? 'quiet' : 'listening', label: null, confidence: 0, hold: 0, level: 0 }, now);
@@ -140,7 +140,7 @@ export async function startMidiInput(o: MidiOptions): Promise<MidiSession> {
     // note-on with vel 0 = note-off
     if (statusByte === 0x90 && data2 > 0) {
       held.set(data1, data2);
-      if (o.target() === 'melody') {
+      if (o.target() === 'melody' || o.target() === 'bass') {
         const got = notes.push(String(data1), data1, now);
         if (got !== null) o.onNote(got);
         status({
@@ -153,7 +153,7 @@ export async function startMidiInput(o: MidiOptions): Promise<MidiSession> {
       }
     } else if (statusByte === 0x80 || (statusByte === 0x90 && data2 === 0)) {
       held.delete(data1);
-      if (o.target() === 'melody' && !held.size) notes.push(null, null, now);
+      if ((o.target() === 'melody' || o.target() === 'bass') && !held.size) notes.push(null, null, now);
     }
   };
 

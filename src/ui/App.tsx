@@ -6,8 +6,9 @@ import {
   spellInKey, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
   INSTRUMENTS, INSTRUMENT_IDS, bassLineMidi, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
-  TimelineSlot, activeSlotIndex, chordTargetIndex, chordsOf, clearSlotChord, insertNote, labelSlot, melodyOf,
-  nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
+  TimelineSlot, activeBassSlotIndex, activeSlotIndex, bassOf, chordTargetIndex, chordsOf, clearSlotChord, insertBassNote, insertNote,
+  labelBassSlot, labelSlot, melodyOf, nextBassBeat, nextNoteBeat, noteDurations, removeBassAt, removeNoteAt, removeSlot,
+  setSlotChord, slotBass, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, rootMotion,
@@ -29,7 +30,7 @@ import { listenErrorMessage, startListening, type ListenSession, type ListenStat
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
 
-type Tab = 'chords' | 'melody';
+type Tab = 'chords' | 'melody' | 'bass';
 /** Left drawer pages — Guide / Artist Lens / mood reference live off the main strip. */
 type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
@@ -204,11 +205,17 @@ function Composer({ data }: { data: LoadedData }) {
 
   const chords = useMemo(() => chordsOf(slots), [slots]);
   const melody = useMemo(() => melodyOf(slots), [slots]);
+  const bassLine = useMemo(() => bassOf(slots), [slots]);
   const chordTarget = chordTargetIndex(slots);
   const pendingHarm = !slots[chordTarget]?.chord && (slots[chordTarget]?.notes.length ?? 0) > 0 ? slots[chordTarget] : null;
-  const noteSlot = slots[activeSlotIndex(slots)] ?? null;
+  const noteSlot = slots[activeSlotIndex(slots, beats)] ?? null;
   const noteChord = noteSlot?.chord ?? slots.filter((s) => s.chord).at(-1)?.chord ?? null;
   const noteBeat = nextNoteBeat(slots, beats);
+  const bassSlot = slots[activeBassSlotIndex(slots, beats)] ?? null;
+  const bassChord = bassSlot?.chord ?? slots.filter((s) => s.chord).at(-1)?.chord ?? null;
+  const bassBeat = nextBassBeat(slots, beats);
+  const lineChord = tab === 'bass' ? bassChord : noteChord;
+  const lineNotes = tab === 'bass' ? bassLine : melody;
   const picked: Key = { tonic: parseNote(tonic)!, mode };
   const detected = useMemo(() => (auto && (chords.length >= 2 || melody.length >= 4) ? detectKeys(chords, melody)[0] : null), [auto, slots]); // eslint-disable-line react-hooks/exhaustive-deps
   // auto-detect only chooses between major/minor keys; a modal pick (e.g. Dorian) is kept as-is
@@ -249,17 +256,17 @@ function Composer({ data }: { data: LoadedData }) {
     if (tensionPick !== null && tensionPick >= chordedSlotIndices.length) setTensionPick(chordedSlotIndices.length ? chordedSlotIndices.length - 1 : null);
   }, [chordedSlotIndices.length, tensionPick]);
   const noteSugs: NoteSuggestion[] = useMemo(
-    () => (tab === 'melody'
+    () => (tab === 'melody' || tab === 'bass'
       ? engine.suggestNotes({
         key: k,
-        melody,
-        chord: noteChord,
+        melody: tab === 'bass' ? bassLine : melody,
+        chord: tab === 'bass' ? bassChord : noteChord,
         // Last few chords so ranking / why text respect the arrival of the sequence.
         progression: chords.slice(-4),
         profile,
         adventure,
         limit: 12,
-        beat: noteBeat,
+        beat: tab === 'bass' ? bassBeat : noteBeat,
         timeSig,
       })
       : []),
@@ -274,9 +281,17 @@ function Composer({ data }: { data: LoadedData }) {
     });
   }, [engine, tab, pendingHarm, chordTarget, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const notePaths: NotePath[] = useMemo(() => {
-    if (tab !== 'melody') return [];
+    if (tab !== 'melody' && tab !== 'bass') return [];
     return suggestNotePaths(engine, {
-      key: k, melody, chord: noteChord, progression: chords.slice(-4), profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
+      key: k,
+      melody: tab === 'bass' ? bassLine : melody,
+      chord: tab === 'bass' ? bassChord : noteChord,
+      progression: chords.slice(-4),
+      profile,
+      adventure,
+      steps: pathLen,
+      limit: 4,
+      beat: tab === 'bass' ? bassBeat : noteBeat,
     });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
@@ -373,16 +388,21 @@ function Composer({ data }: { data: LoadedData }) {
   const omitBass = bassInst !== 'off';
   /** Chord tones on the chord instrument (no low bass when a bass part is active). */
   const chordTones = (c: Chord, v: number[]) => chordMidis(c, v, INSTRUMENTS[chordInst], { omitBass });
-  const playChordParts = (c: Chord, v: number[], opts: { at?: number; dur?: number; vel?: number } = {}) => {
-    synth.playNotes(chordTones(c, v), { ...opts, instrument: chordInst });
-    if (bassInst !== 'off') {
+  const playChordParts = (c: Chord, v: number[], opts: { at?: number; dur?: number; vel?: number; autoBass?: boolean } = {}) => {
+    const { autoBass = true, ...playOpts } = opts;
+    synth.playNotes(chordTones(c, v), { ...playOpts, instrument: chordInst });
+    // Auto root only when no composed bass lane is driving Play (previews still get a root).
+    if (autoBass && bassInst !== 'off') {
       synth.playNotes([bassLineMidi(c, INSTRUMENTS[bassInst])], {
-        at: opts.at, dur: opts.dur ?? 1.1, vel: (opts.vel ?? 0.75) * 0.92, instrument: bassInst,
+        at: playOpts.at, dur: playOpts.dur ?? 1.1, vel: (playOpts.vel ?? 0.75) * 0.92, instrument: bassInst,
       });
     }
   };
-  /** Keep a melody MIDI inside the melody instrument's sample range. */
+  /** Keep a MIDI inside an instrument's sample range (melody or bass part). */
   const fitMidi = (m: number, id: InstrumentId = melodyInst) => fitMidiToInstrument(m, INSTRUMENTS[id]);
+  const ensureBassOn = () => {
+    if (bassInst === 'off') chooseBassInst('bass');
+  };
   // Warm the active parts once audio unlocks / parts change.
   useEffect(() => {
     if (!synth.unlocked && !synth.ctx) return;
@@ -443,6 +463,11 @@ function Composer({ data }: { data: LoadedData }) {
   const playNoteMove = (n: NoteSuggestion) => {
     synth.unlock();
     synth.stopAll();
+    if (tab === 'bass') {
+      const id = bassInst === 'off' ? 'bass' : bassInst;
+      synth.playNotes([fitMidi(n.midi, id)], { dur: 0.7, vel: 0.92, instrument: id });
+      return;
+    }
     synth.playNotes([fitMidi(n.midi)], { dur: 0.65, vel: 0.92, instrument: melodyInst });
   };
   const playAll = () => {
@@ -453,10 +478,21 @@ function Composer({ data }: { data: LoadedData }) {
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
-    ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), { at: c.at, dur: c.dur, vel: 0.7 }));
+    const bassInstId = bassInst === 'off' ? null : bassInst;
+    const composedBassBars = new Set(ev.bass.map((b) => b.index));
+    ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
+      at: c.at, dur: c.dur, vel: 0.7,
+      // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
+      autoBass: !composedBassBars.has(c.index),
+    }));
     ev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], {
       at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85, instrument: melodyInst,
     }));
+    if (bassInstId) {
+      ev.bass.forEach((n) => synth.playNotes([fitMidi(n.midi, bassInstId)], {
+        at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.88, instrument: bassInstId,
+      }));
+    }
   };
 
   // ---- editing ----
@@ -470,6 +506,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const removeAt = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => removeSlot(s, i)); };
   const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
+  const dropBass = (si: number, ni: number) => { snapshot(); setSlots((s) => removeBassAt(s, si, ni)); };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
   const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
   const addNote = (m: number) => {
@@ -477,6 +514,16 @@ function Composer({ data }: { data: LoadedData }) {
     synth.playNotes([fitMidi(m)], { dur: 0.6, instrument: melodyInst });
     snapshot();
     setSlots((s) => insertNote(s, m, undefined, beats).slots);
+    setSelectedId(null);
+  };
+  const addBass = (m: number) => {
+    synth.unlock();
+    ensureBassOn();
+    const id = bassInst === 'off' ? 'bass' : bassInst;
+    const fitted = fitMidi(m, id);
+    synth.playNotes([fitted], { dur: 0.65, instrument: id });
+    snapshot();
+    setSlots((s) => insertBassNote(s, fitted, undefined, beats).slots);
     setSelectedId(null);
   };
   const playChordSequence = (cs: Chord[], step = 0.8, dur = 0.75) => {
@@ -520,9 +567,17 @@ function Composer({ data }: { data: LoadedData }) {
     synth.unlock();
     synth.stopAll();
     const noteStep = Math.max(0.22, beatSec * 1.05);
-    if (noteChord) {
-      const v = noteChord === cur && prevVoicing ? prevVoicing : pianoVoicing(noteChord);
-      playChordParts(noteChord, v, { dur: 0.4 + p.midis.length * noteStep, vel: 0.35 });
+    const under = tab === 'bass' ? bassChord : noteChord;
+    if (under) {
+      const v = under === cur && prevVoicing ? prevVoicing : pianoVoicing(under);
+      playChordParts(under, v, { dur: 0.4 + p.midis.length * noteStep, vel: 0.35 });
+    }
+    if (tab === 'bass') {
+      const id = bassInst === 'off' ? 'bass' : bassInst;
+      p.midis.forEach((m, i) => synth.playNotes([fitMidi(m, id)], {
+        at: 0.05 + i * noteStep, dur: noteStep * 0.9, vel: 0.92, instrument: id,
+      }));
+      return;
     }
     p.midis.forEach((m, i) => synth.playNotes([fitMidi(m)], {
       at: 0.05 + i * noteStep, dur: noteStep * 0.9, vel: 0.92, instrument: melodyInst,
@@ -531,11 +586,21 @@ function Composer({ data }: { data: LoadedData }) {
   const addNotePath = (p: NotePath) => {
     snapshot();
     playNotePath(p);
-    setSlots((prev) => {
-      let s = prev;
-      for (const m of p.midis) s = insertNote(s, m, undefined, beats).slots;
-      return s;
-    });
+    if (tab === 'bass') {
+      ensureBassOn();
+      const id = bassInst === 'off' ? 'bass' : bassInst;
+      setSlots((prev) => {
+        let s = prev;
+        for (const m of p.midis) s = insertBassNote(s, fitMidi(m, id), undefined, beats).slots;
+        return s;
+      });
+    } else {
+      setSlots((prev) => {
+        let s = prev;
+        for (const m of p.midis) s = insertNote(s, m, undefined, beats).slots;
+        return s;
+      });
+    }
     setSelectedId(null);
   };
   const submitTyped = () => {
@@ -610,7 +675,7 @@ function Composer({ data }: { data: LoadedData }) {
   const useJourney = () => {
     if (!journey) return;
     snapshot();
-    setSlots(journey.map((x) => ({ chord: x.chord, notes: [], locked: false })));
+    setSlots(journey.map((x) => ({ chord: x.chord, notes: [], bass: [], locked: false })));
     setMeterNote(null);
     setTab('chords');
     setSelectedId(null);
@@ -624,7 +689,7 @@ function Composer({ data }: { data: LoadedData }) {
     if (!l) return flash('Could not read that exercise');
     snapshot();
     chooseTonic(l.tonic); chooseMode(l.mode);
-    const nextSlots = l.chords.map((chord) => ({ chord, notes: [] as TimelineSlot['notes'], locked: false }));
+    const nextSlots = l.chords.map((chord) => ({ chord, notes: [] as TimelineSlot['notes'], bass: [] as TimelineSlot['notes'], locked: false }));
     if (l.timeSig) {
       setTimeSig(l.timeSig);
       try { localStorage.setItem('muse.timeSig', timeSigLabel(l.timeSig)); } catch { /* private mode */ }
@@ -648,8 +713,8 @@ function Composer({ data }: { data: LoadedData }) {
 
   // ---- Listen (mic YIN/chroma) or MIDI keyboard (Web MIDI → same note/chord callbacks) ----
   // callbacks run outside React's render cycle, so they read the latest state through refs
-  const live = useRef({ tab, k, slots, timeSig });
-  live.current = { tab, k, slots, timeSig };
+  const live = useRef({ tab, k, slots, timeSig, bassInst });
+  live.current = { tab, k, slots, timeSig, bassInst };
   const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots }]);
   const heardChord = (root: number, quality: string): Chord => ({ root: spellInKey(live.current.k, root), quality: quality as Chord['quality'] });
   const stopInput = () => { listen?.stop(); setListen(null); setListenStatus(null); };
@@ -663,7 +728,14 @@ function Composer({ data }: { data: LoadedData }) {
     if (listen) { stopInput(); return; }
     const onNote = (m: number) => {
       snapshotLive();
-      setSlots((x) => insertNote(x, m, undefined, beatsPerBar(live.current.timeSig)).slots);
+      const b = beatsPerBar(live.current.timeSig);
+      if (live.current.tab === 'bass') {
+        ensureBassOn();
+        const part = live.current.bassInst === 'off' ? 'bass' : live.current.bassInst;
+        setSlots((x) => insertBassNote(x, fitMidi(m, part), undefined, b).slots);
+      } else {
+        setSlots((x) => insertNote(x, m, undefined, b).slots);
+      }
       setSelectedId(null);
       setLastHeard(midiName(m, spellInKey(live.current.k, m)));
     };
@@ -675,7 +747,9 @@ function Composer({ data }: { data: LoadedData }) {
       setLastHeard(chordSymbol(c, true));
     };
     const shared = {
-      target: () => (live.current.tab === 'melody' ? 'melody' as const : 'chords' as const),
+      target: () => (live.current.tab === 'melody' || live.current.tab === 'bass'
+        ? live.current.tab
+        : 'chords' as const),
       onNote,
       onChord,
       onStatus: setListenStatus,
@@ -689,9 +763,17 @@ function Composer({ data }: { data: LoadedData }) {
       setListen(session);
       setLastHeard(null);
       if (inputSource === 'midi') {
-        flash(tab === 'chords' ? 'MIDI — hold a chord ~¼ s to add' : 'MIDI — press keys to fill the melody lane');
+        flash(tab === 'chords'
+          ? 'MIDI — hold a chord ~¼ s to add'
+          : tab === 'bass'
+            ? 'MIDI — press keys to fill the bass lane'
+            : 'MIDI — press keys to fill the melody lane');
       } else {
-        flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — fills the melody lane');
+        flash(tab === 'chords'
+          ? 'Listening for chords — hold each one ~½ s'
+          : tab === 'bass'
+            ? 'Listening for low notes — fills the bass lane'
+            : 'Listening for notes — fills the melody lane');
       }
     } catch (e) {
       flash(inputSource === 'midi' ? midiErrorMessage(e) : listenErrorMessage(e));
@@ -764,7 +846,7 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
             <div className="card-actions">
               <button aria-label="Play" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>▶</button>
-              <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else addNote((s as NoteSuggestion).midi); }}>＋</button>
+              <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else if (tab === 'bass') addBass((s as NoteSuggestion).midi); else addNote((s as NoteSuggestion).midi); }}>＋</button>
             </div>
           </div>
         );
@@ -773,45 +855,76 @@ function Composer({ data }: { data: LoadedData }) {
   );
 
   const visuals = (all: boolean) => {
-    if (tab === 'melody') {
-      const underV = noteChord === cur ? prevVoicing : noteChord ? pianoVoicing(noteChord) : [];
-      const addMelodyPc = (p: number) => {
-        // Pick the octave nearest the last melody note, then fold into the instrument range
+    if (tab === 'melody' || tab === 'bass') {
+      const underChord = tab === 'bass' ? bassChord : noteChord;
+      const line = tab === 'bass' ? bassLine : melody;
+      const partId = tab === 'bass' ? (bassInst === 'off' ? 'bass' : bassInst) : melodyInst;
+      const underV = underChord === cur ? prevVoicing : underChord ? pianoVoicing(underChord) : [];
+      const addLinePc = (p: number) => {
+        // Pick the octave nearest the last line note, then fold into the instrument range
         // so bass (and other narrow instruments) get a real sample instead of extreme pitch-shift.
-        const anchor = fitMidi(melody.length ? melody[melody.length - 1]! : 60);
-        let best = fitMidi(p + 60);
+        const fallback = tab === 'bass' ? 40 : 60;
+        const anchor = fitMidi(line.length ? line[line.length - 1]! : fallback, partId);
+        let best = fitMidi(p + (tab === 'bass' ? 36 : 60), partId);
         for (let oct = 1; oct <= 6; oct++) {
-          const m = fitMidi(p + 12 * (oct + 1));
+          const m = fitMidi(p + 12 * (oct + 1), partId);
           if (Math.abs(m - anchor) < Math.abs(best - anchor)) best = m;
         }
-        addNote(best);
-        flash(`Added ${spellMidi(best)} · ${INSTRUMENTS[melodyInst].label}`);
+        if (tab === 'bass') {
+          addBass(best);
+          flash(`Added bass ${spellMidi(best)} · ${INSTRUMENTS[partId].label}`);
+        } else {
+          addNote(best);
+          flash(`Added ${spellMidi(best)} · ${INSTRUMENTS[melodyInst].label}`);
+        }
       };
       return (
         <div className="vis-body">
-          <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={noteChord ? underV : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label={`Melody · plays on ${INSTRUMENTS[melodyInst].label}`} labelKeys="all" />
+          <PianoViz
+            scalePcs={scale}
+            tonicPc={pc(k.tonic)}
+            current={underChord ? underV : []}
+            suggested={selNote ? [fitMidi(selNote.midi, partId)] : []}
+            fingers={[]}
+            melody={line.slice(-8)}
+            color={selColor}
+            spell={spell}
+            minLow={tab === 'bass' ? 28 : 55}
+            minHigh={tab === 'bass' ? 55 : 84}
+            label={`${tab === 'bass' ? 'Bass' : 'Melody'} · plays on ${INSTRUMENTS[partId].label}`}
+            labelKeys="all"
+          />
           <div className="legend">
-            {noteChord && <span><i style={{ background: CURRENT_COLOR }} />under: {chordSymbol(noteChord, true)}</span>}
-            {selNote && <span><i style={{ background: selColor }} />next: {spellMidi(selNote.midi)}</span>}
+            {underChord && <span><i style={{ background: CURRENT_COLOR }} />under: {chordSymbol(underChord, true)}</span>}
+            {selNote && <span><i style={{ background: selColor }} />next: {spellMidi(fitMidi(selNote.midi, partId))}</span>}
             {selNote?.relation && <span><i style={{ background: REL_COLORS[selNote.relation.kind] }} />{selNote.relation.label} · {REL_LABEL[selNote.relation.kind]}</span>}
             <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
           </div>
-          <Contour melody={melody.slice(-10)} next={selNote?.midi} color={selColor} spell={spellMidi} />
+          <Contour melody={line.slice(-10)} next={selNote ? fitMidi(selNote.midi, partId) : undefined} color={selColor} spell={spellMidi} />
           <CircleOfFifths
             tonicPc={pc(k.tonic)} scalePcs={scale}
-            currentPc={melody.length ? melody[melody.length - 1]! % 12 : undefined}
+            currentPc={line.length ? line[line.length - 1]! % 12 : undefined}
             others={noteSugs.map((s) => ({ pc: s.midi % 12, color: lex.color(s.primaryMood), id: s.id, label: s.name.replace('#', '♯') }))}
             selected={selNote ? { pc: selNote.midi % 12, color: selColor, label: selNote.name.replace('#', '♯') } : undefined}
             spellPc={spell}
             onPick={(id) => { const s = noteSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playNoteMove(s); } }}
-            onAddPc={addMelodyPc}
+            onAddPc={addLinePc}
           />
           <p className="small muted center">
             Big letters = notes you can add (brighter = stronger next pick) · rim chips = next-note picks (stack outward by root — rank + quality on each pill; brighter / lower number = better; tap to hear) ·
-            +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[melodyInst].label}</b>
+            +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[partId].label}</b>
           </p>
-          <div className="cof-instr row gap" role="group" aria-label="Melody instrument for circle taps">
-            {INSTRUMENT_IDS.map((id) => (
+          <div className="cof-instr row gap" role="group" aria-label={`${tab === 'bass' ? 'Bass' : 'Melody'} instrument for circle taps`}>
+            {tab === 'bass' ? (
+              <>
+                <button type="button" className={'pill' + (bassInst === 'off' ? ' on' : '')} onClick={() => chooseBassInst('off')}>Off</button>
+                {INSTRUMENT_IDS.map((id) => (
+                  <button key={id} type="button" className={'pill' + (bassInst === id ? ' on' : '')} onClick={() => chooseBassInst(id)}>
+                    {instrChip(id)}
+                  </button>
+                ))}
+              </>
+            ) : INSTRUMENT_IDS.map((id) => (
               <button key={id} type="button" className={'pill' + (melodyInst === id ? ' on' : '')} onClick={() => chooseMelodyInst(id)}>
                 {instrChip(id)}
               </button>
@@ -1012,13 +1125,15 @@ function Composer({ data }: { data: LoadedData }) {
       {/* Unified timeline: melody lane above, chords below (hidden on Guide) */}
       <section className="strip" aria-label="Timeline">
         {slots.length === 0 ? (
-          <p className="muted small">Tap chords below to start, or switch to Melody — both share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
+          <p className="muted small">Tap chords below to start, or switch to Melody / Bass — all share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
         ) : (
           <div className="timeline" role="list">
             {slots.map((s, i) => {
               const labeled = labelSlot(s, data.kb, beats);
+              const bassLabeled = labelBassSlot(s, data.kb, beats);
               const chordedIdx = s.chord ? chordedSlotIndices.indexOf(i) : -1;
               const tensionOn = chordedIdx >= 0 && (tensionPick ?? chordedSlotIndices.length - 1) === chordedIdx;
+              const bassPlayId = bassInst === 'off' ? 'bass' : bassInst;
               return (
                 <div
                   key={i}
@@ -1106,12 +1221,40 @@ function Composer({ data }: { data: LoadedData }) {
                       </button>
                     </div>
                   </div>
+                  <div className="tbass" aria-label={`Bar ${i + 1} bass`}>
+                    {bassLabeled.length === 0 && <span className="muted small">·</span>}
+                    {bassLabeled.map((n, j) => {
+                      const kind = n.relation?.kind;
+                      const tip = n.relation ? `Bass · ${REL_LABEL[n.relation.kind]} · ${n.relation.label}` : 'bass note';
+                      return (
+                        <div
+                          key={j}
+                          className={'tnote bass' + (kind ? ` ${kind}` : '')}
+                          style={kind ? { borderColor: REL_COLORS[kind], color: REL_COLORS[kind] } : undefined}
+                          title={tip}
+                        >
+                          <button
+                            type="button"
+                            className="tnote-play"
+                            onClick={() => {
+                              synth.unlock();
+                              synth.playNotes([fitMidi(n.midi, bassPlayId)], { dur: 0.5, instrument: bassPlayId });
+                            }}
+                          >
+                            <span>{spellMidi(n.midi)}</span>
+                            {n.relation && <small>{n.relation.label}</small>}
+                          </button>
+                          <button type="button" className="tx" aria-label="Remove bass note" onClick={() => dropBass(i, j)}><CloseIcon /></button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
-        <div className="rel-legend small muted" aria-hidden={!slots.some((s) => s.notes.length && s.chord)}>
+        <div className="rel-legend small muted" aria-hidden={!slots.some((s) => (s.notes.length || slotBass(s).length) && s.chord)}>
           {(['chord', 'tension', 'avoid', 'clash'] as RelKind[]).map((r) => (
             <span key={r}><i style={{ background: REL_COLORS[r] }} />{REL_LABEL[r]}</span>
           ))}
@@ -1206,6 +1349,7 @@ function Composer({ data }: { data: LoadedData }) {
         <div className="seg">
           <button className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); }}>Chords</button>
           <button className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); }}>Melody</button>
+          <button className={tab === 'bass' ? 'on' : ''} onClick={() => { setTab('bass'); setSelectedId(null); if (bassInst === 'off') chooseBassInst('bass'); }}>Bass</button>
         </div>
         <>
         <div className={'listen' + (listen ? ' on' : '')}>
@@ -1230,7 +1374,7 @@ function Composer({ data }: { data: LoadedData }) {
                 <span className="muted">
                   {inputSource === 'midi'
                     ? (tab === 'chords' ? 'hold a chord on your keyboard…' : 'press a key…')
-                    : (tab === 'chords' ? 'play a chord…' : 'sing or play a note…')}
+                    : (tab === 'chords' ? 'play a chord…' : tab === 'bass' ? 'play a low note…' : 'sing or play a note…')}
                 </span>
               )}
               <span className="level"><i style={{ width: `${Math.min(100, Math.round((listenStatus?.level ?? 0) * (inputSource === 'midi' ? 100 : 600)))}%` }} /></span>
@@ -1239,8 +1383,8 @@ function Composer({ data }: { data: LoadedData }) {
           ) : (
             <span className="small muted">
               {inputSource === 'midi'
-                ? (tab === 'chords' ? 'add chords from a MIDI keyboard' : 'add melody notes from a MIDI keyboard')
-                : (tab === 'chords' ? 'hear chords from your instrument' : 'hear notes you sing or play')}
+                ? (tab === 'chords' ? 'add chords from a MIDI keyboard' : tab === 'bass' ? 'add bass notes from a MIDI keyboard' : 'add melody notes from a MIDI keyboard')
+                : (tab === 'chords' ? 'hear chords from your instrument' : tab === 'bass' ? 'hear low notes you play' : 'hear notes you sing or play')}
             </span>
           )}
         </div>
@@ -1282,12 +1426,38 @@ function Composer({ data }: { data: LoadedData }) {
             </form>
             <FitExplainer mode="chords" keyInfo={k} />
           </>
-        ) : (
+        ) : tab === 'melody' ? (
           <div className="melody-input">
             <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" labelKeys="all" />
             <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
             <FitExplainer mode="melody" keyInfo={k} underChord={noteChord} />
             <p className="small muted">Tap keys (or 👂 Listen / 🎹 MIDI) to put notes above each chord. Notes land on successive beats; a full bar spills into a new bar with no chord yet. Use <b>Find a chord</b> to pick harmony — Hear plays chord + melody together. On a filled bar, ↻ finds a better chord for that melody.</p>
+          </div>
+        ) : (
+          <div className="melody-input bass-input">
+            <PianoViz
+              scalePcs={scale}
+              tonicPc={pc(k.tonic)}
+              melody={bassLine.slice(-1)}
+              spell={spell}
+              onKey={addBass}
+              minLow={28}
+              minHigh={55}
+              height={130}
+              label={`Tap to add bass · ${INSTRUMENTS[bassInst === 'off' ? 'bass' : bassInst].label}`}
+              labelKeys="all"
+            />
+            <div className="legend">
+              <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
+              <span><i className="dot bass" />bass notes</span>
+            </div>
+            <FitExplainer mode="bass" keyInfo={k} underChord={bassChord} />
+            <p className="small muted">
+              Tap low keys (or Listen / MIDI) to write a bass line under each bar. Notes pack beat-by-beat like melody.
+              Roots and fifths feel solid; other scale tones walk. ▶ Play layers composed bass with chords
+              {bassInst === 'off' ? ' (Bass part turns on when you add a note)' : ` on ${INSTRUMENTS[bassInst].label}`}.
+              Empty bass bars still get an automatic root when Bass isn’t Off.
+            </p>
           </div>
         )}
         </>
@@ -1425,12 +1595,12 @@ function Composer({ data }: { data: LoadedData }) {
             ? (pendingHarm
               ? `Chord for bar ${chordTarget + 1} melody`
               : cur ? `Next chord after ${chordSymbol(cur, true)}` : 'Start with…')
-            : melody.length
-              ? `Next note after ${spellMidi(melody[melody.length - 1])}${noteChord ? ` over ${chordSymbol(noteChord, true)}` : ''}`
-              : 'First melody note'}
+            : lineNotes.length
+              ? `Next ${tab === 'bass' ? 'bass ' : ''}note after ${spellMidi(lineNotes[lineNotes.length - 1])}${lineChord ? ` over ${chordSymbol(lineChord, true)}` : ''}`
+              : (tab === 'bass' ? 'First bass note' : 'First melody note')}
         </h3>
         <NextPickBoard
-          mode={tab === 'melody' ? 'melody' : 'chords'}
+          mode={tab === 'chords' ? 'chords' : 'melody'}
           items={tab === 'chords' ? chordSugs : noteSugs}
           selectedId={tab === 'chords' ? (selChord?.id ?? null) : (selNote?.id ?? null)}
           colorOf={(id) => lex.color(id)}
@@ -1441,7 +1611,7 @@ function Composer({ data }: { data: LoadedData }) {
             ? (pendingHarm
               ? `bar ${chordTarget + 1} melody`
               : (cur ? chordSymbol(cur, true) : undefined))
-            : (melody.length ? spellMidi(melody[melody.length - 1]) : undefined)}
+            : (lineNotes.length ? spellMidi(lineNotes[lineNotes.length - 1]) : undefined)}
           onSelect={(id) => {
             setSelectedId(id);
             if (tab === 'chords') {
@@ -1458,15 +1628,17 @@ function Composer({ data }: { data: LoadedData }) {
               if (s) addChord(s.chord);
             } else {
               const s = noteSugs.find((x) => x.id === id);
-              if (s) addNote(s.midi);
+              if (!s) return;
+              if (tab === 'bass') addBass(s.midi);
+              else addNote(s.midi);
             }
           }}
         />
-        {((tab === 'chords' && chordPaths.length > 0) || (tab === 'melody' && notePaths.length > 0)) && (
+        {((tab === 'chords' && chordPaths.length > 0) || ((tab === 'melody' || tab === 'bass') && notePaths.length > 0)) && (
           <div className="path-block path-block-bottom">
             <div className="row gap" style={{ alignItems: 'center', marginBottom: 4 }}>
               <h4 style={{ margin: 0, flex: 1 }}>
-                {tab === 'chords' ? 'Ready-made progressions' : 'Ready-made melody runs'}
+                {tab === 'chords' ? 'Ready-made progressions' : tab === 'bass' ? 'Ready-made bass runs' : 'Ready-made melody runs'}
               </h4>
               <span className="small muted">length</span>
               <button type="button" className={'pill' + (pathLen === 2 ? ' on' : '')} onClick={() => setPathLen(2)} aria-label="2 steps">2</button>
@@ -1475,7 +1647,9 @@ function Composer({ data }: { data: LoadedData }) {
             <p className="small muted" style={{ margin: '0 0 6px' }}>
               {tab === 'chords'
                 ? 'A short sequence Muse thinks works next. Blue passing notes sit between the chords so the jump feels smooth — ▶ hears the whole thing before you add it.'
-                : 'A short run of notes Muse ranks as a good next phrase. ▶ hears it over the current chord; ＋ adds every note in order.'}
+                : tab === 'bass'
+                  ? 'A short bass figure Muse ranks next. ▶ hears it under the current chord; ＋ adds every note on the bass lane.'
+                  : 'A short run of notes Muse ranks as a good next phrase. ▶ hears it over the current chord; ＋ adds every note in order.'}
             </p>
             <div className="path-row">
               {tab === 'chords' ? chordPaths.map((p) => (
@@ -1497,8 +1671,8 @@ function Composer({ data }: { data: LoadedData }) {
                     {p.why && <div className="path-why">{p.why}</div>}
                   </div>
                   <div className="path-actions">
-                    <button type="button" aria-label="Hear this melody run" onClick={() => playNotePath(p)}>▶</button>
-                    <button type="button" className="add" aria-label="Add this melody run" onClick={() => addNotePath(p)}>＋</button>
+                    <button type="button" aria-label={tab === 'bass' ? 'Hear this bass run' : 'Hear this melody run'} onClick={() => playNotePath(p)}>▶</button>
+                    <button type="button" className="add" aria-label={tab === 'bass' ? 'Add this bass run' : 'Add this melody run'} onClick={() => addNotePath(p)}>＋</button>
                   </div>
                 </div>
               ))}
@@ -1595,6 +1769,7 @@ function Composer({ data }: { data: LoadedData }) {
                   if (t === 'moods') { setDrawer('moods'); return; }
                   setDrawer(null);
                   setTab(t);
+                  if (t === 'bass' && bassInst === 'off') chooseBassInst('bass');
                   setSelectedId(null);
                   window.scrollTo({ top: 0 });
                 }} />
