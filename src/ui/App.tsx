@@ -925,19 +925,6 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       </section>}
 
-      {tab !== 'artists' && tab !== 'guide' && tState && (
-        <TensionCurve
-          state={tState}
-          labels={chords.map((c) => chordSymbol(c, true))}
-          melodyNotes={tensionMelodyNotes}
-          style={tStyle}
-          onStyle={chooseTStyle}
-          selectedIndex={tensionPick}
-          onSelect={setTensionPick}
-          ghost={tab === 'chords' && selChord?.tension ? { level: selChord.tension.level, debtAfter: selChord.tension.debtAfter, label: selChord.symbol, color: lex.color(selChord.primaryMood) } : null}
-        />
-      )}
-
       {/* Input */}
       <section className="input">
         <div className="seg">
@@ -1251,6 +1238,20 @@ function Composer({ data }: { data: LoadedData }) {
           </div>
         )}
       </section>
+
+      {/* Tension sits below timeline + best-next suggestions so picks come first */}
+      {tState && (
+        <TensionCurve
+          state={tState}
+          labels={chords.map((c) => chordSymbol(c, true))}
+          melodyNotes={tensionMelodyNotes}
+          style={tStyle}
+          onStyle={chooseTStyle}
+          selectedIndex={tensionPick}
+          onSelect={setTensionPick}
+          ghost={tab === 'chords' && selChord?.tension ? { level: selChord.tension.level, debtAfter: selChord.tension.debtAfter, label: selChord.symbol, color: lex.color(selChord.primaryMood) } : null}
+        />
+      )}
 
       <div className="center" style={{ marginTop: 14 }}>
         <button className={'pill' + (loreOn ? ' on' : '')} onClick={() => setLoreOn((x) => !x)}>Lore mode {loreOn ? 'on' : 'off'}</button>
