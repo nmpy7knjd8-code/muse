@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import {
   Chord, ChordSuggestion, MoodProfile, ModeId, MODES, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
-  midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, progressionText, romanOf, scalePcs,
-  spellInKey, toMidiFile, tonicChoices, voiceProgression, type Key,
+  midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
+  spellInKey, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
   INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
+  TimelineSlot, activeSlotIndex, chordTargetIndex, chordsOf, clearSlotChord, insertNote, labelSlot, melodyOf,
+  nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
+  REL_COLORS, REL_LABEL, type RelKind,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -16,8 +19,7 @@ import { startListening, type ListenSession, type ListenStatus } from './listen'
 
 type Tab = 'chords' | 'melody' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
-interface Slot { chord: Chord; locked: boolean }
-interface Snapshot { slots: Slot[]; melody: number[] }
+interface Snapshot { slots: TimelineSlot[] }
 
 const PRESET_MOODS = ['mystical', 'melancholy', 'triumphant', 'tense', 'dreamy', 'dark', 'bright', 'peaceful', 'epic', 'bittersweet', 'yearning', 'solemn'];
 const RARITY_MARK: Record<string, { sym: string; label: string }> = {
@@ -42,8 +44,7 @@ function Composer({ data }: { data: LoadedData }) {
   const [tonic, setTonic] = useState('C');
   const [mode, setMode] = useState<ModeId>('major');
   const [auto, setAuto] = useState(true);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [melody, setMelody] = useState<number[]>([]);
+  const [slots, setSlots] = useState<TimelineSlot[]>([]);
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [tab, setTab] = useState<Tab>('chords');
   const [visTab, setVisTab] = useState<VisTab>('piano');
@@ -72,9 +73,15 @@ function Composer({ data }: { data: LoadedData }) {
   const [lastHeard, setLastHeard] = useState<string | null>(null);
   useEffect(() => () => listen?.stop(), [listen]);
 
-  const chords = slots.map((s) => s.chord);
+  const chords = useMemo(() => chordsOf(slots), [slots]);
+  const melody = useMemo(() => melodyOf(slots), [slots]);
+  const chordTarget = chordTargetIndex(slots);
+  const pendingHarm = !slots[chordTarget]?.chord && (slots[chordTarget]?.notes.length ?? 0) > 0 ? slots[chordTarget] : null;
+  const noteSlot = slots[activeSlotIndex(slots)] ?? null;
+  const noteChord = noteSlot?.chord ?? slots.filter((s) => s.chord).at(-1)?.chord ?? null;
+  const noteBeat = nextNoteBeat(slots);
   const picked: Key = { tonic: parseNote(tonic)!, mode };
-  const detected = useMemo(() => (auto && (chords.length >= 2 || melody.length >= 4) ? detectKeys(chords, melody)[0] : null), [auto, slots, melody]); // eslint-disable-line react-hooks/exhaustive-deps
+  const detected = useMemo(() => (auto && (chords.length >= 2 || melody.length >= 4) ? detectKeys(chords, melody)[0] : null), [auto, slots]); // eslint-disable-line react-hooks/exhaustive-deps
   // auto-detect only chooses between major/minor keys; a modal pick (e.g. Dorian) is kept as-is
   const k: Key = auto && detected && (mode === 'major' || mode === 'minor') ? detected.key : picked;
   const scale = scalePcs(k);
@@ -83,17 +90,22 @@ function Composer({ data }: { data: LoadedData }) {
   const spell = (m: number) => noteName(spellInKey(k, m), true);
   const spellMidi = (m: number) => midiName(m, spellInKey(k, m)).replace('#', '♯').replace(/b(?=\d)/, '♭');
 
-  const chordSugs: ChordSuggestion[] = useMemo(
-    () => (tab === 'chords' ? engine.suggestChords({ key: k, progression: chords, profile, adventure, limit: 18, tensionStyle: tStyle }) : []),
-    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const tState = useMemo(
-    () => (chords.length ? progressionTension(chords, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null),
-    [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const chordSugs: ChordSuggestion[] = useMemo(() => {
+    if (tab !== 'chords') return [];
+    const progression = pendingHarm ? chordsOf(slots.slice(0, chordTarget)) : chords;
+    const durs = pendingHarm ? noteDurations(pendingHarm.notes) : [];
+    const harmonize = pendingHarm
+      ? pendingHarm.notes.map((n, i) => ({ midi: n.midi, beat: n.beat, dur: durs[i] }))
+      : undefined;
+    return engine.suggestChords({ key: k, progression, profile, adventure, limit: 18, tensionStyle: tStyle, harmonize });
+  }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tState = useMemo(() => {
+    const steps = slots.filter((s) => s.chord).map((s) => ({ chord: s.chord as Chord, melody: s.notes.map((n) => n.midi) }));
+    return steps.length ? progressionTension(steps, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null;
+  }, [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
   const noteSugs: NoteSuggestion[] = useMemo(
-    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: cur ?? null, profile, adventure, limit: 12 }) : []),
-    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, melody, slots, profile, adventure], // eslint-disable-line react-hooks/exhaustive-deps
+    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat }) : []),
+    [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
   const selNote = noteSugs.find((s) => s.id === selectedId) ?? noteSugs[0];
@@ -104,13 +116,12 @@ function Composer({ data }: { data: LoadedData }) {
     window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 1800);
   };
-  const snapshot = () => setHistory((h) => [...h.slice(-49), { slots, melody }]);
+  const snapshot = () => setHistory((h) => [...h.slice(-49), { slots }]);
   const undo = () => {
     synth.unlock();
     const last = history[history.length - 1];
     if (!last) return;
     setSlots(last.slots);
-    setMelody(last.melody);
     setHistory((h) => h.slice(0, -1));
   };
   // instrument + sample loading state (external store → re-render on progress)
@@ -154,31 +165,43 @@ function Composer({ data }: { data: LoadedData }) {
     synth.unlock();
     const last = melody[melody.length - 1];
     const groups = last !== undefined ? [[last], [n.midi]] : [[n.midi]];
-    if (cur) synth.playNotes(withBass(cur, prevVoicing ?? pianoVoicing(cur)), { dur: 1.6, vel: 0.35 });
+    const under = noteChord;
+    if (under) {
+      const v = under === cur && prevVoicing ? prevVoicing : pianoVoicing(under);
+      synth.playNotes(withBass(under, v), { dur: 1.6, vel: 0.35 });
+    }
     groups.forEach((g, i) => synth.playNotes(g, { at: i * 0.5, dur: 0.5, vel: 0.9 }));
   };
   const playAll = () => {
     synth.unlock();
-    const v = voiceProgression(chords);
-    if (chords.length) synth.playSequence(chords.map((c, i) => withBass(c, v[i])), 0.9, 0.85);
-    melody.forEach((m, i) => synth.playNotes([m], { at: i * 0.45, dur: 0.42, vel: 0.9 }));
+    synth.stopAll();
+    const ev = timelineEvents(slots);
+    const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
+    const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
+    const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
+    ev.chords.forEach((c) => synth.playNotes(withBass(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord)), { at: c.at, dur: c.dur, vel: 0.7 }));
+    ev.notes.forEach((n) => synth.playNotes([n.midi], { at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85 }));
   };
 
   // ---- editing ----
   const addChord = (c: Chord) => {
     snapshot();
-    playChord(c, prevVoicing);
-    setSlots((s) => [...s, { chord: c, locked: false }]);
+    const target = chordTargetIndex(slots);
+    const prev = target > 0 ? voiceProgression(chordsOf(slots.slice(0, target))).at(-1) : undefined;
+    playChord(c, prev);
+    setSlots((s) => setSlotChord(s, chordTargetIndex(s), c));
     setSelectedId(null);
   };
-  const removeAt = (i: number) => { if (slots[i].locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => s.filter((_, j) => j !== i)); };
+  const removeAt = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => removeSlot(s, i)); };
+  const dropChord = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => clearSlotChord(s, i)); };
+  const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
-  const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMelody([]); setSelectedId(null); };
+  const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setSelectedId(null); };
   const addNote = (m: number) => {
     synth.unlock();
     synth.playNotes([m], { dur: 0.6 });
     snapshot();
-    setMelody((x) => [...x, m]);
+    setSlots((s) => insertNote(s, m).slots);
     setSelectedId(null);
   };
   const submitTyped = () => {
@@ -223,11 +246,11 @@ function Composer({ data }: { data: LoadedData }) {
 
   // ---- export ----
   const copyText = async () => {
-    const txt = progressionText(k, chords, melody);
-    try { await navigator.clipboard.writeText(txt); flash('Copied progression'); } catch { flash(txt); }
+    const txt = timelineText(k, slots);
+    try { await navigator.clipboard.writeText(txt); flash('Copied timeline'); } catch { flash(txt); }
   };
   const downloadMidi = () => {
-    const bytes = toMidiFile(chords, melody);
+    const bytes = toMidiTimeline(slots);
     const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'audio/midi' }));
     const a = document.createElement('a');
     a.href = url;
@@ -253,7 +276,7 @@ function Composer({ data }: { data: LoadedData }) {
   const useJourney = () => {
     if (!journey) return;
     snapshot();
-    setSlots(journey.map((x) => ({ chord: x.chord, locked: false })));
+    setSlots(journey.map((x) => ({ chord: x.chord, notes: [], locked: false })));
     setTab('chords');
     setSelectedId(null);
     flash('Journey loaded — undo to go back');
@@ -266,7 +289,7 @@ function Composer({ data }: { data: LoadedData }) {
     if (!l) return flash('Could not read that exercise');
     snapshot();
     setTonic(l.tonic); setMode(l.mode); setAuto(false);
-    setSlots(l.chords.map((chord) => ({ chord, locked: false })));
+    setSlots(l.chords.map((chord) => ({ chord, notes: [], locked: false })));
     setTab('chords');
     setSelectedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -285,9 +308,9 @@ function Composer({ data }: { data: LoadedData }) {
 
   // ---- Listen (live mic: melody notes via YIN, chords via chroma templates) ----
   // callbacks run outside React's render cycle, so they read the latest state through refs
-  const live = useRef({ tab, k, slots, melody });
-  live.current = { tab, k, slots, melody };
-  const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots, melody: live.current.melody }]);
+  const live = useRef({ tab, k, slots });
+  live.current = { tab, k, slots };
+  const snapshotLive = () => setHistory((h) => [...h.slice(-49), { slots: live.current.slots }]);
   const heardChord = (root: number, quality: string): Chord => ({ root: spellInKey(live.current.k, root), quality: quality as Chord['quality'] });
   const toggleListen = async () => {
     synth.unlock();
@@ -298,14 +321,14 @@ function Composer({ data }: { data: LoadedData }) {
         isPaused: () => synth.isPlaying(),
         onNote: (m) => {
           snapshotLive();
-          setMelody((x) => [...x, m]);
+          setSlots((x) => insertNote(x, m).slots);
           setSelectedId(null);
           setLastHeard(midiName(m, spellInKey(live.current.k, m)));
         },
         onChord: (cm) => {
           const c = heardChord(cm.root, cm.quality);
           snapshotLive();
-          setSlots((x) => [...x, { chord: c, locked: false }]);
+          setSlots((x) => setSlotChord(x, chordTargetIndex(x), c));
           setSelectedId(null);
           setLastHeard(chordSymbol(c, true));
         },
@@ -315,7 +338,7 @@ function Composer({ data }: { data: LoadedData }) {
       });
       setListen(session);
       setLastHeard(null);
-      flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — sing or play one at a time');
+      flash(tab === 'chords' ? 'Listening for chords — hold each one ~½ s' : 'Listening for notes — fills the melody lane');
     } catch (e) {
       flash((e as Error).message || 'Microphone unavailable');
     }
@@ -341,12 +364,14 @@ function Composer({ data }: { data: LoadedData }) {
 
   const visuals = (all: boolean) => {
     if (tab === 'melody') {
+      const underV = noteChord === cur ? prevVoicing : noteChord ? pianoVoicing(noteChord) : [];
       return (
         <div className="vis-body">
-          <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={cur ? prevVoicing : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" />
+          <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={noteChord ? underV : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" />
           <div className="legend">
-            {cur && <span><i style={{ background: CURRENT_COLOR }} />now: {chordSymbol(cur, true)}</span>}
+            {noteChord && <span><i style={{ background: CURRENT_COLOR }} />under: {chordSymbol(noteChord, true)}</span>}
             {selNote && <span><i style={{ background: selColor }} />next: {spellMidi(selNote.midi)}</span>}
+            {selNote?.relation && <span><i style={{ background: REL_COLORS[selNote.relation.kind] }} />{selNote.relation.label} · {REL_LABEL[selNote.relation.kind]}</span>}
             <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
           </div>
           <Contour melody={melody.slice(-10)} next={selNote?.midi} color={selColor} spell={spellMidi} />
@@ -453,28 +478,67 @@ function Composer({ data }: { data: LoadedData }) {
         {data.kb.meta.isSeed && <span className="warn"> · using seed theory data</span>}
       </div>
 
-      {/* Progression strip */}
-      <section className="strip" aria-label="Progression">
-        <div className="chips">
-          {slots.length === 0 && melody.length === 0 && <span className="muted small">Tap chords below to start, or switch to Melody.</span>}
-          {slots.map((s, i) => (
-            <div key={i} className={'chip' + (s.locked ? ' locked' : '')} onClick={() => playChord(s.chord)}>
-              <div className="sym">{chordSymbol(s.chord, true)}</div>
-              <div className="rn">{romanOf(s.chord, k)}</div>
-              <div className="chip-actions">
-                <button aria-label="Lock chord" onClick={(e) => { e.stopPropagation(); toggleLock(i); }}>{s.locked ? '🔒' : '🔓'}</button>
-                <button aria-label="Remove chord" onClick={(e) => { e.stopPropagation(); removeAt(i); }}>×</button>
-              </div>
-            </div>
+      {/* Unified timeline: melody lane above, chords below */}
+      <section className="strip" aria-label="Timeline">
+        {slots.length === 0 ? (
+          <p className="muted small">Tap chords below to start, or switch to Melody — both share this timeline.</p>
+        ) : (
+          <div className="timeline" role="list">
+            {slots.map((s, i) => {
+              const labeled = labelSlot(s, data.kb);
+              return (
+                <div key={i} className={'tbar' + (s.locked ? ' locked' : '') + (!s.chord ? ' nc' : '')} role="listitem">
+                  <div className="tmel" aria-label={`Bar ${i + 1} melody`}>
+                    {labeled.length === 0 && <span className="muted small">·</span>}
+                    {labeled.map((n, j) => {
+                      const kind = n.relation?.kind;
+                      const tip = n.relation ? `${REL_LABEL[n.relation.kind]} · ${n.relation.label} — ${n.relation.why}` : 'no chord yet';
+                      return (
+                        <div
+                          key={j}
+                          className={'tnote' + (kind ? ` ${kind}` : '')}
+                          style={kind ? { borderColor: REL_COLORS[kind], color: REL_COLORS[kind] } : undefined}
+                          title={tip}
+                        >
+                          <button type="button" className="tnote-play" onClick={() => { synth.unlock(); synth.playNotes([n.midi], { dur: 0.45 }); }}>
+                            <span>{spellMidi(n.midi)}</span>
+                            {n.relation && <small>{n.relation.label}</small>}
+                          </button>
+                          <button type="button" className="tx" aria-label="Remove note" onClick={() => dropNote(i, j)}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div
+                    className={'tchord' + (s.locked ? ' locked' : '')}
+                    onClick={() => { if (s.chord) playChord(s.chord); }}
+                  >
+                    <div className="sym">{s.chord ? chordSymbol(s.chord, true) : 'N.C.'}</div>
+                    <div className="rn">{s.chord ? romanOf(s.chord, k) : 'melody'}</div>
+                    <div className="chip-actions">
+                      {s.chord && <button aria-label="Lock chord" onClick={(e) => { e.stopPropagation(); toggleLock(i); }}>{s.locked ? '🔒' : '🔓'}</button>}
+                      {s.chord && s.notes.length > 0 && !s.locked && (
+                        <button aria-label="Clear chord, keep melody" title="Clear chord, keep melody" onClick={(e) => { e.stopPropagation(); dropChord(i); }}>⌀</button>
+                      )}
+                      <button aria-label="Remove bar" onClick={(e) => { e.stopPropagation(); removeAt(i); }}>×</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="rel-legend small muted" aria-hidden={!slots.some((s) => s.notes.length && s.chord)}>
+          {(['chord', 'tension', 'avoid', 'clash'] as RelKind[]).map((r) => (
+            <span key={r}><i style={{ background: REL_COLORS[r] }} />{REL_LABEL[r]}</span>
           ))}
-          {melody.length > 0 && <div className="melchips">♪ {melody.slice(-12).map((m) => spellMidi(m)).join(' ')}</div>}
         </div>
         <div className="row gap">
-          <button onClick={playAll} disabled={!chords.length && !melody.length}>▶ Play</button>
+          <button onClick={playAll} disabled={!slots.length}>▶ Play</button>
           <button onClick={undo} disabled={!history.length}>↶ Undo</button>
-          <button onClick={clearAll} disabled={!slots.length && !melody.length}>Clear</button>
-          <button onClick={copyText} disabled={!chords.length && !melody.length}>Copy</button>
-          <button onClick={downloadMidi} disabled={!chords.length && !melody.length}>MIDI</button>
+          <button onClick={clearAll} disabled={!slots.length}>Clear</button>
+          <button onClick={copyText} disabled={!slots.length}>Copy</button>
+          <button onClick={downloadMidi} disabled={!slots.length}>MIDI</button>
         </div>
         <div className="instr" role="radiogroup" aria-label="Instrument">
           {INSTRUMENT_IDS.map((id) => (
@@ -553,7 +617,7 @@ function Composer({ data }: { data: LoadedData }) {
           <div className="melody-input">
             <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" />
             <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
-            <p className="small muted">Tap keys (or use 👂 Listen and sing/play) to add melody notes. With Auto on, the key is detected from your notes too.</p>
+            <p className="small muted">Tap keys (or 👂 Listen) to fill the melody lane above each chord. Notes land on successive beats; a full bar spills into the next (N.C. until you add a chord).</p>
           </div>
         )}
         </>)}
@@ -670,7 +734,15 @@ function Composer({ data }: { data: LoadedData }) {
 
       {/* Suggestions */}
       <section className="suggestions" aria-label="Suggestions">
-        <h3>{tab === 'chords' ? (cur ? `Next chord after ${chordSymbol(cur, true)}` : 'Start with…') : melody.length ? `Next note after ${spellMidi(melody[melody.length - 1])}` : 'First melody note'}</h3>
+        <h3>
+          {tab === 'chords'
+            ? (pendingHarm
+              ? `Chord for bar ${chordTarget + 1} melody`
+              : cur ? `Next chord after ${chordSymbol(cur, true)}` : 'Start with…')
+            : melody.length
+              ? `Next note after ${spellMidi(melody[melody.length - 1])}${noteChord ? ` over ${chordSymbol(noteChord, true)}` : ''}`
+              : 'First melody note'}
+        </h3>
         {groups.map(([mood, items]) => (
           <div key={mood} className="group">
             <div className="ghead"><i style={{ background: lex.color(mood) }} />{lex.label(mood)}</div>
@@ -679,6 +751,8 @@ function Composer({ data }: { data: LoadedData }) {
               const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
               const color = lex.color(s.primaryMood);
               const rar = RARITY_MARK[s.rarity];
+              const cs = isChord ? s as ChordSuggestion : null;
+              const ns = !isChord ? s as NoteSuggestion : null;
               return (
                 <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
                   onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
@@ -690,9 +764,15 @@ function Composer({ data }: { data: LoadedData }) {
                     </div>
                     <div className="tags">
                       {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
-                      {isChord && (s as ChordSuggestion).moodShift && <span className="shift">{(s as ChordSuggestion).moodShift!.arrow} {(s as ChordSuggestion).moodShift!.text}</span>}
+                      {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
                       {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
-                      {isChord && (s as ChordSuggestion).tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
+                      {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
+                      {ns?.relation && (
+                        <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>
+                          {ns.relation.label} · {REL_LABEL[ns.relation.kind]}
+                        </span>
+                      )}
+                      {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
                     </div>
                     <div className="why">{s.why}</div>
                   </div>

@@ -43,10 +43,42 @@ export function setSlotChord(slots: TimelineSlot[], index: number, chord: Chord)
   return out;
 }
 
+/** Clear the chord of a slot, leaving its melody as N.C. (no-op when locked). */
+export function clearSlotChord(slots: TimelineSlot[], index: number): TimelineSlot[] {
+  if (!slots[index] || slots[index].locked) return slots;
+  return pruneEmpty(slots.map((s, i) => (i === index ? { ...s, chord: null } : s)));
+}
+
+/** Remove one melody note; drops empty chordless unlocked slots. */
+export function removeNoteAt(slots: TimelineSlot[], slotIndex: number, noteIndex: number): TimelineSlot[] {
+  if (!slots[slotIndex]) return slots;
+  const out = slots.map((s, i) => (i === slotIndex ? { ...s, notes: s.notes.filter((_, j) => j !== noteIndex) } : { ...s, notes: [...s.notes] }));
+  return pruneEmpty(out);
+}
+
+/** Remove a whole slot (no-op when locked). */
+export function removeSlot(slots: TimelineSlot[], index: number): TimelineSlot[] {
+  if (!slots[index] || slots[index].locked) return slots;
+  return slots.filter((_, i) => i !== index);
+}
+
+/** Drop trailing/interior empty chordless unlocked slots. */
+export function pruneEmpty(slots: TimelineSlot[]): TimelineSlot[] {
+  return slots.filter((s) => s.chord || s.notes.length > 0 || s.locked);
+}
+
 /** Where a new chord goes: the first chordless slot that already has melody (harmonize it), else a new slot. */
 export function chordTargetIndex(slots: TimelineSlot[]): number {
   const i = slots.findIndex((s) => !s.chord && s.notes.length > 0);
   return i >= 0 ? i : slots.length;
+}
+
+/** Beat (0..3) the next melody note will land on in the active slot. */
+export function nextNoteBeat(slots: TimelineSlot[]): number {
+  const i = activeSlotIndex(slots);
+  const notes = slots[i]?.notes ?? [];
+  if (!notes.length) return 0;
+  return Math.min(BEATS_PER_SLOT - 1, notes[notes.length - 1].beat + 1);
 }
 
 export const melodyOf = (slots: TimelineSlot[]) => slots.flatMap((s) => s.notes.map((n) => n.midi));

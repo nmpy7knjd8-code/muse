@@ -484,9 +484,11 @@ export class SuggestionEngine {
       }
 
       const relation = chord ? noteRelation(midi, chord, this.kb) : null;
-      if (relation) {
-        // strong beats want chord tones; tensions are colour (more welcome when adventurous); avoid/clash cost
-        const bw = opts.beat !== undefined ? beatWeight(opts.beat) : 1;
+      // beat-aware colour: only when the UI says where the note will land. Strong beats favour
+      // chord tones; tensions are freer on weak beats / with more adventure. Resolutions (e.g. leading
+      // tone → tonic over V7) keep their existing evidence boost and are not re-penalized here.
+      if (relation && opts.beat !== undefined && !ev.some((e) => e.category === 'resolution')) {
+        const bw = beatWeight(opts.beat);
         if (relation.kind === 'chord') quality += 0.1 * bw;
         else if (relation.kind === 'tension') quality += 0.15 * a - 0.05 * bw;
         else if (relation.kind === 'avoid') quality -= (0.35 - 0.15 * a) * bw;
