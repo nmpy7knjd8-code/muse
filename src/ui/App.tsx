@@ -11,7 +11,7 @@ import {
   setSlotChord, slotBass, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents, clampSlotsToPartMeters,
   REL_COLORS, REL_LABEL, type RelKind,
-  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, openPaletteChords, rootMotion, secondaryPaletteChords,
+  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, openPaletteChords, rootMotion, secondaryPaletteChords,
   TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, BPM_PRESETS, DEFAULT_BPM, beatSecFromBpm, clampBpm,
   beatsPerBar, clampSlotsToMeter, parseMeter, defaultPartMeters, timeSigEqual,
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
@@ -972,10 +972,17 @@ function Composer({ data }: { data: LoadedData }) {
   const chips = profile ? describeProfile(profile, lex) : [];
   const kbBadge = data.kb.meta.isSeed ? 'seed' : '';
 
+  const moodFilterLabel = profile
+    ? Object.entries(profile.moods).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => lex.label(id).toLowerCase()).join(' · ')
+    : '';
+
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
-      <div className="ghead">Best fit first</div>
+      <div className="ghead">
+        Best fit first
+        {moodFilterLabel ? <span className="ghead-mood" title="Active mood filter"> · {moodFilterLabel}</span> : null}
+      </div>
       {ranked.map((s, i) => {
         const isChord = 'chord' in s;
         const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
@@ -1093,26 +1100,12 @@ function Composer({ data }: { data: LoadedData }) {
             onPick={(id) => { const s = noteSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playNoteMove(s); } }}
             onAddPc={addLinePc}
           />
-          <p className="small muted center">
-            Big letters = notes you can add (brighter = stronger next pick) · rim chips = next-note picks (stack outward by root — rank + quality on each pill; brighter / lower number = better; tap to hear) ·
-            +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[partId].label}</b>
+          <p
+            className="small muted center cof-legend"
+            title="Rim chips = next-note picks (stack by root; brighter / lower # = better). +1/−1 = steps from where you are (right brighter, left opens)."
+          >
+            Letters = add · rim = next picks · {INSTRUMENTS[partId].label}
           </p>
-          <div className="cof-instr row gap" role="group" aria-label={`${tab === 'bass' ? 'Bass' : 'Melody'} instrument for circle taps`}>
-            {tab === 'bass' ? (
-              <>
-                <button type="button" className={'pill' + (bassInst === 'off' ? ' on' : '')} onClick={() => chooseBassInst('off')}>Off</button>
-                {INSTRUMENT_IDS.map((id) => (
-                  <button key={id} type="button" className={'pill' + (bassInst === id ? ' on' : '')} onClick={() => chooseBassInst(id)}>
-                    {instrChip(id)}
-                  </button>
-                ))}
-              </>
-            ) : INSTRUMENT_IDS.map((id) => (
-              <button key={id} type="button" className={'pill' + (melodyInst === id ? ' on' : '')} onClick={() => chooseMelodyInst(id)}>
-                {instrChip(id)}
-              </button>
-            ))}
-          </div>
           {bestFitBlock()}
         </div>
       );
@@ -1133,19 +1126,13 @@ function Composer({ data }: { data: LoadedData }) {
           onPick={(id) => { const s = chordSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playMove(s); } }}
           onAddPc={addCircleChord}
         />
-        <p className="small muted center">
-          Big letters = chords you can add (brighter = stronger next pick) · rim chips = next-chord picks (variants of the same root stack outward — rank + quality on each pill; brighter / lower number = better; tap to hear) ·
-          +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
-          plays on <b>{INSTRUMENTS[chordInst].label}</b>
-          {bassInst !== 'off' ? <> + bass <b>{INSTRUMENTS[bassInst].label}</b></> : null}
+        <p
+          className="small muted center cof-legend"
+          title={`Rim chips = next-chord picks (same-root variants stack outward; brighter / lower # = better). +1/−1 = one circle step (right brighter / homeward, left opens). Plays on ${INSTRUMENTS[chordInst].label}${bassInst !== 'off' ? ` + ${INSTRUMENTS[bassInst].label} bass` : ''}.`}
+        >
+          Letters = add · rim = next picks · {INSTRUMENTS[chordInst].label}
+          {bassInst !== 'off' ? ` + ${INSTRUMENTS[bassInst].label}` : ''}
         </p>
-        <div className="cof-instr row gap" role="group" aria-label="Chord instrument for circle taps">
-          {INSTRUMENT_IDS.map((id) => (
-            <button key={id} type="button" className={'pill' + (chordInst === id ? ' on' : '')} onClick={() => chooseChordInst(id)}>
-              {instrChip(id)}
-            </button>
-          ))}
-        </div>
         {bestFitBlock()}
       </div>
     );
@@ -1596,41 +1583,88 @@ function Composer({ data }: { data: LoadedData }) {
           <button onClick={copyText} disabled={!slots.length}>Copy</button>
           <button onClick={downloadMidi} disabled={!slots.length}>MIDI</button>
         </div>
-        <div className="instr-parts" aria-label="Instruments by part">
-          <div className="instr-part">
-            <span className="instr-part-label">Chords</span>
-            <div className="instr" role="radiogroup" aria-label="Chord instrument">
-              {INSTRUMENT_IDS.map((id) => (
-                <button key={id} role="radio" aria-checked={chordInst === id} className={'pill' + (chordInst === id ? ' on' : '')} onClick={() => chooseChordInst(id)}>
-                  {instrChip(id)}
+        {slots.length === 0 ? (
+          <details className="instr-collapsed">
+            <summary>
+              Instruments
+              <span className="muted">
+                {' · '}{instrChip(chordInst)} / {instrChip(melodyInst)}
+                {bassInst !== 'off' ? ` / ${instrChip(bassInst)}` : ' / bass off'}
+              </span>
+            </summary>
+            <div className="instr-parts" aria-label="Instruments by part">
+              <div className="instr-part">
+                <span className="instr-part-label">Chords</span>
+                <div className="instr" role="radiogroup" aria-label="Chord instrument">
+                  {INSTRUMENT_IDS.map((id) => (
+                    <button key={id} role="radio" aria-checked={chordInst === id} className={'pill' + (chordInst === id ? ' on' : '')} onClick={() => chooseChordInst(id)}>
+                      {instrChip(id)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="instr-part">
+                <span className="instr-part-label">Melody</span>
+                <div className="instr" role="radiogroup" aria-label="Melody instrument">
+                  {INSTRUMENT_IDS.map((id) => (
+                    <button key={id} role="radio" aria-checked={melodyInst === id} className={'pill' + (melodyInst === id ? ' on' : '')} onClick={() => chooseMelodyInst(id)}>
+                      {instrChip(id)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="instr-part">
+                <span className="instr-part-label">Bass</span>
+                <div className="instr" role="radiogroup" aria-label="Bass instrument">
+                  <button role="radio" aria-checked={bassInst === 'off'} className={'pill' + (bassInst === 'off' ? ' on' : '')} onClick={() => chooseBassInst('off')}>
+                    Off
+                  </button>
+                  {INSTRUMENT_IDS.map((id) => (
+                    <button key={id} role="radio" aria-checked={bassInst === id} className={'pill' + (bassInst === id ? ' on' : '')} onClick={() => chooseBassInst(id)}>
+                      {instrChip(id)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
+        ) : (
+          <div className="instr-parts" aria-label="Instruments by part">
+            <div className="instr-part">
+              <span className="instr-part-label">Chords</span>
+              <div className="instr" role="radiogroup" aria-label="Chord instrument">
+                {INSTRUMENT_IDS.map((id) => (
+                  <button key={id} role="radio" aria-checked={chordInst === id} className={'pill' + (chordInst === id ? ' on' : '')} onClick={() => chooseChordInst(id)}>
+                    {instrChip(id)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="instr-part">
+              <span className="instr-part-label">Melody</span>
+              <div className="instr" role="radiogroup" aria-label="Melody instrument">
+                {INSTRUMENT_IDS.map((id) => (
+                  <button key={id} role="radio" aria-checked={melodyInst === id} className={'pill' + (melodyInst === id ? ' on' : '')} onClick={() => chooseMelodyInst(id)}>
+                    {instrChip(id)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="instr-part">
+              <span className="instr-part-label">Bass</span>
+              <div className="instr" role="radiogroup" aria-label="Bass instrument">
+                <button role="radio" aria-checked={bassInst === 'off'} className={'pill' + (bassInst === 'off' ? ' on' : '')} onClick={() => chooseBassInst('off')}>
+                  Off
                 </button>
-              ))}
+                {INSTRUMENT_IDS.map((id) => (
+                  <button key={id} role="radio" aria-checked={bassInst === id} className={'pill' + (bassInst === id ? ' on' : '')} onClick={() => chooseBassInst(id)}>
+                    {instrChip(id)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="instr-part">
-            <span className="instr-part-label">Melody</span>
-            <div className="instr" role="radiogroup" aria-label="Melody instrument">
-              {INSTRUMENT_IDS.map((id) => (
-                <button key={id} role="radio" aria-checked={melodyInst === id} className={'pill' + (melodyInst === id ? ' on' : '')} onClick={() => chooseMelodyInst(id)}>
-                  {instrChip(id)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="instr-part">
-            <span className="instr-part-label">Bass</span>
-            <div className="instr" role="radiogroup" aria-label="Bass instrument">
-              <button role="radio" aria-checked={bassInst === 'off'} className={'pill' + (bassInst === 'off' ? ' on' : '')} onClick={() => chooseBassInst('off')}>
-                Off
-              </button>
-              {INSTRUMENT_IDS.map((id) => (
-                <button key={id} role="radio" aria-checked={bassInst === id} className={'pill' + (bassInst === id ? ' on' : '')} onClick={() => chooseBassInst(id)}>
-                  {instrChip(id)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        )}
         {/* Reserve height only while loading / error / first unlock — selected pills already show the mix */}
         {(partsLoading || partsError || !partsReady) && (
           <div className="instr-status small" aria-live="polite">
@@ -1712,17 +1746,15 @@ function Composer({ data }: { data: LoadedData }) {
               const dia = diatonicChords(k, false);
               const sev = diatonicChords(k, true);
               const taken = (c: Chord) => isDiatonicTriadClone(c, dia) || isDiatonicTriadClone(c, sev);
-              const prevMoods = cur ? engine.chordMoods(cur, k, chords[chords.length - 2]) : [];
               const row = (label: string, chords: Chord[]) => (
                 <PaletteRow
                   key={label}
                   label={label}
                   chords={chords}
                   k={k}
-                  prev={cur ?? null}
-                  prevMoods={prevMoods}
                   lex={lex}
                   engine={engine}
+                  profile={profile}
                   onAdd={addChord}
                 />
               );
@@ -1779,8 +1811,16 @@ function Composer({ data }: { data: LoadedData }) {
         )}
       </section>
 
-      {/* Mood */}
+      {/* Mood — active tags filter Best fit + dim clashing palette chords */}
       <section className="mood">
+        <div className="mood-head small">
+          <b>Mood filter</b>
+          <span className="muted">
+            {moodFilterLabel
+              ? `Filtering Best fit · dimming clashes (${moodFilterLabel})`
+              : 'Tap a mood to restack suggestions'}
+          </span>
+        </div>
         <form onSubmit={(e) => { e.preventDefault(); void interpret(moodText); }} className="moodbar">
           <input value={moodText} onChange={(e) => setMoodText(e.target.value)} onBlur={() => void interpret(moodText)} placeholder="Describe a mood: haunting, victorious but bittersweet…" enterKeyHint="go" />
           {moodText && <button type="button" className="ghost" onClick={() => { setMoodText(''); setProfile(null); }}>✕</button>}
@@ -2171,56 +2211,51 @@ function Composer({ data }: { data: LoadedData }) {
   );
 }
 
-/** One palette row: chord symbol, roman, and (vs previous) root ↑/↓ + mood shift. */
+/** Palette chip: symbol + Roman (primary) + one mood word. Dims when it clashes with the active mood. */
 function PaletteRow({
-  label, chords, k, prev, prevMoods, lex, engine, onAdd,
+  label, chords, k, lex, engine, profile, onAdd,
 }: {
   label: string;
   chords: Chord[];
   k: Key;
-  prev: Chord | null;
-  prevMoods: Array<{ id: string; weight: number }>;
   lex: MoodLexicon;
   engine: SuggestionEngine;
+  profile: MoodProfile | null;
   onAdd: (c: Chord) => void;
 }) {
   if (!chords.length) return null;
+  const filtering = !!(profile && !isEmptyProfile(profile) && Object.keys(profile.moods).length);
   return (
     <div className="pal-block">
-      <div className="pal-label small muted">{label}{prev ? ' · vs last chord' : ''}</div>
+      <div className="pal-label small muted">{label}{filtering ? ' · mood filter on' : ''}</div>
       <div className="palette">
         {chords.map((c) => {
           const rn = analyzeRoman(c, k);
           const roman = rn.secondary ?? rn.text;
-          const motion = prev ? rootMotion(prev, c) : null;
-          const nrt = prev ? nrtTag(prev, c) : null;
-          const moods = engine.chordMoods(c, k, prev ?? undefined);
-          const shift = prev && prevMoods.length ? lex.shift(prevMoods, moods) : null;
+          const moods = engine.chordMoods(c, k);
           const moodId = moods[0]?.id;
           const color = moodId ? lex.color(moodId) : undefined;
-          const role = !prev ? degreeRole(rn.degree) : null;
-          const rel = prev
-            ? [nrt || motion?.label, shift ? `${shift.arrow} ${shift.text}` : null].filter(Boolean).join(' · ')
-            : role;
+          const fit = filtering && profile ? engine.scoreAgainst(profile, c, k, moods) : 1;
+          const clash = filtering && fit < 0.32;
+          const role = degreeRole(rn.degree);
           const tip = [
-            `${chordSymbol(c, true)} (${roman})`,
-            motion ? `root ${motion.label} vs ${chordSymbol(prev!, true)}` : null,
-            nrt ? nrtPathLabel(nrt) : null,
-            shift ? `${shift.arrow} ${shift.text}` : moodId ? lex.label(moodId) : null,
-            role,
+            `${chordSymbol(c, true)} · ${roman}${role ? ` (${role})` : ''}`,
+            moodId ? lex.label(moodId).toLowerCase() : null,
+            clash ? `clashes with mood (${Math.round(fit * 100)}% fit)` : filtering ? `${Math.round(fit * 100)}% mood fit` : null,
           ].filter(Boolean).join(' — ');
           return (
             <button
               key={`${label}:${chordSymbol(c)}`}
               type="button"
-              className={'pal' + (motion ? ` root-${motion.dir === '↑' ? 'up' : motion.dir === '↓' ? 'down' : 'same'}` : '')}
-              style={color ? { borderColor: color } : undefined}
+              className={'pal' + (clash ? ' mood-clash' : '')}
+              style={color && !clash ? { borderColor: color } : undefined}
               title={tip}
+              aria-disabled={clash || undefined}
               onClick={() => onAdd(c)}
             >
-              <b>{chordSymbol(c, true)}</b>
-              <small className="pal-rn">{roman}</small>
-              {rel && <small className="pal-rel">{prev ? (nrt || motion?.label) : role}{shift ? ` ${shift.arrow}` : ''}</small>}
+              <b className="pal-rn">{roman}</b>
+              <small className="pal-sym">{chordSymbol(c, true)}</small>
+              {moodId && <small className="pal-mood">{lex.label(moodId).toLowerCase()}</small>}
             </button>
           );
         })}

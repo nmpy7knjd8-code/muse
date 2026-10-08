@@ -166,9 +166,10 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
       <summary>Chord tips · {keyLabel}</summary>
       <div className="fit-explainer-body">
         <p>
-          <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (home / builds / pulls home).
-          <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture at home.
+          <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (tonic / pre-dominant / dominant).
+          <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture.
           <b> Extra colour</b> = borrowed modal surprise. <b>Secondaries</b> = aim at another chord, then resolve.
+          Active mood tags restack Best fit and dim palette chords that clash.
         </p>
         <p className="fit-why">
           Muse ranks next chords by key fit, voice-leading from where you are, mood, and (when harmonizing) how well they sit under your melody.

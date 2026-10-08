@@ -707,8 +707,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
       {!selected && (
         <g>
           <text x={c} y={c - 12} className="ccenter" fill="#bdb8d4">{spellPc(tonicPc)}</text>
-          <text x={c} y={c + 6} className="ceffect" fill="#cfcbe0">home of this key</text>
-          <text x={c} y={c + 20} className="ceffect soft" fill="#8f8aa3">rim chips = next picks · outward = variants</text>
+          <text x={c} y={c + 8} className="ceffect" fill="#cfcbe0">tonic · rim = next picks</text>
         </g>
       )}
     </svg>
