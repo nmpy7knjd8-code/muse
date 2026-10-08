@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
+  Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
   spellInKey, tonicChoices, voiceProgression, type Key,
@@ -45,9 +45,30 @@ function Composer({ data }: { data: LoadedData }) {
   const interpreter = useMemo(() => new LexiconInterpreter(textLex), [textLex]);
   const lex = engine.lexicon;
 
-  const [tonic, setTonic] = useState('C');
-  const [mode, setMode] = useState<ModeId>('major');
-  const [auto, setAuto] = useState(true);
+  const [tonic, setTonic] = useState(() => {
+    try { return localStorage.getItem('muse.tonic') || 'C'; } catch { return 'C'; }
+  });
+  const [mode, setMode] = useState<ModeId>(() => {
+    try {
+      const v = localStorage.getItem('muse.mode');
+      return v && v in MODE_BY_ID ? (v as ModeId) : 'major';
+    } catch { return 'major'; }
+  });
+  const [auto, setAuto] = useState(() => {
+    try { return localStorage.getItem('muse.auto') !== '0'; } catch { return true; }
+  });
+  const chooseTonic = (t: string) => {
+    setTonic(t); setAuto(false);
+    try { localStorage.setItem('muse.tonic', t); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+  };
+  const chooseMode = (m: ModeId) => {
+    setMode(m); setAuto(false);
+    try { localStorage.setItem('muse.mode', m); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+  };
+  const chooseAuto = (on: boolean) => {
+    setAuto(on);
+    try { localStorage.setItem('muse.auto', on ? '1' : '0'); } catch { /* private mode */ }
+  };
   const [timeSig, setTimeSig] = useState<TimeSig>(() => {
     try {
       const v = localStorage.getItem('muse.timeSig');
@@ -174,9 +195,10 @@ function Composer({ data }: { data: LoadedData }) {
   // ---- audio actions (all called from tap handlers) ----
   const playChord = (c: Chord, prev?: number[]) => { synth.unlock(); synth.stopAll(); const v = pianoVoicing(c, prev); synth.playNotes(withBass(c, v)); };
   const playMove = (s: ChordSuggestion) => {
+    // Hear previews only the potential next chord (not previous → next).
     synth.unlock();
-    if (cur && prevVoicing) synth.playSequence([withBass(cur, prevVoicing), withBass(s.chord, s.voicing)], 0.85, 0.8);
-    else { synth.stopAll(); synth.playNotes(withBass(s.chord, s.voicing)); }
+    synth.stopAll();
+    synth.playNotes(withBass(s.chord, s.voicing));
   };
   const playNoteMove = (n: NoteSuggestion) => {
     synth.unlock();
@@ -306,7 +328,7 @@ function Composer({ data }: { data: LoadedData }) {
     const l = loadTryIt(t);
     if (!l) return flash('Could not read that exercise');
     snapshot();
-    setTonic(l.tonic); setMode(l.mode); setAuto(false);
+    chooseTonic(l.tonic); chooseMode(l.mode);
     const nextSlots = l.chords.map((chord) => ({ chord, notes: [] as TimelineSlot['notes'], locked: false }));
     if (l.timeSig) {
       setTimeSig(l.timeSig);
@@ -456,7 +478,7 @@ function Composer({ data }: { data: LoadedData }) {
           spellPc={spell}
           onPick={(id) => { const s = chordSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playMove(s); } }}
         />
-        <p className="small muted center">Ring = key of {keyName(k)} (outlined) · dots = every suggestion, coloured by mood · arrow = selected move</p>
+        <p className="small muted center">Ring = key of {keyName(k)} · CW = sharpward / dominant side · CCW = flatward / subdominant · arrow = selected root move</p>
       </div>
     );
     const tonnetz = (
@@ -489,13 +511,13 @@ function Composer({ data }: { data: LoadedData }) {
       <header className="top">
         <div className="brand">Muse{kbBadge && <small> {kbBadge}</small>}</div>
         <div className="keypick">
-          <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => { setTonic(e.target.value); setAuto(false); }}>
+          <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => chooseTonic(e.target.value)}>
             {tonicChoices(mode).map((t) => <option key={t} value={t}>{t.replace('#', '♯').replace('b', '♭')}</option>)}
           </select>
-          <select aria-label="Mode" value={mode} onChange={(e) => { setMode(e.target.value as ModeId); setAuto(false); }}>
+          <select aria-label="Mode" value={mode} onChange={(e) => chooseMode(e.target.value as ModeId)}>
             {MODES.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
-          <button className={'pill' + (auto ? ' on' : '')} onClick={() => setAuto((a) => !a)} title="Detect key from what you enter">Auto</button>
+          <button className={'pill' + (auto ? ' on' : '')} onClick={() => chooseAuto(!auto)} title="Detect key from what you enter">Auto</button>
         </div>
       </header>
       <div className="keyline small">
@@ -813,6 +835,7 @@ function Composer({ data }: { data: LoadedData }) {
           selectedId={tab === 'chords' ? (selChord?.id ?? null) : (selNote?.id ?? null)}
           colorOf={(id) => lex.color(id)}
           labelOf={(id) => lex.label(id)}
+          fromChord={tab === 'chords' ? cur : undefined}
           fromLabel={tab === 'chords'
             ? (cur ? chordSymbol(cur, true) : undefined)
             : (melody.length ? spellMidi(melody[melody.length - 1]) : undefined)}
@@ -846,6 +869,7 @@ function Composer({ data }: { data: LoadedData }) {
               const rar = RARITY_MARK[s.rarity];
               const cs = isChord ? s as ChordSuggestion : null;
               const ns = !isChord ? s as NoteSuggestion : null;
+              const root = cs && cur ? rootMotion(cur, cs.chord) : null;
               return (
                 <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
                   onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
@@ -853,6 +877,7 @@ function Composer({ data }: { data: LoadedData }) {
                     <div className="card-top">
                       <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
                       <span className="rn">{isChord ? (s as ChordSuggestion).roman : (s as NoteSuggestion).degree}</span>
+                      {root && <span className={'root-move ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{root.label}</span>}
                       <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
                     </div>
                     <div className="tags">
@@ -889,7 +914,7 @@ function Composer({ data }: { data: LoadedData }) {
         <summary>About &amp; credits</summary>
         <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
-          Nylon &amp; steel guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
+          Nylon &amp; steel guitar, bass guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
           Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>
         <p><b>No sound on iPhone?</b> Flip off Silent mode (the switch on the side), turn the volume up, and tap again — Safari only starts audio after a tap.</p>
         <p><b>Theory &amp; moods.</b> Mood labels come from the bundled research knowledge base and mood lexicon (sources listed inside the data files). Lore mode notes are folklore, not science.</p>
@@ -904,7 +929,11 @@ function Composer({ data }: { data: LoadedData }) {
             <div className="sheet-head">
               <div>
                 <div className="big" style={{ color: selColor }}>{cur ? `${chordSymbol(cur, true)} → ` : ''}{selChord.symbol}</div>
-                <div className="muted">{selChord.roman} in {keyName(k)} · {RARITY_MARK[selChord.rarity].label}{selChord.nrt ? ` · ${selChord.nrt.split('').join('→')}` : ''}</div>
+                <div className="muted">
+                  {selChord.roman} in {keyName(k)}
+                  {cur ? (() => { const r = rootMotion(cur, selChord.chord); return <>{' · '}<span className={'root-move ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')}>{r.label}</span></>; })() : null}
+                  {' · '}{RARITY_MARK[selChord.rarity].label}{selChord.nrt ? ` · ${selChord.nrt.split('').join('→')}` : ''}
+                </div>
               </div>
               <button className="ghost" onClick={() => setDetail(false)}>Close</button>
             </div>

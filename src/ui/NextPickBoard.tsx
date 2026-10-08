@@ -2,7 +2,7 @@
 // a 2D map of options + a status strip for the selection + Hear / Add. Tap a dot to preview.
 import { useMemo } from 'react';
 import {
-  ChordSuggestion, NoteSuggestion, REL_COLORS, REL_LABEL, type RelKind,
+  Chord, ChordSuggestion, NoteSuggestion, REL_COLORS, REL_LABEL, rootMotion, type RelKind,
 } from '../core';
 
 type Item = ChordSuggestion | NoteSuggestion;
@@ -17,6 +17,8 @@ interface Props {
   onAdd: (id: string) => void;
   /** Optional current chord/note label for the headline. */
   fromLabel?: string;
+  /** Previous chord — used for root ↑/↓ vs current. */
+  fromChord?: Chord;
 }
 
 const W = 340, H = 168, PAD_L = 36, PAD_R = 12, PAD_T = 16, PAD_B = 28;
@@ -46,7 +48,7 @@ function jitter(id: string, i: number): { dx: number; dy: number } {
   return { dx: ((h % 7) - 3) * 0.8 + (i % 3) * 0.3, dy: (((h >> 3) % 7) - 3) * 0.8 };
 }
 
-export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSelect, onAdd, fromLabel }: Props) {
+export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSelect, onAdd, fromLabel, fromChord }: Props) {
   const top = useMemo(() => items.slice(0, 16), [items]);
   const selected = top.find((s) => s.id === selectedId) ?? top[0] ?? null;
 
@@ -112,6 +114,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
             ? Math.round(((s.tension?.level ?? s.features.tension) * 100))
             : Math.round((1 - s.commonness) * 100);
           const name = isChord(s) ? s.symbol : s.name.replace('#', '♯');
+          const root = isChord(s) && fromChord ? rootMotion(fromChord, s.chord) : null;
           return (
             <button
               key={s.id}
@@ -124,7 +127,10 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
               <span className="nprank-i">{i + 1}</span>
               <span className="nprank-name" style={{ color }}>{name}</span>
               <span className="nprank-bar"><i style={{ width: `${Math.max(8, bar)}%`, background: color }} /></span>
-              <span className="nprank-meta muted">{isChord(s) ? s.roman : s.degree}</span>
+              <span className="nprank-meta muted">
+                {isChord(s) ? s.roman : s.degree}
+                {root ? ` · ${root.label}` : ''}
+              </span>
             </button>
           );
         })}
@@ -138,6 +144,10 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
             </b>
             <span className="muted">
               {isChord(selected) ? selected.roman : `degree ${selected.degree}`}
+              {isChord(selected) && fromChord ? (() => {
+                const r = rootMotion(fromChord, selected.chord);
+                return <>{' · '}<span className={'root-move ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')}>{r.label}</span></>;
+              })() : null}
               {' · '}{labelOf(selected.primaryMood).toLowerCase()}
               {isChord(selected) && selected.moodShift ? ` · ${selected.moodShift.arrow} ${selected.moodShift.text}` : ''}
               {!isChord(selected) && selected.relation ? ` · ${selected.relation.label} ${REL_LABEL[selected.relation.kind]}` : ''}

@@ -280,16 +280,16 @@ export class AudioEngine {
       end = off + 3;
     } else {
       // 2-operator FM: modulator index decays → bright "tine" attack mellowing into a sine
-      const guitar = def.voicing === 'guitar';
+      const plucked = def.voicing === 'guitar' || def.voicing === 'bass';
       const car = ctx.createOscillator(); car.frequency.value = f;
-      const mod = ctx.createOscillator(); mod.frequency.value = f * (guitar ? 3 : 1);
+      const mod = ctx.createOscillator(); mod.frequency.value = f * (plucked ? 3 : 1);
       const idx = ctx.createGain();
-      idx.gain.setValueAtTime(f * (guitar ? 1.2 : 2.2) * vel, start);
-      idx.gain.setTargetAtTime(f * 0.15, start, guitar ? 0.08 : 0.25);
+      idx.gain.setValueAtTime(f * (plucked ? 1.2 : 2.2) * vel, start);
+      idx.gain.setTargetAtTime(f * 0.15, start, plucked ? 0.08 : 0.25);
       mod.connect(idx).connect(car.frequency);
       car.connect(out); oscs.push(car, mod);
       const level = 0.22 * (0.35 + 0.65 * vel);
-      const decay = guitar ? 0.5 : 0.9;
+      const decay = plucked ? 0.5 : 0.9;
       g.setValueAtTime(0, start); g.linearRampToValueAtTime(level, start + 0.005);
       g.setTargetAtTime(level * 0.35, start + 0.005, decay);
       g.setTargetAtTime(0, off, def.release);

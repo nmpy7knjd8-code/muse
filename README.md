@@ -97,7 +97,7 @@ the research worker; `research/artists/` has the build and validation.
   suggestion.
 
 ## Sound
-- Sampled instruments, self-hosted in `public/samples/<instrument>/<midi>.mp3`. They are about 3.4 MB of
+- Sampled instruments, self-hosted in `public/samples/<instrument>/<midi>.mp3`. They are about 3.7 MB of
   MP3 (iOS Safari decodes these), lazy-loaded the first time you need them, and cached by the service
   worker for offline use. A synth plays until they load: FM e-piano/pluck, or detuned saws through a
   filter envelope for the pad.
@@ -106,9 +106,10 @@ the research worker; `research/artists/` has the build and validation.
   - velocity-dependent brightness and slight humanization
   - guitar strums at about 20–24 ms per string
   - voice-led keyboard voicings with a warm bass (D2–C♯3) and low-interval limits so chords don't get
-    muddy; guitar instruments play real guitar shapes
+    muddy; guitar instruments play real guitar shapes; bass guitar plays a single low root
   - a generated convolution reverb and a compressor followed by a limiter
-- The instrument picker (Piano / Guitar / Steel / Rhodes / Pad) is remembered in `localStorage`.
+- The instrument picker (Piano / Guitar / Steel / Rhodes / Pad / Bass) is remembered in `localStorage`.
+  Key and mode picks are remembered too.
 - iPhone: audio starts on the first tap, and the AudioSession is set to `playback`. If you hear nothing,
   check the ring/silent switch and the volume. The app shows this tip.
 - `scripts/fetch-samples.sh` reproduces the sample set.
@@ -118,9 +119,9 @@ the research worker; `research/artists/` has the build and validation.
 ## Credits
 - **Piano:** Salamander Grand Piano (V2/V3) by Alexander Holm, CC BY 3.0
   (https://creativecommons.org/licenses/by/3.0/), via https://github.com/Tonejs/audio (salamander/).
-- **Nylon & steel acoustic guitar, Rhodes (Electric Piano 1), Warm Pad:** FluidR3_GM soundfont by Frank
-  Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts, which publishes them under
-  CC BY 3.0.
+- **Nylon & steel acoustic guitar, acoustic bass, Rhodes (Electric Piano 1), Warm Pad:** FluidR3_GM
+  soundfont by Frank Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts, which
+  publishes them under CC BY 3.0.
 - For both, the samples were trimmed, faded and re-encoded (mono/stereo MP3, 72–96 kbps), and notes
   between samples are pitch-shifted.
 

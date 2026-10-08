@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, statSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { INSTRUMENTS, INSTRUMENT_IDS, avoidMud, chordEvents, chordMidis, keysVoicing, nearestSample, parseChord, pianoVoicing, rng, sampleNotes, chordPcs } from '../src/core';
+import { INSTRUMENTS, INSTRUMENT_IDS, avoidMud, chordEvents, chordMidis, keysVoicing, nearestSample, parseChord, pianoVoicing, pc, rng, sampleNotes, chordPcs } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
 
@@ -55,6 +55,16 @@ describe('pleasant voicing', () => {
       expect(Math.min(...v)).toBeGreaterThanOrEqual(40);
       const pcs = new Set(chordPcs(c));
       expect(v.every((m) => pcs.has(m % 12))).toBe(true);
+    }
+  });
+  it('bass guitar plays a single low root in the sample range', () => {
+    for (const s of ['C', 'Am', 'F', 'G7', 'C/E']) {
+      const c = ch(s);
+      const v = chordMidis(c, pianoVoicing(c), INSTRUMENTS.bass);
+      expect(v).toHaveLength(1);
+      expect(v[0]).toBeGreaterThanOrEqual(28);
+      expect(v[0]).toBeLessThanOrEqual(55);
+      expect(v[0] % 12).toBe(pc(c.bass ?? c.root));
     }
   });
 });

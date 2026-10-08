@@ -2,7 +2,7 @@
 # Downloads and re-encodes the instrument samples into public/samples/<instrument>/<midi>.mp3.
 # Sources & licences (see README "Credits"):
 #   piano  : Salamander Grand Piano V3 by Alexander Holm — CC BY 3.0 (files via github.com/Tonejs/audio/salamander)
-#   nylon, steel, rhodes, pad : FluidR3_GM soundfont by Frank Wen, rendered by gleitz/midi-js-soundfonts — CC BY 3.0
+#   nylon, steel, rhodes, pad, bass : FluidR3_GM soundfont by Frank Wen, rendered by gleitz/midi-js-soundfonts — CC BY 3.0
 # Each sample is trimmed, faded out and encoded as 44.1 kHz MP3 (decodable by iOS Safari).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -31,5 +31,6 @@ fetch nylon  $FL/acoustic_guitar_nylon-mp3 flat 40 85 3 3 0.8 80k 1
 fetch steel  $FL/acoustic_guitar_steel-mp3 flat 40 85 3 3 0.8 80k 1
 fetch rhodes $FL/electric_piano_1-mp3      flat 36 90 3 3 0.8 80k 1
 fetch pad    $FL/pad_2_warm-mp3            flat 36 84 3 3 1.0 72k 1
+fetch bass   $FL/acoustic_bass-mp3         flat 28 55 3 2.5 0.8 80k 1
 rm -rf "$TMP"
 du -sh "$OUT" "$OUT"/*

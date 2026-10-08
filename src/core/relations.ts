@@ -17,6 +17,22 @@ export function fifthsDistance(a: number, b: number): number {
   return mod(fifthsIndex(b) - fifthsIndex(a) + 6, 12) - 6;
 }
 
+/**
+ * Plain-language label for a root move on the circle of fifths.
+ * Positive steps = clockwise / sharpward (dominant side); negative = counter-clockwise / flatward (subdominant).
+ */
+export function fifthsMoveLabel(from: number, to: number): string {
+  const d = fifthsDistance(from, to);
+  if (d === 0) return 'same root';
+  if (d === 1) return '1 step sharpward · dominant side';
+  if (d === -1) return '1 step flatward · subdominant side';
+  if (d === 2) return '2 steps sharpward · toward V of V';
+  if (d === -2) return '2 steps flatward · toward IV of IV';
+  if (d === 6 || d === -6) return 'tritone · opposite on the circle';
+  if (d > 0) return `${d} steps sharpward (clockwise)`;
+  return `${-d} steps flatward (counter-clockwise)`;
+}
+
 export type Triad = { root: number; minor: boolean };
 
 export function asTriad(c: Chord): Triad | null {

@@ -81,6 +81,10 @@ section { margin-top: 10px; }
 .pal.root-up .pal-rel { color: #7fd0a8; }
 .pal.root-down .pal-rel { color: #f0a070; }
 .pal.root-same .pal-rel { color: var(--muted); }
+.root-move { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.root-move.root-up { color: #7fd0a8; }
+.root-move.root-down { color: #f0a070; }
+.root-move.root-same { color: var(--muted); }
 .typed { display: flex; gap: 6px; flex: 1; min-width: 200px; margin-top: 2px; }
 .typed input { flex: 1; min-width: 0; }
 .toggle { display: flex; align-items: center; gap: 4px; }
@@ -124,7 +128,9 @@ svg .vlnote { fill: #ddd; font-size: 12px; }
 svg .vldelta { font-size: 11px; text-anchor: middle; font-weight: 700; }
 svg .cname { fill: #ddd; font-size: 12px; font-weight: 600; text-anchor: middle; }
 svg .cname.dark { fill: #111; }
-svg .ccenter { font-size: 22px; font-weight: 800; text-anchor: middle; }
+svg .ccenter { font-size: 18px; font-weight: 800; text-anchor: middle; }
+svg .cmove { font-size: 11px; font-weight: 700; text-anchor: middle; }
+svg .cdir { font-size: 9px; fill: #8f8aa3; text-anchor: middle; }
 svg .tgrid line { stroke: #34313f; stroke-width: 1; }
 svg .tnode { fill: #1d1c24; stroke: #4a4658; }
 svg .tnode.tonic { stroke: #fff; stroke-width: 2; }

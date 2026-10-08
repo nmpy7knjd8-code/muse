@@ -3,7 +3,7 @@
   "title": "Muse Artist Lens",
   "version": "1.0.0",
   "generated": "2026-10-07",
-  "description": "How artists use musical polarities (tension/release, consonance/dissonance, light/dark, stability, dynamics, complexity) and how to try their techniques in Muse. TOOL first, then 14 artists across genres.",
+  "description": "How artists use musical polarities (tension/release, consonance/dissonance, light/dark, stability, dynamics, complexity) and how to try their techniques in Muse. TOOL first, then 17 artists across genres.",
   "kb": "theory_kb.json (chordMoves, melodicMoves, modes, progressions, moodVocabulary)",
   "romanConvention": "Roman numerals follow web/src/core/roman.ts parseRoman: roots relative to the MAJOR scale of the tonic regardless of mode (bIII, bVI, bVII for minor-mode chords). Suffixes: 5, sus2, sus4, add9, maj7, (maj7), 7, m7, 7b9, 7#9, maj7#11, 7sus4, m9, 6, +, °, °7, ø. Pedal tones are given separately in bassPedal (scale degree).",
   "tryItPolicy": "All tryIt progressions are ORIGINAL exercises illustrating a technique. They are not transcriptions of the artists' songs.",
@@ -6905,6 +6905,718 @@
      "type": "encyclopedia"
     }
    ]
+  },
+  {
+   "id": "dream-theater",
+   "name": "Dream Theater",
+   "era": "1985–present",
+   "origin": "Long Island, USA",
+   "genres": [
+    "progressive metal",
+    "progressive rock"
+   ],
+   "documentation": "medium",
+   "hook": "Virtuosic prog-metal: odd meters, extended ii–V chains, and modal lifts that still resolve like songs.",
+   "aestheticSummary": "Dream Theater treats metal riffing as classical-scale architecture. Odd meters and metric modulation keep the groove athletic, while harmony often walks through jazz-facing ii–V motion or bright Dorian IV lifts before slamming back to a heavy tonic. Solos and sections are long and sectional, but cadences still land — virtuosity in service of a clear home key.",
+   "polarities": [
+    {
+     "id": "simple_complex",
+     "how": "Riffs can be a single power-chord idea; the complexity is meter changes, sectional forms, and dense middle voices."
+    },
+    {
+     "id": "tension_release",
+     "how": "Long developmental stretches hold unresolved motion; big chorus or final tonic hits release the debt."
+    },
+    {
+     "id": "stable_unstable",
+     "how": "A clear tonal center under constantly shifting bar lengths."
+    },
+    {
+     "id": "expectation_surprise",
+     "how": "You expect a 4/4 chorus; the band lands it after an odd-meter bridge."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "dt-odd-meter",
+     "category": "rhythm-meter",
+     "name": "Odd-meter grooves that still cadence",
+     "description": "Bars of 5, 7, or mixed groupings carry riffs, but harmonic goals (V→I or ii→V→I) stay readable so the meter feels athletic rather than lost.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "maj_V_I"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_ii_V"
+      }
+     ],
+     "moods": [
+      "epic",
+      "energetic",
+      "triumphant"
+     ],
+     "evidence": "critic-description",
+     "sourceIds": [
+      "dth-wp",
+      "dth-wp-images"
+     ],
+     "tryInMuse": "Write a short progression in 7/8 or 5/4 and keep a clear V→I at the end of each phrase.",
+     "polarities": [
+      "stable_unstable"
+     ]
+    },
+    {
+     "id": "dt-iiv",
+     "category": "harmony",
+     "name": "Extended ii–V chains into heavy tonics",
+     "description": "Jazz-facing ii–V (and secondary ii–V) motion prepares big power-chord or maj7 landings — progressive harmony with a metal downbeat.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "maj_ii_V"
+      },
+      {
+       "kind": "chordMove",
+       "id": "sec_II_V"
+      }
+     ],
+     "moods": [
+      "bright",
+      "triumphant",
+      "tense"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "dth-wp"
+     ],
+     "tryInMuse": "Try ii → V → I, then insert V/V before V for a longer run-up.",
+     "polarities": [
+      "tension_release"
+     ]
+    },
+    {
+     "id": "dt-dorian",
+     "category": "mode",
+     "name": "Dorian IV lifts over a minor tonic",
+     "description": "Minor-key verses open to a bright IV (Dorian flavour) before returning to i — a classic prog-metal 'sun through clouds' move.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "mod_dorian_i_IV"
+      },
+      {
+       "kind": "mode",
+       "id": "dorian"
+      }
+     ],
+     "moods": [
+      "hopeful",
+      "dreamy",
+      "epic"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "dth-wp"
+     ],
+     "tryInMuse": "In a minor key, add IV major after i and compare Muse's mood tags to staying on iv.",
+     "polarities": [
+      "light_dark"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "Images and Words (album era)",
+     "year": 1992,
+     "release": "Images and Words",
+     "whatHappens": "Long-form songs with shifting meters, virtuosic solos, and clearly tonal choruses.",
+     "whyItFeels": "Odd time feels like propulsion, not chaos, because cadences still resolve.",
+     "techniqueIds": [
+      "dt-odd-meter",
+      "dt-iiv"
+     ],
+     "moods": [
+      "epic",
+      "triumphant"
+     ],
+     "listenFor": [
+      "meter changes that still groove",
+      "ii–V colour before heavy landings"
+     ],
+     "sourceIds": [
+      "dth-wp-images"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "epic",
+     "weight": 0.9
+    },
+    {
+     "mood": "triumphant",
+     "weight": 0.8
+    },
+    {
+     "mood": "energetic",
+     "weight": 0.75
+    },
+    {
+     "mood": "tense",
+     "weight": 0.55
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Prog ii–V into tonic",
+     "key": {
+      "tonic": "E",
+      "mode": "minor"
+     },
+     "roman": [
+      "i",
+      "iv",
+      "II",
+      "V",
+      "i"
+     ],
+     "meter": "7/8",
+     "howToPlay": "Count the bar in 7. Treat II–V as a bright run-up into the final i.",
+     "moods": [
+      "epic",
+      "tense",
+      "triumphant"
+     ],
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "maj_ii_V"
+      },
+      {
+       "kind": "chordMove",
+       "id": "sec_II_V"
+      },
+      {
+       "kind": "mode",
+       "id": "dorian"
+      }
+     ],
+     "techniqueIds": [
+      "dt-iiv",
+      "dt-odd-meter"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Find the downbeat",
+     "what": "Even in odd meters, clap the recurring '1' — the band usually telegraphs it."
+    },
+    {
+     "step": 2,
+     "title": "Hear the ii–V colour",
+     "what": "Before a big chorus, listen for a short major/dominant chain that lifts out of the riff key."
+    },
+    {
+     "step": 3,
+     "title": "Notice the landing",
+     "what": "Virtuosity stops mattering the moment the tonic hits hard and square."
+    }
+   ],
+   "relatedArtists": [
+    "tool",
+    "king-crimson",
+    "opeth"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "dth-wp",
+     "title": "Wikipedia: Dream Theater",
+     "url": "https://en.wikipedia.org/wiki/Dream_Theater",
+     "type": "encyclopedia"
+    },
+    {
+     "id": "dth-wp-images",
+     "title": "Wikipedia: Images and Words",
+     "url": "https://en.wikipedia.org/wiki/Images_and_Words",
+     "type": "encyclopedia"
+    }
+   ]
+  },
+  {
+   "id": "snarky-puppy",
+   "name": "Snarky Puppy",
+   "era": "2004–present",
+   "origin": "Denton / Brooklyn, USA",
+   "genres": [
+    "jazz fusion",
+    "instrumental funk",
+    "groove"
+   ],
+   "documentation": "medium",
+   "hook": "Modern fusion grooves: lush maj7/9 colour, ii–V motion, and pocket that never abandons the dance.",
+   "aestheticSummary": "Snarky Puppy writes for a large ensemble that still grooves like a small band. Harmony is jazz-fluent — maj7♯11 colours, clean ii–V turnarounds, modal vamps — but the drums and bass keep a deep pocket. Arrangements bloom and thin out; virtuosity is collective, not just soloistic.",
+   "polarities": [
+    {
+     "id": "simple_complex",
+     "how": "A one-chord vamp can carry a whole section while inner horns stack dense extensions."
+    },
+    {
+     "id": "consonance_dissonance",
+     "how": "Maj7 and ♯11 colours sparkle without sounding 'out'; tension resolves into groove."
+    },
+    {
+     "id": "loud_quiet",
+     "how": "Arrangements swell from sparse Rhodes to full-horn peaks."
+    },
+    {
+     "id": "organic_synthetic",
+     "how": "Acoustic and electric voices blend in a live-take aesthetic."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "sp-maj7colour",
+     "category": "harmony",
+     "name": "Lush maj7 / ♯11 colour chords",
+     "description": "Tonic and IV areas often wear maj7 or maj7♯11 voicings — bright, open fusion colour instead of plain triads.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "col_maj7s11"
+      },
+      {
+       "kind": "mode",
+       "id": "lydian"
+      }
+     ],
+     "moods": [
+      "bright",
+      "dreamy",
+      "warm"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "sp-wp"
+     ],
+     "tryInMuse": "Swap a plain I for Imaj7 or Imaj7♯11 and compare the mood tags.",
+     "polarities": [
+      "consonance_dissonance"
+     ]
+    },
+    {
+     "id": "sp-iiv",
+     "category": "harmony",
+     "name": "Pocket ii–V turnarounds",
+     "description": "ii–V (and secondary ii–V) cells turn the form around without stopping the groove — functional jazz harmony under a funk beat.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "maj_ii_V"
+      },
+      {
+       "kind": "chordMove",
+       "id": "sec_II_V"
+      }
+     ],
+     "moods": [
+      "bright",
+      "energetic",
+      "warm"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "sp-wp"
+     ],
+     "tryInMuse": "Loop ii → V → I with a steady pulse; keep the V short so the pocket never stalls.",
+     "polarities": [
+      "tension_release"
+     ]
+    },
+    {
+     "id": "sp-dorian-vamp",
+     "category": "mode",
+     "name": "Dorian vamps with a bright IV",
+     "description": "Minor grooves often sit in Dorian, using major IV against i for a hopeful lift inside a modal vamp.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "mod_dorian_i_IV"
+      },
+      {
+       "kind": "mode",
+       "id": "dorian"
+      }
+     ],
+     "moods": [
+      "dreamy",
+      "hopeful",
+      "earthy"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "sp-wp"
+     ],
+     "tryInMuse": "In Dorian, alternate i and IV and stay there — no need to cadence.",
+     "polarities": [
+      "stable_unstable"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "Culcha Vulcha (album era)",
+     "year": 2016,
+     "release": "Culcha Vulcha",
+     "whatHappens": "Studio-focused fusion writing with layered grooves and rich chord colour.",
+     "whyItFeels": "The harmony is advanced but the drums never leave the dance floor.",
+     "techniqueIds": [
+      "sp-maj7colour",
+      "sp-iiv"
+     ],
+     "moods": [
+      "bright",
+      "warm",
+      "energetic"
+     ],
+     "listenFor": [
+      "maj7♯11 colour on open chords",
+      "short ii–V cells inside long vamps"
+     ],
+     "sourceIds": [
+      "sp-wp"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "bright",
+     "weight": 0.85
+    },
+    {
+     "mood": "warm",
+     "weight": 0.8
+    },
+    {
+     "mood": "dreamy",
+     "weight": 0.65
+    },
+    {
+     "mood": "energetic",
+     "weight": 0.7
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Fusion colour vamp",
+     "key": {
+      "tonic": "D",
+      "mode": "dorian"
+     },
+     "roman": [
+      "i",
+      "IV",
+      "i",
+      "II",
+      "V",
+      "i"
+     ],
+     "meter": "4/4",
+     "howToPlay": "Keep a soft pocket. Let IV glow; treat II–V as a quick turnaround home.",
+     "moods": [
+      "dreamy",
+      "bright",
+      "warm"
+     ],
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "mod_dorian_i_IV"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_ii_V"
+      }
+     ],
+     "techniqueIds": [
+      "sp-dorian-vamp",
+      "sp-iiv"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Lock the pocket",
+     "what": "Find the kick/bass agreement before chasing the chords."
+    },
+    {
+     "step": 2,
+     "title": "Name the colour",
+     "what": "When a chord blooms, ask: maj7? ♯11? 9? — those are the fusion paints."
+    },
+    {
+     "step": 3,
+     "title": "Spot the turnaround",
+     "what": "Short ii–V cells often restart the form without a hard stop."
+    }
+   ],
+   "relatedArtists": [
+    "steely-dan",
+    "coltrane"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "sp-wp",
+     "title": "Wikipedia: Snarky Puppy",
+     "url": "https://en.wikipedia.org/wiki/Snarky_Puppy",
+     "type": "encyclopedia"
+    }
+   ]
+  },
+  {
+   "id": "animals-as-leaders",
+   "name": "Animals as Leaders",
+   "era": "2007–present",
+   "origin": "Washington, D.C., USA",
+   "genres": [
+    "progressive metal",
+    "instrumental metal",
+    "djent-adjacent"
+   ],
+   "documentation": "medium",
+   "hook": "Instrumental 8-string virtuosity: polymetric grooves, Phrygian bite, and wide-interval guitar architecture.",
+   "aestheticSummary": "Animals as Leaders is guitar-forward progressive metal without vocals. Extended-range guitars stack low chromatic thumps with glassy high chords; meters superimpose; Phrygian and dissonant power shapes supply menace while clean interludes offer release. The instruments lead — melody, harmony and rhythm all live in the guitar/bass/drums trio.",
+   "polarities": [
+    {
+     "id": "simple_complex",
+     "how": "A repeating low cell can be simple while upper voices outline a different grouping."
+    },
+    {
+     "id": "light_dark",
+     "how": "Dark Phrygian / low chromatic riffs contrast with bright clean tapping passages."
+    },
+    {
+     "id": "human_machine",
+     "how": "Tight quantized grooves sit next to fluid tapped lines that feel almost vocal."
+    },
+    {
+     "id": "tension_release",
+     "how": "Dissonant low stacks release into open fifths or clean major colour."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "aal-phrygian",
+     "category": "mode",
+     "name": "Phrygian low-string menace",
+     "description": "♭2 against a low tonic power shape is a core colour — exotic and aggressive without needing a full scale run.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "mod_phrygian_bII_i"
+      },
+      {
+       "kind": "mode",
+       "id": "phrygian"
+      }
+     ],
+     "moods": [
+      "aggressive",
+      "ominous",
+      "tense"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "aal-wp"
+     ],
+     "tryInMuse": "In Phrygian, vamp i5 ↔ ♭II5 and listen for the ♭2 bite.",
+     "polarities": [
+      "light_dark"
+     ]
+    },
+    {
+     "id": "aal-power",
+     "category": "voicing-tuning",
+     "name": "Extended-range power stacks",
+     "description": "Open low strings and power-chord shapes on extended-range guitars create huge intervals; dissonant neighbours rub against the open root.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "col_power"
+      },
+      {
+       "kind": "chordMove",
+       "id": "ped_tonic"
+      }
+     ],
+     "moods": [
+      "aggressive",
+      "dark",
+      "epic"
+     ],
+     "evidence": "critic-description",
+     "sourceIds": [
+      "aal-wp"
+     ],
+     "tryInMuse": "Keep a pedal tonic under shifting power shapes and compare moods when you leave the pedal.",
+     "polarities": [
+      "stable_unstable"
+     ]
+    },
+    {
+     "id": "aal-poly",
+     "category": "rhythm-meter",
+     "name": "Polymetric low cells",
+     "description": "A short low-string cell (e.g. groups of 5 or 7) repeats against a straighter drum grid so the downbeat keeps drifting and re-locking.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "col_power"
+      }
+     ],
+     "moods": [
+      "tense",
+      "aggressive",
+      "surprising"
+     ],
+     "evidence": "critic-description",
+     "sourceIds": [
+      "aal-wp"
+     ],
+     "tryInMuse": "Write a 4-chord cell and loop it in a meter that does not divide evenly into the cell length.",
+     "polarities": [
+      "expectation_surprise"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "The Joy of Motion (album era)",
+     "year": 2014,
+     "release": "The Joy of Motion",
+     "whatHappens": "Instrumental pieces balancing groove, tapping lyricism, and extended-range heaviness.",
+     "whyItFeels": "Virtuosity reads as architecture because riffs and clean themes keep returning.",
+     "techniqueIds": [
+      "aal-phrygian",
+      "aal-poly"
+     ],
+     "moods": [
+      "aggressive",
+      "epic",
+      "tense"
+     ],
+     "listenFor": [
+      "♭2 against low tonics",
+      "cells that refuse to line up with the bar"
+     ],
+     "sourceIds": [
+      "aal-wp"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "aggressive",
+     "weight": 0.9
+    },
+    {
+     "mood": "tense",
+     "weight": 0.8
+    },
+    {
+     "mood": "epic",
+     "weight": 0.7
+    },
+    {
+     "mood": "ominous",
+     "weight": 0.65
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Phrygian power cell",
+     "key": {
+      "tonic": "E",
+      "mode": "phrygian"
+     },
+     "roman": [
+      "i5",
+      "bII5",
+      "i5",
+      "bVII5"
+     ],
+     "meter": "Drums in 4/4; riff cell of 5 eighths repeating.",
+     "howToPlay": "Palm-mute the low string. Let ♭II bite, then breathe on ♭VII before restarting.",
+     "moods": [
+      "aggressive",
+      "ominous",
+      "tense"
+     ],
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "mod_phrygian_bII_i"
+      },
+      {
+       "kind": "chordMove",
+       "id": "col_power"
+      }
+     ],
+     "techniqueIds": [
+      "aal-phrygian",
+      "aal-power"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Track the low cell",
+     "what": "Ignore the lead for a minute — count the repeating low pattern."
+    },
+    {
+     "step": 2,
+     "title": "Feel the ♭2",
+     "what": "When a chord sits a semitone above the tonic, that is the Phrygian colour."
+    },
+    {
+     "step": 3,
+     "title": "Notice clean relief",
+     "what": "Bright tapped or clean passages are the release valves in an otherwise dark palette."
+    }
+   ],
+   "relatedArtists": [
+    "meshuggah",
+    "tool",
+    "deftones"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "aal-wp",
+     "title": "Wikipedia: Animals as Leaders",
+     "url": "https://en.wikipedia.org/wiki/Animals_as_Leaders",
+     "type": "encyclopedia"
+    }
+   ]
   }
  ],
  "techniqueChipIndex": {
@@ -6993,6 +7705,11 @@
     "artistId": "coltrane",
     "techniqueId": "col-pedal",
     "name": "Chords over pedal tones"
+   },
+   {
+    "artistId": "animals-as-leaders",
+    "techniqueId": "aal-power",
+    "name": "Extended-range power stacks"
    }
   ],
   "chordMove:col_power": [
@@ -7040,6 +7757,16 @@
     "artistId": "debussy",
     "techniqueId": "deb-planing",
     "name": "Parallel chords (planing)"
+   },
+   {
+    "artistId": "animals-as-leaders",
+    "techniqueId": "aal-power",
+    "name": "Extended-range power stacks"
+   },
+   {
+    "artistId": "animals-as-leaders",
+    "techniqueId": "aal-poly",
+    "name": "Polymetric low cells"
    }
   ],
   "melodicMove:ct_root": [
@@ -7621,6 +8348,16 @@
     "artistId": "coltrane",
     "techniqueId": "col-vamp",
     "name": "Modal vamps"
+   },
+   {
+    "artistId": "dream-theater",
+    "techniqueId": "dt-dorian",
+    "name": "Dorian IV lifts over a minor tonic"
+   },
+   {
+    "artistId": "snarky-puppy",
+    "techniqueId": "sp-dorian-vamp",
+    "name": "Dorian vamps with a bright IV"
    }
   ],
   "melodicMove:nct_chromatic_passing": [
@@ -7941,6 +8678,11 @@
     "artistId": "coltrane",
     "techniqueId": "col-pedal",
     "name": "Chords over pedal tones"
+   },
+   {
+    "artistId": "snarky-puppy",
+    "techniqueId": "sp-maj7colour",
+    "name": "Lush maj7 / ♯11 colour chords"
    }
   ],
   "melodicMove:nct_neighbor": [
@@ -8004,6 +8746,21 @@
     "artistId": "coltrane",
     "techniqueId": "col-changes",
     "name": "Coltrane changes (major-third key cycle)"
+   },
+   {
+    "artistId": "dream-theater",
+    "techniqueId": "dt-odd-meter",
+    "name": "Odd-meter grooves that still cadence"
+   },
+   {
+    "artistId": "dream-theater",
+    "techniqueId": "dt-iiv",
+    "name": "Extended ii–V chains into heavy tonics"
+   },
+   {
+    "artistId": "snarky-puppy",
+    "techniqueId": "sp-iiv",
+    "name": "Pocket ii–V turnarounds"
    }
   ],
   "progression:prog_dorian_vamp": [
@@ -8032,6 +8789,32 @@
     "artistId": "coltrane",
     "techniqueId": "col-quartal",
     "name": "Quartal voicings and pentatonic superimposition (with McCoy Tyner)"
+   }
+  ],
+  "chordMove:maj_V_I": [
+   {
+    "artistId": "dream-theater",
+    "techniqueId": "dt-odd-meter",
+    "name": "Odd-meter grooves that still cadence"
+   }
+  ],
+  "chordMove:sec_II_V": [
+   {
+    "artistId": "dream-theater",
+    "techniqueId": "dt-iiv",
+    "name": "Extended ii–V chains into heavy tonics"
+   },
+   {
+    "artistId": "snarky-puppy",
+    "techniqueId": "sp-iiv",
+    "name": "Pocket ii–V turnarounds"
+   }
+  ],
+  "chordMove:mod_phrygian_bII_i": [
+   {
+    "artistId": "animals-as-leaders",
+    "techniqueId": "aal-phrygian",
+    "name": "Phrygian low-string menace"
    }
   ]
  }
