@@ -97,6 +97,15 @@ const SECTIONS: Section[] = [
     musicality: 'You’re choosing a path through musical space: safer moves stay left/down; adventurous colours and tension climb up/right. Best fit is the rank order — use the map to understand *why*.',
   },
   {
+    id: 'connections',
+    title: 'How notes connect (within & between)',
+    use: 'Under the timeline, “How notes connect” shows two views. Between: each chord change as voice-leading lines (held / half-step / whole / leap), root motion, and any melody or bass bridge across the barline — ▶ Hear move plays the pair. Within: the ordered melody/bass sequence inside each bar with step sizes. Toggle Both / Between / Within.',
+    musicality: 'Chords are pillars; notes are the paths between them. Smooth voice leading keeps shared tones and steps the rest; a melody that walks by step across a change feels joined instead of bolted on. Watching the sequence trains your ear to hear connection, not just labels.',
+    tip: 'Add 2+ chords (and optionally a short melody) — the panel appears once there is a sequence or a bridge to show.',
+    jump: 'chords',
+    jumpLabel: 'Build a short progression',
+  },
+  {
     id: 'paths',
     title: 'Ready-made progressions & melody runs',
     use: 'At the bottom of Suggestions, Muse offers 2- or 3-step packages. For chords, blue passing notes sit between chords. ▶ hears the whole path; ＋ adds it in order.',
