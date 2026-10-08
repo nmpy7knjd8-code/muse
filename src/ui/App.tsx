@@ -642,15 +642,15 @@ function Composer({ data }: { data: LoadedData }) {
           <CircleOfFifths
             tonicPc={pc(k.tonic)} scalePcs={scale}
             currentPc={melody.length ? melody[melody.length - 1]! % 12 : undefined}
-            others={noteSugs.map((s) => ({ pc: s.midi % 12, color: lex.color(s.primaryMood), id: s.id }))}
+            others={noteSugs.map((s) => ({ pc: s.midi % 12, color: lex.color(s.primaryMood), id: s.id, label: s.name.replace('#', '♯') }))}
             selected={selNote ? { pc: selNote.midi % 12, color: selColor, label: selNote.name.replace('#', '♯') } : undefined}
             spellPc={spell}
             onPick={(id) => { const s = noteSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playNoteMove(s); } }}
             onAddPc={addMelodyPc}
           />
           <p className="small muted center">
-            Big letters = notes you can add (brighter = stronger next pick) · colored rim dots = Muse’s next-note picks (tap to hear) ·
-            numbers are steps from where you are (+ right/brighter, − left/opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
+            Big letters = notes you can add (brighter = stronger next pick) · rim dots = next-note picks (bigger / brighter = better; numbers = rank; tap to hear) ·
+            +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
           </p>
           <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
             {INSTRUMENT_IDS.map((id) => (
@@ -673,14 +673,14 @@ function Composer({ data }: { data: LoadedData }) {
         {opts?.title && <h4>Circle of fifths</h4>}
         <CircleOfFifths
           tonicPc={pc(k.tonic)} scalePcs={scale} currentPc={cur ? pc(cur.root) : undefined}
-          others={chordSugs.map((s) => ({ pc: pc(s.chord.root), color: lex.color(s.primaryMood), id: s.id }))}
+          others={chordSugs.map((s) => ({ pc: pc(s.chord.root), color: lex.color(s.primaryMood), id: s.id, label: s.symbol }))}
           selected={selChord ? { pc: pc(selChord.chord.root), color: selColor, label: selChord.symbol } : undefined}
           spellPc={spell}
           onPick={(id) => { const s = chordSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playMove(s); } }}
           onAddPc={addCircleChord}
         />
         <p className="small muted center">
-          Big letters = chords you can add (brighter = stronger next pick) · colored rim dots = Muse’s next-chord picks (tap to hear) ·
+          Big letters = chords you can add (brighter = stronger next pick) · rim dots = next-chord picks (variants of the same root fan out — bigger / brighter / lower number = better; tap to hear) ·
           +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
           plays on <b>{INSTRUMENTS[instrument].label}</b>
         </p>
