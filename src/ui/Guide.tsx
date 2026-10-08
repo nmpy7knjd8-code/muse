@@ -41,7 +41,7 @@ const SECTIONS: Section[] = [
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths; the next-pick board below compares them on a map. ▶ hears; ＋ adds.',
+    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano graphic of the chord notes); the next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
     musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
@@ -90,7 +90,7 @@ const SECTIONS: Section[] = [
   {
     id: 'paths',
     title: 'Ready-made progressions & melody runs',
-    use: 'Above the cards, Muse offers 2- or 3-step packages. For chords, blue passing notes sit between chords. ▶ hears the whole path; ＋ adds it in order.',
+    use: 'At the bottom of Suggestions, Muse offers 2- or 3-step packages. For chords, blue passing notes sit between chords. ▶ hears the whole path; ＋ adds it in order.',
     musicality: 'Short paths teach voice-leading and phrase shape: not just “what chord,” but how to walk there so the ear follows. Passing notes are the glue between harmonic pillars.',
   },
   {

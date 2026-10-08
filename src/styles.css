@@ -183,10 +183,13 @@ svg .tcap { fill: #aaa; font-size: 11px; }
 svg .cnote { fill: #bbb; font-size: 10px; text-anchor: middle; }
 
 .suggestions .group { margin-bottom: 8px; }
-.best-fit-under-cof { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
-.best-fit-under-cof .ghead { margin-top: 8px; }
 .ghead { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin: 12px 0 6px; text-transform: capitalize; }
 .ghead i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.best-fit-under-cof { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
+.best-fit-under-cof .ghead { margin-top: 8px; }
+.card-piano { margin-top: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.card-piano .piano-card { display: block; height: 44px; width: auto; max-width: 100%; }
+.card-piano .kname.card-k { font-size: 7px; font-weight: 700; }
 .card { display: flex; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-left: 5px solid; border-radius: 12px; padding: 9px 10px; margin-bottom: 7px; cursor: pointer; }
 .card.sel { background: #262333; border-color: #5a5470; }
 .card-main { flex: 1; min-width: 0; }
@@ -419,13 +422,8 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .guide-card .pill { margin-top: 2px; }
 .guide-foot { margin: 16px 0 8px; }
 .card-rank { font-size: 11px; font-weight: 700; color: #7fd0a8; min-width: 1.4em; }
-.card-hands { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; font-size: 11px; color: var(--muted); }
-.card-hands b { color: var(--text); font-weight: 600; margin-right: 4px; }
-.card-hands .mono { letter-spacing: 0.02em; }
-.card-hands span.on { color: #cfc8e8; }
-.card-hands span.on b { color: #9ecbff; }
-.card-hands span.on .mono { color: #eceaf4; }
 .path-block { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px; margin: 8px 0 12px; }
+.path-block-bottom { margin-top: 14px; margin-bottom: 4px; }
 .path-row { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 0; }
 .path-chip {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
