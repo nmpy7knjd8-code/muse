@@ -23,11 +23,14 @@ import { Guide } from './Guide';
 import { FitExplainer } from './FitExplainer';
 import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
+import { MoodChordRef } from './MoodChordRef';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BrandMark, CloseIcon, LockIcon, ReharmIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
 
-type Tab = 'chords' | 'melody' | 'artists' | 'guide';
+type Tab = 'chords' | 'melody';
+/** Left drawer pages — Guide / Artist Lens / mood reference live off the main strip. */
+type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
 type InputSource = 'mic' | 'midi';
 interface Snapshot { slots: TimelineSlot[] }
@@ -125,6 +128,39 @@ function Composer({ data }: { data: LoadedData }) {
   const [history, setHistory] = useState<Snapshot[]>([]);
   const beats = beatsPerBar(timeSig);
   const [tab, setTab] = useState<Tab>('chords');
+  const [drawer, setDrawer] = useState<DrawerPage | null>(null);
+  // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
+  useEffect(() => {
+    let x0 = 0, y0 = 0, tracking = false;
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t || t.clientX > 28 || drawer) return;
+      tracking = true; x0 = t.clientX; y0 = t.clientY;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!tracking) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Math.abs(dy) > 40) { tracking = false; return; }
+      if (dx > 56) { tracking = false; setDrawer('menu'); }
+    };
+    const onEnd = () => { tracking = false; };
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onEnd);
+    return () => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+  }, [drawer]);
+  useEffect(() => {
+    if (!drawer) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [drawer]);
   const [visTab, setVisTab] = useState<VisTab>('piano');
   const [adventure, setAdventure] = useState(0.35);
   const [tStyle, setTStyle] = useState<TensionStyleId>(() => {
@@ -784,10 +820,21 @@ function Composer({ data }: { data: LoadedData }) {
   return (
     <div className="app" onPointerDown={() => synth.unlock()}>
       <header className="top">
-        <div className="brand" aria-label="Muse">
-          <BrandMark />
-          <span className="brand-name">Muse</span>
-          {kbBadge && <small>{kbBadge}</small>}
+        <div className="top-left">
+          <button
+            type="button"
+            className="menu-btn"
+            aria-label="Open menu"
+            aria-expanded={drawer != null}
+            onClick={() => setDrawer((d) => (d ? null : 'menu'))}
+          >
+            <MenuIcon />
+          </button>
+          <div className="brand" aria-label="Muse">
+            <BrandMark />
+            <span className="brand-name">Muse</span>
+            {kbBadge && <small>{kbBadge}</small>}
+          </div>
         </div>
         <div className="keypick">
           <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => chooseTonic(e.target.value)}>
@@ -825,9 +872,9 @@ function Composer({ data }: { data: LoadedData }) {
       )}
 
       {/* Unified timeline: melody lane above, chords below (hidden on Guide) */}
-      {tab !== 'guide' && <section className="strip" aria-label="Timeline">
+      <section className="strip" aria-label="Timeline">
         {slots.length === 0 ? (
-          <p className="muted small">Tap chords below to start, or switch to Melody — both share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setTab('guide')}>Guide</button>.</p>
+          <p className="muted small">Tap chords below to start, or switch to Melody — both share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
         ) : (
           <div className="timeline" role="list">
             {slots.map((s, i) => {
@@ -953,21 +1000,15 @@ function Composer({ data }: { data: LoadedData }) {
             : loadState.state === 'ready' ? <span className="muted">♪ {INSTRUMENTS[instrument].label} ready</span>
             : <span className="muted">Tap anything to start sound</span>}
         </div>
-      </section>}
+      </section>
 
       {/* Input */}
       <section className="input">
         <div className="seg">
           <button className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); }}>Chords</button>
           <button className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); }}>Melody</button>
-          {data.artists && <button className={tab === 'artists' ? 'on' : ''} onClick={() => { setTab('artists'); setSelectedId(null); }}>Artist Lens</button>}
-          <button className={tab === 'guide' ? 'on' : ''} onClick={() => { setTab('guide'); setSelectedId(null); }}>Guide</button>
         </div>
-        {tab === 'guide' ? (
-          <Guide onJump={(t) => { setTab(t); setSelectedId(null); window.scrollTo({ top: 0 }); }} />
-        ) : tab === 'artists' && data.artists ? (
-          <ArtistLens key={focusArtist ?? 'all'} initial={focusArtist} data={data.artists} lex={lex} kbIndex={data.kbIndex} onTryIt={tryIt} onPreview={previewTryIt} />
-        ) : (<>
+        <>
         <div className={'listen' + (listen ? ' on' : '')}>
           <div className="seg listen-src" role="group" aria-label="Input source">
             <button type="button" className={inputSource === 'mic' ? 'on' : ''} onClick={() => chooseInputSource('mic')} aria-pressed={inputSource === 'mic'}>Mic</button>
@@ -1050,10 +1091,8 @@ function Composer({ data }: { data: LoadedData }) {
             <p className="small muted">Tap keys (or 👂 Listen / 🎹 MIDI) to put notes above each chord. Notes land on successive beats; a full bar spills into a new bar with no chord yet. Use <b>Find a chord</b> to pick harmony — Hear plays chord + melody together. On a filled bar, ↻ finds a better chord for that melody.</p>
           </div>
         )}
-        </>)}
+        </>
       </section>
-
-      {tab !== 'artists' && tab !== 'guide' && (<>
 
       {/* Mood */}
       <section className="mood">
@@ -1286,12 +1325,12 @@ function Composer({ data }: { data: LoadedData }) {
       <div className="center" style={{ marginTop: 14 }}>
         <button className={'pill' + (loreOn ? ' on' : '')} onClick={() => setLoreOn((x) => !x)}>Lore mode {loreOn ? 'on' : 'off'}</button>
       </div>
-      </>)}
 
       <details className="about">
         <summary>About &amp; credits</summary>
         <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.
-          {' '}<button type="button" className="linkish" onClick={() => { setTab('guide'); window.scrollTo({ top: 0 }); }}>Open the Guide</button> for how each feature connects to musicality.</p>
+          {' '}<button type="button" className="linkish" onClick={() => setDrawer('guide')}>Open the Guide</button> for how each feature connects to musicality.
+          {' '}<button type="button" className="linkish" onClick={() => setDrawer('moods')}>Moods &amp; chords</button> lists every mood tag and the moves that carry it.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
           Nylon, steel &amp; metal guitar (distortion samples + live amp), bass guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
           Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>
@@ -1301,6 +1340,83 @@ function Composer({ data }: { data: LoadedData }) {
       <footer className="foot small muted">
         Works offline · no account · theory: {data.kbFile} v{data.kb.meta.version}{data.featureMapping ? ` · feature map (${data.featureMapping.applied} rules)` : ''} · lexicon {textLex.size} terms{data.moodLexicon ? ' (+ research lexicon)' : ''}
       </footer>
+
+      {drawer && (
+        <div
+          className="drawer-root"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          onClick={(e) => { if (e.target === e.currentTarget) setDrawer(null); }}
+        >
+          <aside className={'drawer' + (drawer === 'menu' ? ' menu-only' : '')} onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-head">
+              {drawer !== 'menu' ? (
+                <button type="button" className="ticon" aria-label="Back to menu" onClick={() => setDrawer('menu')}><BackIcon /></button>
+              ) : (
+                <span className="drawer-title">Menu</span>
+              )}
+              <button type="button" className="ticon danger" aria-label="Close menu" onClick={() => setDrawer(null)}><CloseIcon /></button>
+            </div>
+            {drawer === 'menu' && (
+              <nav className="drawer-nav" aria-label="More">
+                <button type="button" className="drawer-link" onClick={() => setDrawer('moods')}>
+                  <b>Moods &amp; chords</b>
+                  <span className="muted">Every mood tag and the chord moves that carry it</span>
+                </button>
+                <button type="button" className="drawer-link" onClick={() => setDrawer('guide')}>
+                  <b>Guide</b>
+                  <span className="muted">How to use Muse — what to tap and why</span>
+                </button>
+                {data.artists && (
+                  <button type="button" className="drawer-link" onClick={() => setDrawer('artists')}>
+                    <b>Artist Lens</b>
+                    <span className="muted">Styles, techniques, and Try-it exercises</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="drawer-link"
+                  onClick={() => { setDrawer(null); setTab('chords'); setSelectedId(null); }}
+                >
+                  <b>Back to writing</b>
+                  <span className="muted">Chords &amp; melody</span>
+                </button>
+              </nav>
+            )}
+            {drawer === 'moods' && (
+              <div className="drawer-body">
+                <MoodChordRef kb={data.kb} lex={lex} />
+              </div>
+            )}
+            {drawer === 'guide' && (
+              <div className="drawer-body">
+                <Guide onJump={(t) => {
+                  if (t === 'artists') { setDrawer('artists'); return; }
+                  if (t === 'moods') { setDrawer('moods'); return; }
+                  setDrawer(null);
+                  setTab(t);
+                  setSelectedId(null);
+                  window.scrollTo({ top: 0 });
+                }} />
+              </div>
+            )}
+            {drawer === 'artists' && data.artists && (
+              <div className="drawer-body">
+                <ArtistLens
+                  key={focusArtist ?? 'all'}
+                  initial={focusArtist}
+                  data={data.artists}
+                  lex={lex}
+                  kbIndex={data.kbIndex}
+                  onTryIt={(t, a) => { tryIt(t, a); setDrawer(null); }}
+                  onPreview={previewTryIt}
+                />
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
 
       {detail && selChord && tab === 'chords' && (
         <div className="sheet" role="dialog" aria-label="Suggestion details">
@@ -1344,7 +1460,7 @@ function Composer({ data }: { data: LoadedData }) {
                   <ul className="evidence">
                     {uniq.map((u) => (
                       <li key={u.artistId + u.techniqueId}>
-                        <button className="linkish" onClick={() => { setDetail(false); setFocusArtist(u.artistId); setTab('artists'); window.scrollTo({ top: 0 }); }}>{name(u.artistId)}</button> — {u.name}
+                        <button className="linkish" onClick={() => { setDetail(false); setFocusArtist(u.artistId); setDrawer('artists'); }}>{name(u.artistId)}</button> — {u.name}
                       </li>
                     ))}
                   </ul>

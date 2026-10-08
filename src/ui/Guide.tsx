@@ -1,7 +1,7 @@
 // How-to guide: each Muse feature with a plain “how to use it” and why it matters musically.
 import type { ReactNode } from 'react';
 
-export type GuideJump = 'chords' | 'melody' | 'artists';
+export type GuideJump = 'chords' | 'melody' | 'artists' | 'moods';
 
 interface Props {
   onJump: (tab: GuideJump) => void;
@@ -125,9 +125,17 @@ const SECTIONS: Section[] = [
     musicality: 'Register and timbre change meaning: the same progression on bass vs pad feels like different arrangements. Hear options in the texture you’ll actually write in.',
   },
   {
+    id: 'moods-chords',
+    title: 'Moods & chords',
+    use: 'Open the menu (☰) → Moods & chords for every mood tag, the chord moves that carry it, and how chord qualities fall back when no theory move matches.',
+    musicality: 'Mood is a colour label on a move — not the ranking. Knowing which moves feel tense vs warm helps you choose with intention instead of hoping a tag will sort the list.',
+    jump: 'moods',
+    jumpLabel: 'Open Moods & chords',
+  },
+  {
     id: 'artists',
     title: 'Artist Lens',
-    use: 'Browse artists’ polarities and techniques, then Try it to load a short exercise into your timeline. Request a song or artist analysis when you want the catalog expanded.',
+    use: 'From the menu (☰), browse artists’ polarities and techniques, then Try it to load a short exercise into your timeline. Request a song or artist analysis when you want the catalog expanded.',
     musicality: 'Styles are patterns of tension, darkness, and surprise. Trying an exercise is apprenticing for a minute — then remixing it with Muse’s suggestions into your own voice.',
     jump: 'artists',
     jumpLabel: 'Open Artist Lens',

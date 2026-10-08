@@ -46,6 +46,22 @@ export function ReharmIcon({ className }: IconProps) {
   );
 }
 
+export function MenuIcon({ className }: IconProps) {
+  return (
+    <svg className={'ui-icon' + (className ? ` ${className}` : '')} viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+      <path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function BackIcon({ className }: IconProps) {
+  return (
+    <svg className={'ui-icon' + (className ? ` ${className}` : '')} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** Tiny staff flourish for the Muse wordmark. */
 export function BrandMark({ className }: IconProps) {
   return (
