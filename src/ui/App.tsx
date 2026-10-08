@@ -20,6 +20,7 @@ import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
 import { ArtistLens } from './ArtistLens';
 import { Guide } from './Guide';
+import { FitExplainer } from './FitExplainer';
 import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
@@ -958,11 +959,13 @@ function Composer({ data }: { data: LoadedData }) {
               <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type a chord: F#m7, Bb/D…" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
               <button type="submit">Add</button>
             </form>
+            <FitExplainer mode="chords" keyInfo={k} />
           </>
         ) : (
           <div className="melody-input">
             <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" labelKeys="all" />
             <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
+            <FitExplainer mode="melody" keyInfo={k} underChord={noteChord} />
             <p className="small muted">Tap keys (or 👂 Listen / 🎹 MIDI) to put notes above each chord. Notes land on successive beats; a full bar spills into a new bar with no chord yet. Use <b>Find a chord</b> to pick harmony — Hear plays chord + melody together. On a filled bar, ↻ finds a better chord for that melody.</p>
           </div>
         )}

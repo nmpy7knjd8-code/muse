@@ -219,6 +219,28 @@ svg .cnote { fill: #bbb; font-size: 10px; text-anchor: middle; }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #333044; padding: 10px 16px; border-radius: 12px; z-index: 30; font-size: 14px; max-width: 90vw; }
 .foot { margin-top: 20px; text-align: center; }
 .melody-input svg { width: 100%; height: auto; touch-action: manipulation; }
+.fit-explainer {
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(143, 168, 200, 0.12), rgba(79, 209, 165, 0.08));
+  border: 1px solid rgba(143, 168, 200, 0.28);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.fit-explainer p { margin: 0 0 6px; }
+.fit-explainer p:last-child { margin-bottom: 0; }
+.fit-explainer .fit-why { color: var(--muted); font-size: 12px; }
+.fit-rel {
+  display: flex; flex-wrap: wrap; gap: 8px 12px;
+  list-style: none; margin: 0 0 6px; padding: 0;
+  font-size: 12px; color: var(--muted);
+}
+.fit-rel i {
+  display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  margin-right: 4px; vertical-align: -1px;
+}
 svg .maxis { fill: #8a869a; font-size: 10.5px; }
 svg .mlabel { fill: #ddd; font-size: 10px; font-weight: 600; paint-order: stroke; stroke: #15141b; stroke-width: 3px; }
 svg .mlabel.sel { font-size: 12px; }

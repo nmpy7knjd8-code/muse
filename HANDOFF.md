@@ -24,6 +24,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Metal guitar: electric instrument retuned (tighter release/ring/reverb) with a live amp path (HPF → WaveShaper drive → mid scoop → presence → air → LPF) on distortion samples and sawtooth fallback.
 - MIDI keyboard input: Mic ↔ MIDI toggle beside Listen; Web MIDI note-on fills melody, held notes → `chromaFromMidis` + `matchChord` for chords (same templates as mic).
 - Guide: “Which notes & chords will work” (relation tags + ranking) and Mic/MIDI section.
+- In-context FitExplainer under Melody piano / Chords palettes (key tint + relation chips + ranking why).
 
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).
