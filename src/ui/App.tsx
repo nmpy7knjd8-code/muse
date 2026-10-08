@@ -453,6 +453,7 @@ function Composer({ data }: { data: LoadedData }) {
           if (Math.abs(m - anchor) < Math.abs(best - anchor)) best = m;
         }
         addNote(best);
+        flash(`Added ${spellMidi(best)}`);
       };
       return (
         <div className="vis-body">
@@ -477,7 +478,22 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       );
     }
-    if (!selChord) return <p className="muted">Suggestions appear here.</p>;
+    const addCircleChord = (p: number) => {
+      const dia = diatonicChords(k).find((c) => pc(c.root) === p);
+      const built = dia ?? parseChord(noteName(spellInKey(k, p)));
+      if (built) { addChord(built); flash(`Added ${chordSymbol(built, true)}`); }
+    };
+    if (!selChord) {
+      return (
+        <div className="vis-body">
+          <p className="muted">Suggestions appear here — or tap a note on the circle to add its chord.</p>
+          <CircleOfFifths
+            tonicPc={pc(k.tonic)} scalePcs={scale} currentPc={cur ? pc(cur.root) : undefined}
+            others={[]} spellPc={spell} onAddPc={addCircleChord}
+          />
+        </div>
+      );
+    }
     const fingers = pianoFingering(selChord.voicing, 'R');
     const piano = (
       <div className="vis-section" key="piano">
@@ -528,13 +544,9 @@ function Composer({ data }: { data: LoadedData }) {
           selected={{ pc: pc(selChord.chord.root), color: selColor, label: selChord.symbol }}
           spellPc={spell}
           onPick={(id) => { const s = chordSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playMove(s); } }}
-          onAddPc={(p) => {
-            const dia = diatonicChords(k).find((c) => pc(c.root) === p);
-            const built = dia ?? parseChord(noteName(spellInKey(k, p)));
-            if (built) addChord(built);
-          }}
+          onAddPc={addCircleChord}
         />
-        <p className="small muted center">+N = clockwise (dominant / sharp) · −N = counter-clockwise (subdominant / flat) · tap a note to add · outer dots preview</p>
+        <p className="small muted center">Tap any note to add that chord · outer dots preview suggestions · +N = CW/V · −N = CCW/IV</p>
       </div>
     );
     const tonnetz = (

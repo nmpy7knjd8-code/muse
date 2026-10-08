@@ -159,7 +159,8 @@ svg .cstep.cw { fill: #7fd0a8; }
 svg .cstep.ccw { fill: #f0a070; }
 svg .cstep.home { fill: #bdb8d4; }
 svg .ceffect { font-size: 8.5px; text-anchor: middle; }
-svg .cadd { font-size: 9px; fill: #8f8aa3; text-anchor: middle; pointer-events: none; }
+svg .cadd { font-size: 8px; fill: #bdb8d4; text-anchor: middle; pointer-events: none; font-weight: 600; }
+svg .cnode-hit:hover circle:nth-of-type(2) { stroke: #ECEAF4; stroke-width: 2; }
 svg .tgrid line { stroke: #34313f; stroke-width: 1; }
 svg .tnode { fill: #1d1c24; stroke: #4a4658; }
 svg .tnode.tonic { stroke: #fff; stroke-width: 2; }

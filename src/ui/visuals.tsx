@@ -1,5 +1,5 @@
 // SVG visualisations: piano, guitar diagram, voice leading, circle of fifths, Tonnetz.
-import { useMemo, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
+import { useMemo, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
 import {
   Chord, GuitarShape, VoiceLine, asTriad, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsStepTag, midiOctave, mod, pc as pcOf, tonnetzPc, layoutMoodMap,
 } from '../core';
@@ -215,6 +215,7 @@ export interface CircleProps {
 
 export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
   const S = 300, c = S / 2, R = 112;
+  const [pressed, setPressed] = useState<number | null>(null);
   const pos = (p: number, r: number) => {
     const a = (fifthsIndex(p) / 12) * Math.PI * 2 - Math.PI / 2;
     return { x: c + Math.cos(a) * r, y: c + Math.sin(a) * r };
@@ -269,19 +270,35 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         const steps = fifthsDistance(refPc, p);
         const tag = fifthsStepTag(refPc, p);
         const tagClass = steps > 0 ? 'cw' : steps < 0 ? 'ccw' : 'home';
+        const hit = pressed === p;
         return (
           <g
             key={p}
-            onClick={() => onAddPc?.(p)}
-            style={{ cursor: onAddPc ? 'pointer' : undefined }}
+            className={onAddPc ? 'cnode-hit' : undefined}
+            onPointerDown={(e) => {
+              if (!onAddPc) return;
+              e.preventDefault();
+              setPressed(p);
+              onAddPc(p);
+            }}
+            onPointerUp={() => setPressed(null)}
+            onPointerLeave={() => setPressed(null)}
+            style={{ cursor: onAddPc ? 'pointer' : undefined, touchAction: onAddPc ? 'manipulation' : undefined }}
             role={onAddPc ? 'button' : undefined}
-            aria-label={onAddPc ? `Add ${label}, ${fifthsMoveLabel(refPc, p)}` : `${label}, ${fifthsMoveLabel(refPc, p)}`}
+            aria-label={onAddPc ? `Add ${label}` : label}
           >
-            <title>{`${label}: ${fifthsMoveLabel(refPc, p)}`}</title>
-            <circle cx={x} cy={y} r={17} fill={isCur ? CURRENT_COLOR : inKey ? '#2E2A40' : '#1d1c24'} stroke={isTonic ? '#fff' : inKey ? '#5d5680' : '#33313d'} strokeWidth={isTonic ? 2.5 : 1} />
+            <title>{onAddPc ? `Tap to add ${label}` : `${label}: ${fifthsMoveLabel(refPc, p)}`}</title>
+            {/* Large invisible hit target for fingers */}
+            {onAddPc && <circle cx={x} cy={y} r={26} fill="transparent" />}
+            <circle
+              cx={x} cy={y} r={hit ? 19 : 17}
+              fill={isCur ? CURRENT_COLOR : inKey ? '#2E2A40' : '#1d1c24'}
+              stroke={hit ? '#ECEAF4' : isTonic ? '#fff' : inKey ? '#5d5680' : '#33313d'}
+              strokeWidth={hit || isTonic ? 2.5 : 1}
+            />
             <text x={x} y={y + 1} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
             <text x={x} y={y + 12} className={'cstep ' + tagClass}>{tag}</text>
-            {onAddPc && <text x={x} y={y + 26} className="cadd">＋</text>}
+            {onAddPc && <text x={x} y={y + 26} className="cadd">＋ add</text>}
           </g>
         );
       })}
@@ -290,7 +307,17 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         counts.set(o.pc, n + 1);
         const a = (fifthsIndex(o.pc) / 12) * Math.PI * 2 - Math.PI / 2 + (n - 1) * 0.11;
         const r = R + 27;
-        return <circle key={o.id} cx={c + Math.cos(a) * r} cy={c + Math.sin(a) * r} r={5} fill={o.color} onClick={() => onPick?.(o.id)} style={{ cursor: onPick ? 'pointer' : undefined }} />;
+        return (
+          <circle
+            key={o.id}
+            cx={c + Math.cos(a) * r}
+            cy={c + Math.sin(a) * r}
+            r={6}
+            fill={o.color}
+            onPointerDown={(e) => { e.stopPropagation(); onPick?.(o.id); }}
+            style={{ cursor: onPick ? 'pointer' : undefined }}
+          />
+        );
       })}
       {arrow && selected && <path d={arrow} stroke={selected.color} strokeWidth={3.5} fill="none" markerEnd="url(#arrowhead)" opacity={0.95} />}
       {selected && (
