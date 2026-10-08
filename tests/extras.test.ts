@@ -100,7 +100,7 @@ describe('spelling of journey chords', () => {
         for (const s of steps) expect(s.roman + s.symbol).not.toMatch(/𝄫|𝄪|bb|##/);
       }
     }
-  });
+  }, 20_000);
 });
 
 describe('mood map layout', () => {

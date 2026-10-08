@@ -113,7 +113,7 @@ function Composer({ data }: { data: LoadedData }) {
     const harmonize = pendingHarm
       ? pendingHarm.notes.map((n, i) => ({ midi: n.midi, beat: n.beat, dur: durs[i] }))
       : undefined;
-    return engine.suggestChords({ key: k, progression, profile, adventure, limit: 18, tensionStyle: tStyle, harmonize });
+    return engine.suggestChords({ key: k, progression, profile, adventure, limit: 28, tensionStyle: tStyle, harmonize });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
   const tState = useMemo(() => {
     const steps = slots.filter((s) => s.chord).map((s) => ({ chord: s.chord as Chord, melody: s.notes.map((n) => n.midi) }));

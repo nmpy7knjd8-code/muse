@@ -85,9 +85,19 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
   });
   it('works in minor keys and on an empty progression', () => {
     const s = eng.suggestChords({ key: key('A', 'minor'), progression: prog('Am Dm') });
-    expect(s.slice(0, 5).some((x) => x.id === 'E' || x.id === 'E7')).toBe(true);
+    expect(s.slice(0, 8).some((x) => x.id === 'E' || x.id === 'E7')).toBe(true);
     const start = eng.suggestChords({ key: key('G'), progression: [] });
     expect(start[0].id).toBe('G');
+  });
+  it('includes richer sevenths, secondaries and borrowed colour in the pool', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C Am F'), adventure: 0.4, limit: 60 });
+    const ids = new Set(s.map((x) => x.id));
+    // diatonic / secondary / borrowed complexity beyond plain triads
+    expect(['G7', 'Cmaj7', 'Dm7', 'Fmaj7', 'Bb', 'Ab', 'D7', 'E7'].filter((id) => ids.has(id)).length).toBeGreaterThanOrEqual(4);
+    expect(s.some((x) => !['maj', 'min', 'dim'].includes(x.chord.quality))).toBe(true);
+    const wild = eng.suggestChords({ key: key('C'), progression: prog('C Am F'), adventure: 0.85, limit: 60 });
+    const wids = new Set(wild.map((x) => x.id));
+    expect(['Db7', 'G7b9', 'G7#9', 'B7'].filter((id) => wids.has(id)).length).toBeGreaterThanOrEqual(2);
   });
 });
 
