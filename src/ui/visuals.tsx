@@ -232,12 +232,13 @@ export function cofPcVisibility(others: Array<{ pc: number }>): Map<number, numb
   for (let p = 0; p < 12; p++) {
     const r = best.get(p);
     if (r === undefined) {
-      out.set(p, others.length ? 0.22 : 1);
+      // Well below ranked floors so unpicked roots recede.
+      out.set(p, others.length ? 0.12 : 1);
       continue;
     }
-    // Rank 0 (best) → 1; worst ranked among suggestions → ~0.45 (still above unranked).
+    // Rank 0 (best) → 1; worst ranked among suggestions → ~0.5 (still above unranked).
     const t = maxRank <= 0 ? 1 : 1 - r / maxRank;
-    out.set(p, 0.45 + 0.55 * (0.25 + 0.75 * t * t));
+    out.set(p, 0.5 + 0.5 * (t * t));
   }
   return out;
 }
@@ -248,8 +249,8 @@ function lerpChannel(a: number, b: number, t: number): number {
 
 /** Lift a dark node fill toward a brighter tint by visibility t (0..1). */
 function cofNodeFill(inKey: boolean, t: number): string {
-  const lo = inKey ? [0x2e, 0x2a, 0x40] : [0x1d, 0x1c, 0x24];
-  const hi = inKey ? [0x6a, 0x62, 0x98] : [0x4a, 0x46, 0x5c];
+  const lo = inKey ? [0x22, 0x20, 0x30] : [0x16, 0x15, 0x1c];
+  const hi = inKey ? [0x8a, 0x80, 0xc0] : [0x5c, 0x56, 0x72];
   const u = Math.max(0, Math.min(1, t));
   return `rgb(${lerpChannel(lo[0], hi[0], u)} ${lerpChannel(lo[1], hi[1], u)} ${lerpChannel(lo[2], hi[2], u)})`;
 }
@@ -257,8 +258,8 @@ function cofNodeFill(inKey: boolean, t: number): string {
 function cofNodeStroke(inKey: boolean, t: number, isTonic: boolean, hit: boolean): string {
   if (hit) return '#ECEAF4';
   if (isTonic) return '#fff';
-  const lo = inKey ? [0x5d, 0x56, 0x80] : [0x33, 0x31, 0x3d];
-  const hi = inKey ? [0xb0, 0xa8, 0xd8] : [0x7a, 0x74, 0x90];
+  const lo = inKey ? [0x3a, 0x36, 0x50] : [0x28, 0x26, 0x32];
+  const hi = inKey ? [0xd0, 0xc8, 0xf0] : [0x9a, 0x92, 0xb0];
   const u = Math.max(0, Math.min(1, t));
   return `rgb(${lerpChannel(lo[0], hi[0], u)} ${lerpChannel(lo[1], hi[1], u)} ${lerpChannel(lo[2], hi[2], u)})`;
 }
@@ -334,7 +335,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
           <g
             key={p}
             className={onAddPc ? 'cnode-hit' : undefined}
-            opacity={isCur || isSel ? 1 : 0.35 + 0.65 * vis}
+            opacity={isCur || isSel ? 1 : 0.18 + 0.82 * vis}
             onPointerDown={(e) => {
               if (!onAddPc) return;
               e.preventDefault();

@@ -14,7 +14,7 @@ describe('cofPcVisibility', () => {
     expect(v.get(7)!).toBeGreaterThan(v.get(5)!);
     expect(v.get(5)!).toBeGreaterThan(v.get(2)!); // unranked D
     expect(v.get(0)!).toBeCloseTo(1, 5);
-    expect(v.get(2)!).toBeLessThan(0.3);
+    expect(v.get(2)!).toBeLessThan(0.2);
   });
 
   it('uses the best index when the same pc appears twice', () => {
