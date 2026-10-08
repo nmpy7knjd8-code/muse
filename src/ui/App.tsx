@@ -552,6 +552,68 @@ function Composer({ data }: { data: LoadedData }) {
   const chips = profile ? describeProfile(profile, lex) : [];
   const kbBadge = data.kb.meta.isSeed ? 'seed' : '';
 
+  /** Ranked suggestion cards — shown just under the Circle of Fifths. */
+  const bestFitBlock = () => (
+    <div className="group best-fit-under-cof">
+      <div className="ghead">Best fit first <span className="muted" style={{ fontWeight: 500 }}>· mood is a tag, not the sort</span></div>
+      {ranked.map((s, i) => {
+        const isChord = 'chord' in s;
+        const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
+        const color = lex.color(s.primaryMood);
+        const rar = RARITY_MARK[s.rarity];
+        const cs = isChord ? s as ChordSuggestion : null;
+        const ns = !isChord ? s as NoteSuggestion : null;
+        const root = cs && cur ? rootMotion(cur, cs.chord) : null;
+        const midis = cs ? cs.voicing : ns ? [ns.midi] : [];
+        return (
+          <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
+            onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
+            <div className="card-main">
+              <div className="card-top">
+                <span className="card-rank" title="Best-fit rank (1 = strongest suggestion)">#{i + 1}</span>
+                {root && <span className={'root-arrow ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} aria-label={root.label} title={root.label}>{root.dir}</span>}
+                <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
+                <span className="rn" title={isChord ? 'Roman numeral in this key' : 'Scale degree from home'}>{isChord ? (s as ChordSuggestion).roman : `deg ${(s as NoteSuggestion).degree}`}</span>
+                {root && <span className={'root-badge ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Bass/root vs the chord you’re on">{root.label}</span>}
+                <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
+              </div>
+              <div className="tags">
+                {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
+                {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
+                {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
+                {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
+                {ns?.relation && (
+                  <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>
+                    {ns.relation.label} · {REL_LABEL[ns.relation.kind]}
+                  </span>
+                )}
+                {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
+              </div>
+              <div className="why">{s.why}</div>
+              {midis.length > 0 && (
+                <div className="card-piano" aria-label={cs ? `Piano notes for ${cs.symbol}` : `Piano note ${(ns as NoteSuggestion).name}`}>
+                  <PianoViz
+                    variant="card"
+                    suggested={midis}
+                    fingers={[]}
+                    color={color}
+                    spell={spell}
+                    height={44}
+                    label={cs ? cs.symbol : (ns as NoteSuggestion).name}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="card-actions">
+              <button aria-label="Play" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>▶</button>
+              <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else addNote((s as NoteSuggestion).midi); }}>＋</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const visuals = (all: boolean) => {
     if (tab === 'melody') {
       const underV = noteChord === cur ? prevVoicing : noteChord ? pianoVoicing(noteChord) : [];
@@ -597,6 +659,7 @@ function Composer({ data }: { data: LoadedData }) {
               </button>
             ))}
           </div>
+          {bestFitBlock()}
         </div>
       );
     }
@@ -628,6 +691,7 @@ function Composer({ data }: { data: LoadedData }) {
             </button>
           ))}
         </div>
+        {bestFitBlock()}
       </div>
     );
     if (!selChord) {
@@ -1099,7 +1163,7 @@ function Composer({ data }: { data: LoadedData }) {
         )}
       </details>
 
-      {/* Suggestions */}
+      {/* Suggestions — ranked cards live under CoF; next-pick board then ready-made paths at the bottom */}
       <section className="suggestions" aria-label="Suggestions">
         <h3>
           {tab === 'chords'
@@ -1110,8 +1174,41 @@ function Composer({ data }: { data: LoadedData }) {
               ? `Next note after ${spellMidi(melody[melody.length - 1])}${noteChord ? ` over ${chordSymbol(noteChord, true)}` : ''}`
               : 'First melody note'}
         </h3>
+        <NextPickBoard
+          mode={tab === 'melody' ? 'melody' : 'chords'}
+          items={tab === 'chords' ? chordSugs : noteSugs}
+          selectedId={tab === 'chords' ? (selChord?.id ?? null) : (selNote?.id ?? null)}
+          colorOf={(id) => lex.color(id)}
+          labelOf={(id) => lex.label(id)}
+          harmonizing={tab === 'chords' && !!pendingHarm}
+          fromChord={tab === 'chords' ? cur : undefined}
+          fromLabel={tab === 'chords'
+            ? (pendingHarm
+              ? `bar ${chordTarget + 1} melody`
+              : (cur ? chordSymbol(cur, true) : undefined))
+            : (melody.length ? spellMidi(melody[melody.length - 1]) : undefined)}
+          onSelect={(id) => {
+            setSelectedId(id);
+            if (tab === 'chords') {
+              const s = chordSugs.find((x) => x.id === id);
+              if (s) playMove(s);
+            } else {
+              const s = noteSugs.find((x) => x.id === id);
+              if (s) playNoteMove(s);
+            }
+          }}
+          onAdd={(id) => {
+            if (tab === 'chords') {
+              const s = chordSugs.find((x) => x.id === id);
+              if (s) addChord(s.chord);
+            } else {
+              const s = noteSugs.find((x) => x.id === id);
+              if (s) addNote(s.midi);
+            }
+          }}
+        />
         {((tab === 'chords' && chordPaths.length > 0) || (tab === 'melody' && notePaths.length > 0)) && (
-          <div className="path-block">
+          <div className="path-block path-block-bottom">
             <div className="row gap" style={{ alignItems: 'center', marginBottom: 4 }}>
               <h4 style={{ margin: 0, flex: 1 }}>
                 {tab === 'chords' ? 'Ready-made progressions' : 'Ready-made melody runs'}
@@ -1153,108 +1250,6 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
           </div>
         )}
-        <NextPickBoard
-          mode={tab === 'melody' ? 'melody' : 'chords'}
-          items={tab === 'chords' ? chordSugs : noteSugs}
-          selectedId={tab === 'chords' ? (selChord?.id ?? null) : (selNote?.id ?? null)}
-          colorOf={(id) => lex.color(id)}
-          labelOf={(id) => lex.label(id)}
-          harmonizing={tab === 'chords' && !!pendingHarm}
-          fromChord={tab === 'chords' ? cur : undefined}
-          fromLabel={tab === 'chords'
-            ? (pendingHarm
-              ? `bar ${chordTarget + 1} melody`
-              : (cur ? chordSymbol(cur, true) : undefined))
-            : (melody.length ? spellMidi(melody[melody.length - 1]) : undefined)}
-          onSelect={(id) => {
-            setSelectedId(id);
-            if (tab === 'chords') {
-              const s = chordSugs.find((x) => x.id === id);
-              if (s) playMove(s);
-            } else {
-              const s = noteSugs.find((x) => x.id === id);
-              if (s) playNoteMove(s);
-            }
-          }}
-          onAdd={(id) => {
-            if (tab === 'chords') {
-              const s = chordSugs.find((x) => x.id === id);
-              if (s) addChord(s.chord);
-            } else {
-              const s = noteSugs.find((x) => x.id === id);
-              if (s) addNote(s.midi);
-            }
-          }}
-        />
-        <div className="group">
-          <div className="ghead">Best fit first <span className="muted" style={{ fontWeight: 500 }}>· mood is a tag, not the sort</span></div>
-          {ranked.map((s, i) => {
-            const isChord = 'chord' in s;
-            const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
-            const color = lex.color(s.primaryMood);
-            const rar = RARITY_MARK[s.rarity];
-            const cs = isChord ? s as ChordSuggestion : null;
-            const ns = !isChord ? s as NoteSuggestion : null;
-            const root = cs && cur ? rootMotion(cur, cs.chord) : null;
-            const gShape = cs ? guitarVoicings(cs.chord, 1)[0] : null;
-            const fingers = cs ? pianoFingering(cs.voicing, 'R') : [];
-            const frets = gShape ? gShape.frets.map((f) => (f === null ? 'x' : f)).join(' ') : '—';
-            const gFingers = gShape?.fingers?.some((f) => f && f > 0)
-              ? gShape.fingers.map((f) => (f === null ? 'x' : f === 0 ? 'o' : f)).join('')
-              : null;
-            const bassNoteLabel = cs ? noteName(spellInKey(k, pc(cs.chord.bass ?? cs.chord.root)), true) : '';
-            const keysLabel = fingers.length ? fingers.join('-') : '—';
-            return (
-              <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
-                onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
-                <div className="card-main">
-                  <div className="card-top">
-                    <span className="card-rank" title="Best-fit rank (1 = strongest suggestion)">#{i + 1}</span>
-                    {root && <span className={'root-arrow ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} aria-label={root.label} title={root.label}>{root.dir}</span>}
-                    <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
-                    <span className="rn" title={isChord ? 'Roman numeral in this key' : 'Scale degree from home'}>{isChord ? (s as ChordSuggestion).roman : `deg ${(s as NoteSuggestion).degree}`}</span>
-                    {root && <span className={'root-badge ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Bass/root vs the chord you’re on">{root.label}</span>}
-                    <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
-                  </div>
-                  <div className="tags">
-                    {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
-                    {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
-                    {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
-                    {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
-                    {ns?.relation && (
-                      <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>
-                        {ns.relation.label} · {REL_LABEL[ns.relation.kind]}
-                      </span>
-                    )}
-                    {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
-                  </div>
-                  <div className="why">{s.why}</div>
-                  {cs && (
-                    <div className="card-hands" aria-label="Hand placements by instrument">
-                      {INSTRUMENT_IDS.map((id) => {
-                        const def = INSTRUMENTS[id];
-                        const short = def.label.replace(' guitar', '').replace('Nylon', 'Nylon').replace('Soft pad', 'Pad');
-                        let place = '—';
-                        if (def.voicing === 'keys') place = keysLabel;
-                        else if (def.voicing === 'guitar') place = gFingers ? `${frets} · ${gFingers}` : frets;
-                        else if (def.voicing === 'bass') place = bassNoteLabel;
-                        return (
-                          <span key={id} className={instrument === id ? 'on' : undefined} title={def.label}>
-                            <b>{short}</b><span className="mono">{place}</span>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div className="card-actions">
-                  <button aria-label="Play" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>▶</button>
-                  <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else addNote((s as NoteSuggestion).midi); }}>＋</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </section>
 
       <div className="center" style={{ marginTop: 14 }}>

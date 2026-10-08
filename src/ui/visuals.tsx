@@ -26,28 +26,44 @@ export interface PianoVizProps {
   tonicPc?: number;
   /** Label every key (melody) vs only Cs / tonic / lit keys (chords). */
   labelKeys?: 'c' | 'all';
+  /**
+   * Compact keyboard for suggestion cards: tight range around lit notes, smaller keys,
+   * no finger-number badges, note names only on lit keys.
+   */
+  variant?: 'full' | 'card';
 }
 
 /** Scale marking colours: deliberately quieter than the full-key chord/melody highlights. */
 export const SCALE_COLOR = '#A693F5';
 export const TONIC_COLOR = '#3FC9B4';
 
-export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers = [], melody = [], color = '#9C7CF4', spell, onKey, minLow, minHigh, height = 120, label, tonicPc, labelKeys = 'c' }: PianoVizProps) {
+export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers = [], melody = [], color = '#9C7CF4', spell, onKey, minLow, minHigh, height = 120, label, tonicPc, labelKeys = 'c', variant = 'full' }: PianoVizProps) {
+  const card = variant === 'card';
   const all = [...current, ...suggested, ...melody];
-  let lo = Math.min(minLow ?? 60, ...all);
-  let hi = Math.max(minHigh ?? 83, ...all);
-  lo = lo - mod(lo, 12); // start on C
-  hi = hi + (11 - mod(hi, 12)); // end on B
-  if (hi - lo < 23) hi = lo + 23;
+  let lo = Math.min(minLow ?? (card ? 60 : 60), ...(all.length ? all : [60]));
+  let hi = Math.max(minHigh ?? (card ? 72 : 83), ...(all.length ? all : [72]));
+  if (card) {
+    // Pad a whole step beyond the chord, then snap to white-key edges for a tidy strip.
+    lo = Math.max(36, lo - 2);
+    hi = Math.min(96, hi + 2);
+    while (isBlack(lo) && lo > 36) lo--;
+    while (isBlack(hi) && hi < 96) hi++;
+  } else {
+    lo = lo - mod(lo, 12); // start on C
+    hi = hi + (11 - mod(hi, 12)); // end on B
+    if (hi - lo < 23) hi = lo + 23;
+  }
   const whites: number[] = [];
   for (let m = lo; m <= hi; m++) if (!isBlack(m)) whites.push(m);
-  const W = 26, H = height, BW = 16, BH = H * 0.62;
+  const W = card ? 14 : 26, H = card ? Math.min(height, 44) : height, BW = card ? 9 : 16, BH = H * 0.62;
   const xOf = (m: number) => whites.indexOf(m) * W;
   const fingerOf = new Map<number, number>();
-  [...suggested].sort((a, b) => a - b).forEach((m, i) => fingers[i] !== undefined && fingerOf.set(m, fingers[i]));
+  if (!card) {
+    [...suggested].sort((a, b) => a - b).forEach((m, i) => fingers[i] !== undefined && fingerOf.set(m, fingers[i]));
+  }
   const cur = new Set(current), sug = new Set(suggested), mel = new Set(melody);
   const scale = new Set(scalePcs);
-  const hasScale = scale.size > 0;
+  const hasScale = !card && scale.size > 0;
   const inScale = (m: number) => !hasScale || scale.has(mod(m, 12));
   const isTonic = (m: number) => tonicPc !== undefined && mod(m, 12) === mod(tonicPc, 12);
   const lit = (m: number) => sug.has(m) || cur.has(m);
@@ -56,7 +72,7 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
     if (sug.has(m)) return color;
     if (cur.has(m)) return CURRENT_COLOR;
     if (isBlack(m)) return inScale(m) ? '#4A4366' : '#0E0D12';
-    return inScale(m) ? '#FFFFFF' : '#C2BFCD';
+    return inScale(m) ? '#FFFFFF' : (card ? '#D8D5E0' : '#C2BFCD');
   };
   const bar = (m: number, x: number, w: number, bottom: number, black: boolean) => {
     if (!hasScale || !inScale(m)) return null;
@@ -75,21 +91,22 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
     ...(onKey ? { onPointerDown: (e: RPointerEvent) => { e.preventDefault(); press(m); }, style: { cursor: 'pointer' } } : {}),
   });
   return (
-    <svg className="piano" viewBox={`0 0 ${whites.length * W} ${H + 4}`} role="img" aria-label={label ?? 'Piano keyboard'}>
+    <svg className={'piano' + (card ? ' piano-card' : '')} viewBox={`0 0 ${whites.length * W} ${H + 4}`} role="img" aria-label={label ?? 'Piano keyboard'}>
       {whites.map((m) => (
         <g key={m} {...keyProps(m)}>
-          <rect x={xOf(m) + 0.5} y={0.5} width={W - 1} height={H} rx={3} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : '#2a2933'} strokeWidth={cur.has(m) && sug.has(m) ? 4 : 1} />
+          <rect x={xOf(m) + 0.5} y={0.5} width={W - 1} height={H} rx={card ? 2 : 3} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : '#2a2933'} strokeWidth={cur.has(m) && sug.has(m) ? 4 : 1} />
           {bar(m, xOf(m), W, H, false)}
-          {labelKeys === 'all' && (
+          {!card && labelKeys === 'all' && (
             <text x={xOf(m) + W / 2} y={H - 12} className={'kname' + (lit(m) ? ' on' : '') + (isTonic(m) && !lit(m) ? ' tonic' : '')}>
               {mod(m, 12) === 0 ? `C${midiOctave(m)}` : spell(m)}
             </text>
           )}
-          {labelKeys === 'c' && mod(m, 12) === 0 && !lit(m) && <text x={xOf(m) + W / 2} y={H - 17} className="kname">C{midiOctave(m)}</text>}
-          {labelKeys === 'c' && isTonic(m) && !lit(m) && mod(m, 12) !== 0 && <text x={xOf(m) + W / 2} y={H - 17} className="kname tonic">{spell(m)}</text>}
-          {labelKeys === 'c' && lit(m) && <text x={xOf(m) + W / 2} y={H - 22} className="kname on">{spell(m)}</text>}
+          {!card && labelKeys === 'c' && mod(m, 12) === 0 && !lit(m) && <text x={xOf(m) + W / 2} y={H - 17} className="kname">C{midiOctave(m)}</text>}
+          {!card && labelKeys === 'c' && isTonic(m) && !lit(m) && mod(m, 12) !== 0 && <text x={xOf(m) + W / 2} y={H - 17} className="kname tonic">{spell(m)}</text>}
+          {!card && labelKeys === 'c' && lit(m) && <text x={xOf(m) + W / 2} y={H - 22} className="kname on">{spell(m)}</text>}
+          {card && lit(m) && <text x={xOf(m) + W / 2} y={H - 5} className="kname on card-k">{spell(m)}</text>}
           {fingerOf.has(m) && <FingerBadge x={xOf(m) + W / 2} y={H - 42} n={fingerOf.get(m)!} />}
-          {mel.has(m) && <circle cx={xOf(m) + W / 2} cy={H * 0.7} r={5.5} className="meldot" />}
+          {mel.has(m) && <circle cx={xOf(m) + W / 2} cy={H * 0.7} r={card ? 3.5 : 5.5} className="meldot" />}
         </g>
       ))}
       {Array.from({ length: hi - lo + 1 }, (_, i) => lo + i).filter(isBlack).map((m) => {
@@ -98,11 +115,12 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
           <g key={m} {...keyProps(m)}>
             <rect x={x} y={0} width={BW} height={BH} rx={2} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : inScale(m) && hasScale ? '#6E6590' : '#000'} strokeWidth={cur.has(m) && sug.has(m) ? 3 : 1} />
             {bar(m, x, BW, BH, true)}
-            {labelKeys === 'all' && (
+            {!card && labelKeys === 'all' && (
               <text x={x + BW / 2} y={BH - 6} className={'kname black' + (lit(m) ? ' on' : '') + (isTonic(m) && !lit(m) ? ' tonic' : '')}>{spell(m)}</text>
             )}
+            {card && lit(m) && <text x={x + BW / 2} y={BH - 4} className="kname black on card-k">{spell(m)}</text>}
             {fingerOf.has(m) && <FingerBadge x={x + BW / 2} y={BH - 22} n={fingerOf.get(m)!} small />}
-            {mel.has(m) && <circle cx={x + BW / 2} cy={12} r={4.5} className="meldot" />}
+            {mel.has(m) && <circle cx={x + BW / 2} cy={12} r={card ? 3 : 4.5} className="meldot" />}
           </g>
         );
       })}
