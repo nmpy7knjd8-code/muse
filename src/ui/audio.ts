@@ -102,44 +102,44 @@ function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number):
   preBite.Q.value = 0.8;
   preBite.gain.value = 2.8 + vel * 1.2;
 
-  // Two soft stages → saturated without ice-pick fizz.
+  // Two soft stages → saturated metal grind without ice-pick fizz.
   const drive1 = ctx.createWaveShaper();
-  drive1.curve = metalDriveCurve(14);
+  drive1.curve = metalDriveCurve(16);
   drive1.oversample = '4x';
   const inter = ctx.createGain();
-  inter.gain.value = 0.85;
+  inter.gain.value = 0.9;
   const drive2 = ctx.createWaveShaper();
-  drive2.curve = metalDriveCurve(9);
+  drive2.curve = metalDriveCurve(11);
   drive2.oversample = '4x';
 
-  // Guitar-cab sim: body, mild scoop, speaker roll-off (this is the "sounds like a guitar" part).
+  // Guitar-cab sim: thick body, scooped mids, speaker roll-off (reads as a cab, not a synth).
   const body = ctx.createBiquadFilter();
   body.type = 'peaking';
-  body.frequency.value = 240;
+  body.frequency.value = 220;
   body.Q.value = 0.75;
-  body.gain.value = 3.0;
+  body.gain.value = 3.4;
   const scoop = ctx.createBiquadFilter();
   scoop.type = 'peaking';
-  scoop.frequency.value = 800;
-  scoop.Q.value = 0.85;
-  scoop.gain.value = -3.0;
+  scoop.frequency.value = 780;
+  scoop.Q.value = 0.9;
+  scoop.gain.value = -4.0;
   const presence = ctx.createBiquadFilter();
   presence.type = 'peaking';
-  presence.frequency.value = 3200;
-  presence.Q.value = 0.9;
-  presence.gain.value = 2.2 + vel * 0.8;
+  presence.frequency.value = 3000;
+  presence.Q.value = 0.85;
+  presence.gain.value = 2.0 + vel * 0.7;
   const cab = ctx.createBiquadFilter();
   cab.type = 'lowpass';
-  cab.frequency.value = 4800;
-  cab.Q.value = 0.65;
+  cab.frequency.value = 4500;
+  cab.Q.value = 0.7;
   const air = ctx.createBiquadFilter();
   air.type = 'highshelf';
-  air.frequency.value = 5500;
-  air.gain.value = -5.5;
+  air.frequency.value = 5200;
+  air.gain.value = -6.0;
 
   const post = ctx.createGain();
-  // Leave headroom for 4–6 string chords through the master compressor/limiter.
-  post.gain.value = 0.15;
+  // Headroom for 4–6 string chords through the master compressor/limiter (avoid hard clips).
+  post.gain.value = 0.12;
 
   source
     .connect(pre)
