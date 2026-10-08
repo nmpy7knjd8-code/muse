@@ -37,6 +37,8 @@ type Tab = 'chords' | 'melody' | 'bass';
 /** Left drawer pages — Guide / Artist Lens / mood reference live off the main strip. */
 type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists';
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
+/** Best-fit card note graphic: piano keys (default) or staff. */
+type CardNoteViz = 'piano' | 'staff';
 type InputSource = 'mic' | 'midi';
 interface Snapshot { slots: TimelineSlot[] }
 
@@ -200,6 +202,18 @@ function Composer({ data }: { data: LoadedData }) {
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
   const [visTab, setVisTab] = useState<VisTab>('piano');
+  /** Best-fit cards: piano keys (default) or staff notation. */
+  const [cardNoteViz, setCardNoteViz] = useState<CardNoteViz>(() => {
+    try {
+      const v = localStorage.getItem('muse.cardNoteViz');
+      if (v === 'staff' || v === 'piano') return v;
+    } catch { /* private mode */ }
+    return 'piano';
+  });
+  const chooseCardNoteViz = (v: CardNoteViz) => {
+    setCardNoteViz(v);
+    try { localStorage.setItem('muse.cardNoteViz', v); } catch { /* private mode */ }
+  };
   const [adventure, setAdventure] = useState(0.35);
   const [tStyle, setTStyle] = useState<TensionStyleId>(() => {
     const v = typeof localStorage !== 'undefined' ? localStorage.getItem('muse.tensionStyle') : null;
@@ -908,7 +922,36 @@ function Composer({ data }: { data: LoadedData }) {
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
-      <div className="ghead">Best fit first</div>
+      <div className="ghead best-fit-head">
+        <span>Best fit first</span>
+        <div className="card-viz-toggle" role="group" aria-label="Card note display">
+          <button
+            type="button"
+            className={'pill' + (cardNoteViz === 'piano' ? ' on' : '')}
+            aria-pressed={cardNoteViz === 'piano'}
+            title="Show piano keys on cards"
+            onClick={() => chooseCardNoteViz('piano')}
+          >
+            Keys
+          </button>
+          <button
+            type="button"
+            className={'pill' + (cardNoteViz === 'staff' ? ' on' : '')}
+            aria-pressed={cardNoteViz === 'staff'}
+            title="Show staff notation on cards"
+            onClick={() => chooseCardNoteViz('staff')}
+          >
+            Staff
+          </button>
+        </div>
+      </div>
+      {cur && (
+        <div className="card-note-legend small muted" aria-hidden="true">
+          <span><i style={{ background: CURRENT_COLOR }} />now: {chordSymbol(cur, true)}</span>
+          <span><i style={{ background: '#9C7CF4' }} />next</span>
+          <span><i className="ring" />shared</span>
+        </div>
+      )}
       {ranked.map((s, i) => {
         const isChord = 'chord' in s;
         const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
@@ -918,6 +961,8 @@ function Composer({ data }: { data: LoadedData }) {
         const ns = !isChord ? s as NoteSuggestion : null;
         const root = cs && cur ? rootMotion(cur, cs.chord) : null;
         const midis = cs ? cs.voicing : ns ? [ns.midi] : [];
+        // Previous chord tones (voice-led) — same “now” colour as the big Piano tab.
+        const prior = cs && cur && prevVoicing?.length ? prevVoicing : [];
         return (
           <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
             onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
@@ -943,15 +988,29 @@ function Composer({ data }: { data: LoadedData }) {
                 {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
               </div>
               <div className="why">{s.why}</div>
-              {midis.length > 0 && (
+              {midis.length > 0 && cardNoteViz === 'piano' && (
                 <div className="card-piano" aria-label={cs ? `Piano notes for ${cs.symbol}` : `Piano note ${(ns as NoteSuggestion).name}`}>
                   <PianoViz
                     variant="card"
+                    current={prior}
                     suggested={midis}
                     fingers={[]}
                     color={color}
                     spell={spell}
                     height={44}
+                    label={cs ? cs.symbol : (ns as NoteSuggestion).name}
+                  />
+                </div>
+              )}
+              {midis.length > 0 && cardNoteViz === 'staff' && (
+                <div className="card-staff" aria-label={cs ? `Staff notes for ${cs.symbol}` : `Staff note ${(ns as NoteSuggestion).name}`}>
+                  <StaffChordViz
+                    midis={midis}
+                    priorMidis={prior}
+                    color={color}
+                    spell={spell}
+                    scalePcs={scale}
+                    tonicPc={pc(k.tonic)}
                     label={cs ? cs.symbol : (ns as NoteSuggestion).name}
                   />
                 </div>
