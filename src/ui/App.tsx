@@ -149,6 +149,22 @@ function Composer({ data }: { data: LoadedData }) {
   /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
   const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
   const [playSec, setPlaySec] = useState(0);
+  /** Loop ▶ Play when the timeline ends (default on). */
+  const [loopPlay, setLoopPlay] = useState(() => {
+    try {
+      const v = localStorage.getItem('muse.loop');
+      if (v === '0') return false;
+      if (v === '1') return true;
+    } catch { /* private mode */ }
+    return true;
+  });
+  const chooseLoop = (on: boolean) => {
+    setLoopPlay(on);
+    try { localStorage.setItem('muse.loop', on ? '1' : '0'); } catch { /* private mode */ }
+  };
+  const loopPlayRef = useRef(loopPlay);
+  loopPlayRef.current = loopPlay;
+  const playAllRef = useRef<() => void>(() => {});
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const barRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
@@ -504,9 +520,10 @@ function Composer({ data }: { data: LoadedData }) {
     setTransport(null);
     setPlaySec(0);
   };
-  const playAll = () => {
+  const playAll = (opts: { soft?: boolean } = {}) => {
     synth.unlock();
-    synth.stopAll();
+    // Soft restart (loop): previous pass already finished — skip stopAll to avoid a click.
+    if (!opts.soft) synth.stopAll();
     for (const id of activeParts) void synth.ensureLoaded(id);
     // ▶ Play from the selected bar (if any); otherwise from the start.
     const startIndex = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? 0) : 0;
@@ -535,6 +552,7 @@ function Composer({ data }: { data: LoadedData }) {
       }));
     }
   };
+  playAllRef.current = () => playAll({ soft: true });
   const togglePlay = () => {
     if (transport) stopPlayback();
     else playAll();
@@ -544,6 +562,7 @@ function Composer({ data }: { data: LoadedData }) {
   useEffect(() => {
     if (!transport) return;
     let raf = 0;
+    let restarted = false;
     const tick = () => {
       const now = synth.audioTime();
       if (now === null) {
@@ -552,6 +571,13 @@ function Composer({ data }: { data: LoadedData }) {
       }
       const t = now - transport.origin;
       if (t >= transport.events.total) {
+        if (loopPlayRef.current) {
+          if (!restarted) {
+            restarted = true;
+            playAllRef.current();
+          }
+          return;
+        }
         setTransport(null);
         setPlaySec(0);
         return;
@@ -1398,6 +1424,15 @@ function Composer({ data }: { data: LoadedData }) {
         <div className="row gap play-row">
           <button onClick={togglePlay} disabled={!slots.length} aria-pressed={!!transport}>
             {transport ? '■ Stop' : '▶ Play'}
+          </button>
+          <button
+            type="button"
+            className={'pill' + (loopPlay ? ' on' : '')}
+            aria-pressed={loopPlay}
+            title={loopPlay ? 'Loop on — Play repeats until you stop' : 'Loop off — Play stops at the end'}
+            onClick={() => chooseLoop(!loopPlay)}
+          >
+            Loop
           </button>
           <label className="meter-pick bpm-inline">
             <span className="muted">BPM</span>
