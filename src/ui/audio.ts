@@ -271,10 +271,9 @@ export class AudioEngine {
   private now() { return this.ctx ? this.ctx.currentTime + 0.03 : 0; }
 
   /** One note: sampled when the instrument is loaded, otherwise the fallback synth. */
-  private voice(midi: number, start: number, dur: number, vel: number) {
+  private voice(midi: number, start: number, dur: number, vel: number, def: InstrumentDef = this.def) {
     const ctx = this.ctx, input = this.input;
     if (!ctx || !input) return;
-    const def = this.def;
     const set = this.buffers.get(def.id);
     const out = ctx.createGain();
     // gentle stereo spread by pitch
@@ -317,7 +316,7 @@ export class AudioEngine {
       src.stop(stopAt + 0.01);
       v = { end: stopAt, stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ } } };
     } else {
-      v = this.fallbackVoice(midi, start, vel, out, off);
+      v = this.fallbackVoice(midi, start, vel, out, off, def);
     }
     this.voices.push(v);
     this.markBusy(v.end);
@@ -325,10 +324,9 @@ export class AudioEngine {
   }
 
   /** Improved synth used until samples load: FM e-piano/pluck, or detuned saws through a filter envelope for the pad. */
-  private fallbackVoice(midi: number, start: number, vel: number, out: GainNode, off: number): Voice {
+  private fallbackVoice(midi: number, start: number, vel: number, out: GainNode, off: number, def: InstrumentDef = this.def): Voice {
     const ctx = this.ctx!;
     const f = 440 * Math.pow(2, (midi - 69) / 12);
-    const def = this.def;
     const g = out.gain;
     const oscs: OscillatorNode[] = [];
     let end: number;
@@ -385,22 +383,27 @@ export class AudioEngine {
   }
 
   /** Play notes together (a chord is strummed/rolled per instrument, with slight humanization). */
-  playNotes(midis: number[], opts: { at?: number; dur?: number; vel?: number } = {}): void {
+  playNotes(midis: number[], opts: { at?: number; dur?: number; vel?: number; instrument?: InstrumentId } = {}): void {
     if (!this.ctx) return;
-    // Kick sample load on first play if unlock already attached the graph.
-    if (this.loadState().state === 'idle') void this.ensureLoaded();
-    const def = this.def;
+    const id = opts.instrument && opts.instrument in INSTRUMENTS ? opts.instrument : this.instrument;
+    const def = INSTRUMENTS[id];
+    // Kick sample load for this part if needed (multi-instrument Play loads chord/melody/bass separately).
+    if (this.loadState(id).state === 'idle') void this.ensureLoaded(id);
     // Fold every note into the active instrument range (critical for bass melody / CoF taps).
     const fitted = midis.map((m) => fitMidiToInstrument(m, def));
     const t = (opts.at ?? 0) + this.now();
-    for (const e of chordEvents(fitted, t, opts.dur ?? 1.1, opts.vel ?? 0.75, def, this.rand)) this.voice(e.midi, e.time, e.dur, e.vel);
+    for (const e of chordEvents(fitted, t, opts.dur ?? 1.1, opts.vel ?? 0.75, def, this.rand)) {
+      this.voice(e.midi, e.time, e.dur, e.vel, def);
+    }
   }
 
   /** Play note-groups one after another (e.g. previous chord → suggestion). */
-  playSequence(groups: number[][], step = 0.9, dur = 0.85): void {
+  playSequence(groups: number[][], step = 0.9, dur = 0.85, instrument?: InstrumentId): void {
     if (!this.ctx) return;
     this.stopAll();
-    groups.forEach((g, i) => this.playNotes(g, { at: i * step, dur, vel: i === groups.length - 1 ? 0.78 : 0.7 }));
+    groups.forEach((g, i) => this.playNotes(g, {
+      at: i * step, dur, vel: i === groups.length - 1 ? 0.78 : 0.7, instrument,
+    }));
   }
 }
 
