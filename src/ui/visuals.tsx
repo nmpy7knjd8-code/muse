@@ -370,8 +370,8 @@ function cofNodeStroke(inKey: boolean, t: number, isTonic: boolean, hit: boolean
 }
 
 export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
-  // Extra canvas so fanned rim variants stay inside the viewBox.
-  const S = 360, c = S / 2, R = 112;
+  // Extra canvas so fanned rim variants (incl. weaker outward steps) stay inside the viewBox.
+  const S = 420, c = S / 2, R = 118;
   const [pressed, setPressed] = useState<number | null>(null);
   const [pressedDot, setPressedDot] = useState<string | null>(null);
   const pos = (p: number, r: number) => {
@@ -380,7 +380,8 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
   };
   const visibility = useMemo(() => cofPcVisibility(others), [others]);
   const slots = useMemo(() => cofVariantSlots(others, { cx: c, cy: c, nodeR: R }), [others, c, R]);
-  const sameRoot = currentPc !== undefined && !!selected && currentPc === selected.pc;
+  // Same pitch-class as the chord/note you’re on (e.g. G → G6) — never draw a self-loop arrow.
+  const sameRoot = currentPc !== undefined && !!selected && Number(currentPc) === Number(selected.pc);
   const arrow = useMemo(() => {
     if (currentPc === undefined || !selected || sameRoot) return null;
     const a = pos(currentPc, R - 18), b = pos(selected.pc, R - 18);
@@ -394,11 +395,14 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
     ? { title: 'Same root', hint: 'Richer colour / extension on the note you’re on' }
     : currentPc !== undefined && selected
       ? fifthsMovePlain(currentPc, selected.pc)
-      : selected
+      : selected && Number(selected.pc) !== Number(tonicPc)
         ? fifthsMovePlain(tonicPc, selected.pc)
-        : null;
+        : selected
+          ? { title: 'On the tonic', hint: 'Suggestion stays on the home note of this key' }
+          : null;
   const fromName = currentPc !== undefined ? spellPc(currentPc) : spellPc(tonicPc);
   const toName = selected ? spellPc(selected.pc) : null;
+  const showMoveLine = !!selected && (sameRoot || (toName && (currentPc !== undefined ? !sameRoot : Number(selected.pc) !== Number(tonicPc))));
   return (
     <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — brighter letters and larger rim dots are stronger next picks">
       <defs>
@@ -521,10 +525,12 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
           <text x={c} y={c - 18} className="ccenter" fill={selected.color}>{selected.label}</text>
           {sameRoot ? (
             <text x={c} y={c} className="cmove" fill={selected.color}>{fromName} · same root</text>
-          ) : toName && (
+          ) : showMoveLine && toName ? (
             <text x={c} y={c} className="cmove" fill={selected.color}>
               {fromName}{move !== null && move < 0 ? ' ← ' : ' → '}{toName}
             </text>
+          ) : (
+            <text x={c} y={c} className="cmove" fill={selected.color}>next pick</text>
           )}
           {movePlain && (
             <>
