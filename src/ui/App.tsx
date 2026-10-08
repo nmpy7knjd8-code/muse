@@ -46,7 +46,10 @@ function Composer({ data }: { data: LoadedData }) {
   const lex = engine.lexicon;
 
   const [tonic, setTonic] = useState(() => {
-    try { return localStorage.getItem('muse.tonic') || 'C'; } catch { return 'C'; }
+    try {
+      const t = localStorage.getItem('muse.tonic');
+      return t && parseNote(t) ? t : 'C';
+    } catch { return 'C'; }
   });
   const [mode, setMode] = useState<ModeId>(() => {
     try {
@@ -55,19 +58,48 @@ function Composer({ data }: { data: LoadedData }) {
     } catch { return 'major'; }
   });
   const [auto, setAuto] = useState(() => {
-    try { return localStorage.getItem('muse.auto') !== '0'; } catch { return true; }
+    try {
+      const a = localStorage.getItem('muse.auto');
+      if (a === '0') return false;
+      if (a === '1') return true;
+      // Saved key/mode from a prior visit → keep that pick, don't reopen on Auto/C major
+      if (localStorage.getItem('muse.tonic') || localStorage.getItem('muse.mode')) return false;
+      return true;
+    } catch { return true; }
   });
   const chooseTonic = (t: string) => {
     setTonic(t); setAuto(false);
-    try { localStorage.setItem('muse.tonic', t); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+    try {
+      localStorage.setItem('muse.tonic', t);
+      localStorage.setItem('muse.mode', mode);
+      localStorage.setItem('muse.auto', '0');
+    } catch { /* private mode */ }
   };
   const chooseMode = (m: ModeId) => {
     setMode(m); setAuto(false);
-    try { localStorage.setItem('muse.mode', m); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+    // Keep tonic spelling valid for the new mode family (e.g. Db major → C# minor)
+    const choices = tonicChoices(m);
+    let nextTonic = tonic;
+    if (!choices.includes(tonic)) {
+      const n = parseNote(tonic);
+      nextTonic = n ? choices[pc(n)] ?? choices[0]! : choices[0]!;
+      setTonic(nextTonic);
+    }
+    try {
+      localStorage.setItem('muse.mode', m);
+      localStorage.setItem('muse.tonic', nextTonic);
+      localStorage.setItem('muse.auto', '0');
+    } catch { /* private mode */ }
   };
   const chooseAuto = (on: boolean) => {
     setAuto(on);
-    try { localStorage.setItem('muse.auto', on ? '1' : '0'); } catch { /* private mode */ }
+    try {
+      localStorage.setItem('muse.auto', on ? '1' : '0');
+      if (!on) {
+        localStorage.setItem('muse.tonic', tonic);
+        localStorage.setItem('muse.mode', mode);
+      }
+    } catch { /* private mode */ }
   };
   const [timeSig, setTimeSig] = useState<TimeSig>(() => {
     try {
