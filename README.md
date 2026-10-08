@@ -106,7 +106,7 @@ the research worker; `research/artists/` has the build and validation.
   - velocity-dependent brightness and slight humanization
   - guitar strums at about 20–24 ms per string
   - voice-led keyboard voicings with a warm bass (D2–C♯3) and low-interval limits so chords don't get
-    muddy; guitar instruments play real guitar shapes; metal guitar uses distortion samples plus a live high-gain amp stack; bass plays a single low root
+    muddy; guitar instruments play real guitar shapes; metal guitar uses clean electric samples plus a live amp/cab stack; bass plays a single low root
   - a generated convolution reverb and a compressor followed by a limiter
 - The instrument picker (Piano / Nylon / Steel / Metal / Rhodes / Pad / Bass) is remembered in `localStorage`.
   Key and mode picks are remembered too.
@@ -120,9 +120,11 @@ the research worker; `research/artists/` has the build and validation.
 ## Credits
 - **Piano:** Salamander Grand Piano (V2/V3) by Alexander Holm, CC BY 3.0
   (https://creativecommons.org/licenses/by/3.0/), via https://github.com/Tonejs/audio (salamander/).
-- **Nylon & steel acoustic guitar, metal guitar (FluidR3 distortion_guitar + live amp EQ/drive in
-  `src/ui/audio.ts`), acoustic bass, Rhodes (Electric Piano 1), Warm Pad:** FluidR3_GM soundfont by
-  Frank Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts (CC BY 3.0).
+- **Nylon & steel acoustic guitar, acoustic bass, Rhodes (Electric Piano 1), Warm Pad:** FluidR3_GM
+  soundfont by Frank Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts (CC BY 3.0).
+- **Metal guitar:** MusyngKite `electric_guitar_clean` samples (same midi-js-soundfonts pack, CC BY 3.0)
+  through a live high-gain amp + speaker-cab path in `src/ui/audio.ts` — clean electric guitar into an
+  amp, not FluidR3’s synth-like `distortion_guitar`.
 - For both, the samples were trimmed, faded and re-encoded (mono/stereo MP3, 72–96 kbps), and notes
   between samples are pitch-shifted.
 

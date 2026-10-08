@@ -10,6 +10,18 @@ export interface TimeSig {
 
 export const DEFAULT_TIME_SIG: TimeSig = { num: 4, den: 4 };
 
+/** Quarter-/pulse-note tempos for ▶ Play and MIDI export. 140 ≈ the old fixed 0.42s beat. */
+export const DEFAULT_BPM = 140;
+export const BPM_PRESETS = [60, 80, 90, 100, 120, 140, 160, 180] as const;
+export function clampBpm(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_BPM;
+  return Math.max(40, Math.min(240, Math.round(n)));
+}
+/** Seconds per beat (timeline pulse) at the given BPM. */
+export function beatSecFromBpm(bpm: number): number {
+  return 60 / clampBpm(bpm);
+}
+
 export interface TimeSigPreset extends TimeSig {
   label: string;
   /** Short hint shown in the picker. */

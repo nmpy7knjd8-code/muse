@@ -4,7 +4,7 @@
 import { Chord } from './chords';
 import { NoteRelation, noteRelation } from './noteRelation';
 import type { TheoryKB } from './kb';
-import { DEFAULT_TIME_SIG, TimeSig, beatsPerBar as bpb } from './meter';
+import { DEFAULT_BPM, DEFAULT_TIME_SIG, TimeSig, beatSecFromBpm, beatsPerBar as bpb } from './meter';
 
 export interface TimelineNote { midi: number; beat: number }
 export interface TimelineSlot { chord: Chord | null; notes: TimelineNote[]; locked?: boolean }
@@ -118,12 +118,13 @@ export interface TimelineEvents {
 /** Timing for playback/export. With no melody anywhere, chords keep a quicker one-per-step feel. */
 export function timelineEvents(
   slots: TimelineSlot[],
-  o: { beatSec?: number; chordOnlyStep?: number; timeSig?: TimeSig } = {},
+  o: { beatSec?: number; bpm?: number; chordOnlyStep?: number; timeSig?: TimeSig } = {},
 ): TimelineEvents {
   const beats = bpb(o.timeSig ?? DEFAULT_TIME_SIG);
   const hasMelody = slots.some((s) => s.notes.length);
-  const beat = o.beatSec ?? (o.timeSig?.den === 8 ? 0.28 : 0.42);
-  const step = hasMelody ? beat * beats : o.chordOnlyStep ?? 0.9;
+  const beat = o.beatSec ?? beatSecFromBpm(o.bpm ?? DEFAULT_BPM);
+  // Chord-only browsing stays snappier than a full bar (~2.14 beats at the active tempo).
+  const step = hasMelody ? beat * beats : o.chordOnlyStep ?? beat * 2.14;
   const ev: TimelineEvents = { chords: [], notes: [], total: slots.length * step };
   slots.forEach((s, i) => {
     if (s.chord) ev.chords.push({ index: i, chord: s.chord, at: i * step, dur: step * 0.95 });
@@ -136,10 +137,10 @@ export function timelineEvents(
 /** One-bar preview: chord under a pending (N.C.) melody — same grid as timelineEvents. */
 export function harmPreviewEvents(
   notes: TimelineNote[],
-  o: { beatSec?: number; timeSig?: TimeSig } = {},
+  o: { beatSec?: number; bpm?: number; timeSig?: TimeSig } = {},
 ): { notes: Array<{ midi: number; at: number; dur: number; beat: number }>; chordDur: number; total: number } {
   const beats = bpb(o.timeSig ?? DEFAULT_TIME_SIG);
-  const beat = o.beatSec ?? (o.timeSig?.den === 8 ? 0.28 : 0.42);
+  const beat = o.beatSec ?? beatSecFromBpm(o.bpm ?? DEFAULT_BPM);
   const total = beat * beats;
   const d = noteDurations(notes, beats);
   return {

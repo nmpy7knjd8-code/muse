@@ -50,7 +50,7 @@ export function formatNotePath(p: Pick<NotePath, 'names'>): string {
 function linkTone(engine: SuggestionEngine, k: Key, a: Chord, b: Chord, melody: number[]): number {
   // Prefer a chord tone of both, else of the arrival, near the last melody pitch.
   const anchor = melody[melody.length - 1] ?? 64;
-  const pool = engine.suggestNotes({ key: k, melody: [...melody, anchor], chord: b, limit: 16, beat: 0 });
+  const pool = engine.suggestNotes({ key: k, melody: [...melody, anchor], chord: b, progression: [a, b], limit: 16, beat: 0 });
   const scored = pool.map((n) => {
     const ra = noteRelation(n.midi, a, engine.kb);
     const rb = noteRelation(n.midi, b, engine.kb);
@@ -158,6 +158,7 @@ export function suggestNotePaths(
     key: Key;
     melody: number[];
     chord: Chord | null;
+    progression?: Chord[];
     profile?: MoodProfile | null;
     adventure?: number;
     steps?: 2 | 3;
@@ -176,6 +177,7 @@ export function suggestNotePaths(
         key: opts.key,
         melody: b.midis,
         chord: opts.chord,
+        progression: opts.progression,
         profile: opts.profile ?? null,
         adventure: opts.adventure ?? 0.35,
         limit: 10,

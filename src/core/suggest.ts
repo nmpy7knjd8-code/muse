@@ -95,6 +95,11 @@ export interface NoteSuggestOptions {
   key: Key;
   melody: number[];
   chord?: Chord | null;
+  /**
+   * Recent chord stretch (e.g. last 4). Used so next-note ranking and “why” text
+   * respect the arrival chord of the sequence, not only a single under-chord.
+   */
+  progression?: Chord[];
   targetMoods?: string[];
   profile?: MoodProfile | null;
   adventure?: number;
@@ -103,6 +108,19 @@ export interface NoteSuggestOptions {
   beat?: number;
   /** meter used to decide which beats are strong (default 4/4 accents) */
   timeSig?: TimeSig;
+}
+
+/** Last up-to-4 chords for stretch-aware melody ranking / copy. */
+function recentStretch(prog: Chord[] | undefined, under: Chord | null): Chord[] {
+  const raw = (prog?.length ? prog : under ? [under] : []).slice(-4);
+  if (!raw.length) return [];
+  // Prefer the explicit under-chord as the stretch end when both are present.
+  if (under && !chordsEqual(raw[raw.length - 1]!, under)) return [...raw.slice(0, -1), under].slice(-4);
+  return raw;
+}
+
+function stretchSymbols(stretch: Chord[]): string {
+  return stretch.map((c) => chordSymbol(c, true)).join('–');
 }
 
 // Functional-harmony transition priors (offset of chord root above tonic → next offset).
@@ -527,11 +545,17 @@ export class SuggestionEngine {
     const mel = opts.melody;
     const last = mel.length ? mel[mel.length - 1] : undefined;
     const before = mel.length > 1 ? mel[mel.length - 2] : undefined;
-    const chord = opts.chord ?? null;
+    const stretch = recentStretch(opts.progression, opts.chord ?? null);
+    const chord = opts.chord ?? (stretch.length ? stretch[stretch.length - 1]! : null);
+    const penult = stretch.length >= 2 ? stretch[stretch.length - 2]! : null;
+    const stretchTxt = stretch.length >= 2 ? stretchSymbols(stretch) : null;
+    const finalSym = chord ? chordSymbol(chord, true) : null;
+    const finalRn = chord ? analyzeRoman(chord, k) : null;
     const t = pc(k.tonic);
     const fam = this.family(k);
     const centre = last ?? (chord ? pianoVoicing(chord)[pianoVoicing(chord).length - 1] : 67);
     const chordSet = new Set(chord ? chordPcs(chord) : []);
+    const penultSet = new Set(penult ? chordPcs(penult) : []);
     const mm = this.kb.melodicMoves;
     const chromaticOffsets = new Set(mm.filter((m) => m.semitonesFromTonic !== undefined).map((m) => m.semitonesFromTonic!));
 
@@ -620,6 +644,24 @@ export class SuggestionEngine {
         if (Math.abs(prevIv) >= 5 && Math.sign(iv) === -Math.sign(prevIv) && absIv <= 2 && absIv > 0) quality += 0.4; // gap fill
       }
       if (absIv > 9) quality -= 0.3;
+      // Stretch-aware ranking: favour notes that belong to the arrival (final) chord of the recent sequence,
+      // and tones that were held through the stretch — not only “whatever the last bar was.”
+      const midiPc = mod(midi, 12);
+      if (stretch.length >= 2 && chord) {
+        const held = stretch.filter((c) => chordPcs(c).includes(midiPc)).length;
+        if (held >= Math.ceil(stretch.length * 0.6)) quality += 0.22; // pedal / common tone through the phrase
+        if (penult && chordSet.has(midiPc) && !penultSet.has(midiPc)) quality += 0.28; // new colour of the arrival chord
+        if (penult && !chordSet.has(midiPc) && penultSet.has(midiPc) && relation && (relation.kind === 'clash' || relation.kind === 'avoid')) {
+          quality -= 0.18; // leftover from the previous chord that fights the arrival
+        }
+        // Cadential arrival: if the stretch ends on V (or V7), tonic-scale-degree notes get a nudge toward home.
+        if (finalRn && finalRn.offset === 7 && off === 0) quality += 0.2;
+        // Predominant → dominant arrivals: chord tones of V over IV/ii feel like the phrase goal.
+        if (penult && finalRn && finalRn.offset === 7) {
+          const penOff = analyzeRoman(penult, k).offset;
+          if ((penOff === 5 || penOff === 2) && chordSet.has(midiPc)) quality += 0.15;
+        }
+      }
       // Primary fit signal: how the note sits on the under-chord (or in the key when no chord).
       // Resolutions are “fit” musically even when the arrival is not a chord tone of V.
       const fit = isResolution ? 0.95 : relation ? REL_FIT[relation.kind] : (scaleTone ? 0.4 : -0.25);
@@ -643,12 +685,29 @@ export class SuggestionEngine {
       const sdEv = ev.find((e) => e.category === 'scale-degree' || e.category === 'mode-color');
       const resEv = ev.find((e) => e.category === 'resolution');
       const tenEv = ev.find((e) => e.category === 'tension' || e.category === 'chord-tone');
-      const bits = [`${motion}${last === undefined ? '' : ` to ${deg}`}`];
-      if (resEv) bits.push(resEv.name);
-      else if (tenEv) bits.push(tenEv.name.replace(/ \(.*\)/, ''));
-      else if (sdEv) bits.push(firstSentence(sdEv.description));
-      if (isResolution) bits.push('resolves a tendency tone');
-      else if (relation) bits.push(relation.kind === 'chord' ? 'sits in the chord' : relation.kind === 'tension' ? 'colour over the chord' : relation.kind === 'avoid' ? 'rubs if held' : 'clashes the chord');
+      const bits: string[] = [`${motion}${last === undefined ? '' : ` to ${deg}`}`];
+      // Prefer a why that names the arrival chord of the recent stretch (e.g. end of C–Am–F–G).
+      if (stretchTxt && finalSym && relation) {
+        const role =
+          relation.kind === 'chord' ? `${relation.label} of ${finalSym}`
+            : relation.kind === 'tension' ? `colour over ${finalSym}`
+              : relation.kind === 'avoid' ? `rubs over ${finalSym} if held`
+                : `clashes ${finalSym}`;
+        bits.push(`${role} (end of ${stretchTxt})`);
+        if (relation.why && relation.kind !== 'chord') bits.push(firstSentence(relation.why));
+      } else if (stretchTxt && finalSym) {
+        bits.push(`toward ${finalSym} at the end of ${stretchTxt}`);
+        if (resEv) bits.push(resEv.name);
+        else if (tenEv) bits.push(tenEv.name.replace(/ \(.*\)/, ''));
+        else if (sdEv) bits.push(firstSentence(sdEv.description));
+      } else {
+        if (resEv) bits.push(resEv.name);
+        else if (tenEv) bits.push(tenEv.name.replace(/ \(.*\)/, ''));
+        else if (sdEv) bits.push(firstSentence(sdEv.description));
+        if (isResolution) bits.push('resolves a tendency tone');
+        else if (relation) bits.push(relation.kind === 'chord' ? 'sits in the chord' : relation.kind === 'tension' ? 'colour over the chord' : relation.kind === 'avoid' ? 'rubs if held' : 'clashes the chord');
+      }
+      if (stretchTxt && finalSym && isResolution) bits.push('resolves a tendency tone');
       out.push({
         id: `n${midi}`,
         midi,
