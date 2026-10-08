@@ -78,6 +78,8 @@ section { margin-top: 10px; }
 .keyline { color: var(--text); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .meter-pick { display: inline-flex; align-items: center; gap: 5px; }
 .meter-pick select { padding: 3px 6px; font-size: 13px; max-width: 140px; }
+.bpm-inline select { min-width: 4.2em; max-width: 5.5em; font-variant-numeric: tabular-nums; }
+.play-row { flex-wrap: wrap; align-items: center; }
 .meter-note { margin: 2px 0 8px; padding: 0 2px; }
 .meter-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel2); font-size: 11px; color: var(--text); vertical-align: 1px; }
 
