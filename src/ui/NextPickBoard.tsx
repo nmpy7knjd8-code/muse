@@ -95,11 +95,16 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
         {laid.map(({ s, px, py, color }) => {
           const on = s.id === selected?.id;
           const label = isChord(s) ? s.symbol : s.name.replace('#', '♯').replace(/b(?=\d)/, '♭');
+          const root = isChord(s) && fromChord ? rootMotion(fromChord, s.chord) : null;
+          const arrow = root && root.dir !== '→' ? root.dir : '';
           return (
             <g key={s.id} onClick={() => onSelect(s.id)} style={{ cursor: 'pointer' }}>
               {on && <circle cx={px} cy={py} r={14} fill="none" stroke={color} strokeWidth={2} opacity={0.85} />}
               <circle cx={px} cy={py} r={on ? 7 : 5.5} fill={color} stroke="#121117" strokeWidth={1.5} />
-              <text x={px} y={py - 11} textAnchor="middle" className={'nplabel' + (on ? ' on' : '')} fill={on ? color : '#bdb8d4'}>{label}</text>
+              <text x={px} y={py - 11} textAnchor="middle" className={'nplabel' + (on ? ' on' : '')} fill={on ? color : '#bdb8d4'}>
+                {arrow ? `${arrow} ${label}` : label}
+              </text>
+              {arrow && <title>{root!.label}</title>}
             </g>
           );
         })}

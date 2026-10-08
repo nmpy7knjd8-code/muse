@@ -816,6 +816,10 @@ function Composer({ data }: { data: LoadedData }) {
           {tab === 'chords' && selChord ? (
             <>
               <div className="vis-title">
+                {cur ? (() => {
+                  const r = rootMotion(cur, selChord.chord);
+                  return <span className={'root-arrow ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')} aria-label={r.label} title={r.label}>{r.dir}</span>;
+                })() : null}
                 <b style={{ color: selColor }}>{cur ? `${chordSymbol(cur, true)} → ` : ''}{selChord.symbol}</b>
                 <span className="muted">{selChord.roman}</span>
                 {cur ? (() => {
@@ -938,6 +942,7 @@ function Composer({ data }: { data: LoadedData }) {
                   onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
                   <div className="card-main">
                     <div className="card-top">
+                      {root && <span className={'root-arrow ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} aria-label={root.label} title={root.label}>{root.dir}</span>}
                       <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
                       <span className="rn">{isChord ? (s as ChordSuggestion).roman : (s as NoteSuggestion).degree}</span>
                       {root && <span className={'root-badge ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{root.label}</span>}
