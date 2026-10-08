@@ -80,14 +80,14 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
         <g key={m} {...keyProps(m)}>
           <rect x={xOf(m) + 0.5} y={0.5} width={W - 1} height={H} rx={3} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : '#2a2933'} strokeWidth={cur.has(m) && sug.has(m) ? 4 : 1} />
           {bar(m, xOf(m), W, H, false)}
-          {labelKeys === 'all' && !lit(m) && (
-            <text x={xOf(m) + W / 2} y={H - 14} className={'kname' + (isTonic(m) ? ' tonic' : '')}>
+          {labelKeys === 'all' && (
+            <text x={xOf(m) + W / 2} y={H - 12} className={'kname' + (lit(m) ? ' on' : '') + (isTonic(m) && !lit(m) ? ' tonic' : '')}>
               {mod(m, 12) === 0 ? `C${midiOctave(m)}` : spell(m)}
             </text>
           )}
           {labelKeys === 'c' && mod(m, 12) === 0 && !lit(m) && <text x={xOf(m) + W / 2} y={H - 17} className="kname">C{midiOctave(m)}</text>}
           {labelKeys === 'c' && isTonic(m) && !lit(m) && mod(m, 12) !== 0 && <text x={xOf(m) + W / 2} y={H - 17} className="kname tonic">{spell(m)}</text>}
-          {lit(m) && <text x={xOf(m) + W / 2} y={H - 22} className="kname on">{spell(m)}</text>}
+          {labelKeys === 'c' && lit(m) && <text x={xOf(m) + W / 2} y={H - 22} className="kname on">{spell(m)}</text>}
           {fingerOf.has(m) && <FingerBadge x={xOf(m) + W / 2} y={H - 42} n={fingerOf.get(m)!} />}
           {mel.has(m) && <circle cx={xOf(m) + W / 2} cy={H * 0.7} r={5.5} className="meldot" />}
         </g>
@@ -98,8 +98,10 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
           <g key={m} {...keyProps(m)}>
             <rect x={x} y={0} width={BW} height={BH} rx={2} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : inScale(m) && hasScale ? '#6E6590' : '#000'} strokeWidth={cur.has(m) && sug.has(m) ? 3 : 1} />
             {bar(m, x, BW, BH, true)}
-            {labelKeys === 'all' && !lit(m) && <text x={x + BW / 2} y={BH - 8} className={'kname black' + (isTonic(m) ? ' tonic' : '')}>{spell(m)}</text>}
-            {fingerOf.has(m) && <FingerBadge x={x + BW / 2} y={BH - 18} n={fingerOf.get(m)!} small />}
+            {labelKeys === 'all' && (
+              <text x={x + BW / 2} y={BH - 6} className={'kname black' + (lit(m) ? ' on' : '') + (isTonic(m) && !lit(m) ? ' tonic' : '')}>{spell(m)}</text>
+            )}
+            {fingerOf.has(m) && <FingerBadge x={x + BW / 2} y={BH - 22} n={fingerOf.get(m)!} small />}
             {mel.has(m) && <circle cx={x + BW / 2} cy={12} r={4.5} className="meldot" />}
           </g>
         );
