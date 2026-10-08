@@ -261,7 +261,8 @@ export function voiceProgression(chords: Chord[]): number[][] {
 /** weight of melody fit when harmonizing notes (fit is −1..1). HEURISTIC. */
 export const HARMONIZE_GAIN = 2.2;
 /** Chord suggestions: mood can move ranking a lot (user asked for a feeling). */
-const MOOD_GAIN = 3.6;
+/** Strong enough that an active mood visibly restacks Best-fit. */
+const MOOD_GAIN = 5.2;
 /**
  * Note suggestions: mood only tints — harmonic/melodic fit must stay primary so the list
  * isn't clustered by aesthetic tag (e.g. all “mystical” notes first while clashes beat chord tones).

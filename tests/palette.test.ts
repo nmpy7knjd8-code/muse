@@ -48,8 +48,12 @@ describe('palette extras', () => {
   it('tags single-step NRT and degree roles', () => {
     expect(nrtTag(ch('C'), ch('Am'))).toBe('R');
     expect(nrtTag(ch('C'), ch('Cm'))).toBe('P');
-    expect(degreeRole(1)).toBe('home');
-    expect(degreeRole(5)).toBe('pulls home');
-    expect(degreeRole(4)).toBe('builds toward home');
+    expect(degreeRole(1)).toBe('tonic');
+    expect(degreeRole(6)).toBe('relative');
+    expect(degreeRole(3)).toBe('mediant');
+    expect(degreeRole(5)).toBe('dominant');
+    expect(degreeRole(4)).toBe('pre-dominant');
+    expect(degreeRole(2)).toBe('pre-dominant');
+    expect(degreeRole(7)).toBe('dominant');
   });
 });

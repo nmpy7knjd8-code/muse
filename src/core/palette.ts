@@ -45,11 +45,17 @@ export function nrtTag(prev: Chord, next: Chord): string | null {
   return p && p.length === 1 ? p : null;
 }
 
-/** Functional family of a diatonic degree (1..7), for when there is no previous chord. */
+/**
+ * Classical function of a diatonic degree (1..7).
+ * Only I is “tonic”; vi/iii are relatives/mediants — not home.
+ */
 export function degreeRole(degree: number): string {
-  if (degree === 1 || degree === 6 || degree === 3) return 'home';
-  if (degree === 4 || degree === 2) return 'builds toward home';
-  return 'pulls home';
+  if (degree === 1) return 'tonic';
+  if (degree === 6) return 'relative';
+  if (degree === 3) return 'mediant';
+  if (degree === 4 || degree === 2) return 'pre-dominant';
+  if (degree === 5 || degree === 7) return 'dominant';
+  return '';
 }
 
 /** Realise a list of roman numerals in `k`, skipping failures and root+quality dupes. */
