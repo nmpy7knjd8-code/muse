@@ -36,7 +36,7 @@ export const INSTRUMENTS: Record<InstrumentId, InstrumentDef> = {
   rhodes: { id: 'rhodes', label: 'Rhodes', voicing: 'keys', samples: { from: 36, to: 90, step: 3 }, attack: 0.006, release: 0.3, ring: 0.2, strumMs: 5, reverb: 0.28, gain: 0.55, velocityFilter: true, source: FLUID },
   pad: { id: 'pad', label: 'Soft pad', voicing: 'keys', samples: { from: 36, to: 84, step: 3 }, attack: 0.16, release: 0.55, ring: 0.1, strumMs: 0, reverb: 0.4, gain: 0.85, velocityFilter: false, source: FLUID },
   // Saw lead — bright electronic for chords + melody (FluidR3 lead_2_sawtooth).
-  synth: { id: 'synth', label: 'Electronic', voicing: 'keys', samples: { from: 36, to: 90, step: 3 }, attack: 0.008, release: 0.28, ring: 0.18, strumMs: 8, reverb: 0.26, gain: 0.48, velocityFilter: true, source: FLUID },
+  synth: { id: 'synth', label: 'Electronic', voicing: 'keys', samples: { from: 36, to: 90, step: 3 }, attack: 0.008, release: 0.28, ring: 0.18, strumMs: 8, reverb: 0.26, gain: 0.62, velocityFilter: true, source: FLUID },
   bass: { id: 'bass', label: 'Bass guitar', voicing: 'bass', samples: { from: 28, to: 55, step: 3 }, attack: 0.004, release: 0.32, ring: 0.45, strumMs: 0, reverb: 0.12, gain: 1.05, velocityFilter: true, source: FLUID },
 };
 export const INSTRUMENT_IDS = Object.keys(INSTRUMENTS) as InstrumentId[];
