@@ -28,8 +28,8 @@ h3 { font-size: 15px; margin: 18px 0 8px; color: var(--muted); font-weight: 600;
 h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 section { margin-top: 10px; }
 
-.top { display: flex; justify-content: space-between; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, var(--bg) 70%, transparent); padding: 8px 0 10px; }
-.top-left { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, var(--bg) 70%, transparent); padding: 8px 0 10px; }
+.top-left { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .menu-btn {
   width: 36px; height: 36px; padding: 0;
   border-radius: 10px;
@@ -42,6 +42,7 @@ section { margin-top: 10px; }
 .menu-btn:hover { border-color: #5a5470; }
 .brand {
   display: inline-flex; align-items: center; gap: 8px;
+  flex: 0 0 auto;
   user-select: none;
 }
 .brand-mark { flex: 0 0 auto; display: block; filter: drop-shadow(0 0 10px rgba(156, 124, 244, 0.25)); }
@@ -71,9 +72,20 @@ section { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) {
   .brand-name { animation: none; }
 }
-.keypick { display: flex; gap: 6px; align-items: center; }
-.keypick select { padding: 6px 6px; font-size: 15px; max-width: 140px; }
-.pill { border-radius: 999px; padding: 5px 10px; font-size: 13px; }
+.keypick {
+  display: flex; gap: 6px; align-items: center;
+  min-width: 0; flex: 1 1 auto; justify-content: flex-end;
+}
+.keypick select { padding: 6px 6px; font-size: 15px; max-width: 140px; min-width: 0; }
+.keypick select:nth-child(2) { max-width: 128px; } /* mode — longest labels */
+.pill { border-radius: 999px; padding: 5px 10px; font-size: 13px; flex: 0 0 auto; }
+@media (max-width: 420px) {
+  .top { gap: 12px; }
+  .brand-name { font-size: 21px; }
+  .keypick { gap: 5px; }
+  .keypick select:nth-child(2) { max-width: 108px; }
+  .pill { padding: 5px 8px; }
+}
 .pill.on { background: var(--accent); color: #111; border-color: var(--accent); }
 .keyline { color: var(--text); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .meter-pick { display: inline-flex; align-items: center; gap: 5px; }
