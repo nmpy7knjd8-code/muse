@@ -348,6 +348,53 @@ section { margin-top: 10px; }
 .mchip { border: 1.5px solid; border-radius: 999px; padding: 2px 4px; font-size: 13px; display: inline-flex; align-items: center; gap: 2px; }
 .mchip button { border: none; background: transparent; padding: 0 6px; font-size: 15px; color: inherit; }
 .dchip { border-radius: 999px; padding: 3px 9px; font-size: 12.5px; }
+.input-pane { margin: 8px 0 6px; }
+.rest-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 6px 0 4px;
+}
+.part-meter {
+  margin: 4px 0 8px; padding: 10px 10px 8px;
+  border: 1px solid var(--line); border-radius: 14px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(127, 208, 168, 0.07), transparent 55%),
+    var(--panel);
+}
+.part-meter-lead { margin: 0 0 10px; line-height: 1.4; }
+.part-meter-row {
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 10px;
+  margin: 0 0 8px;
+}
+.part-meter-row > .muted { min-width: 4.5em; padding-top: 6px; font-size: 12px; }
+.part-meter-sigs { display: flex; flex-wrap: wrap; gap: 4px; }
+.part-meter-sigs .pill { padding: 3px 8px; font-size: 12px; }
+.part-meter-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.part-meter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 4px; margin: 0 0 8px;
+}
+.pm-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-height: 44px; border-radius: 8px;
+  border: 1px solid var(--line); background: rgba(0, 0, 0, 0.18);
+  font-size: 11px; color: var(--muted);
+}
+.pm-cell.pulse { border-color: rgba(127, 208, 168, 0.35); }
+.pm-cell.tone { color: #cfe4ff; border-color: rgba(158, 203, 255, 0.45); background: rgba(158, 203, 255, 0.1); }
+.pm-cell.rest { color: #bdb8d4; border-color: rgba(189, 184, 212, 0.4); }
+.pm-beat { font-variant-numeric: tabular-nums; font-size: 10px; }
+.pm-mark { font-size: 14px; line-height: 1; }
+.part-meter-foot { margin: 0; }
+.tnote.rest {
+  border-color: rgba(189, 184, 212, 0.35);
+  background: linear-gradient(180deg, #2a2733 0%, #1c1a22 100%);
+  color: #bdb8d4;
+}
+.tnote-rest {
+  display: inline-flex; align-items: center; padding: 6px 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+}
 .presets {
   display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px;
   max-height: none;

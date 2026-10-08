@@ -80,3 +80,40 @@ export function midiTimeSigBytes(ts: TimeSig): number[] {
   const cc = ts.den === 8 && ts.num % 3 === 0 ? 36 : ts.den === 8 ? 12 : 24;
   return [0xff, 0x58, 0x04, ts.num, dd, cc, 8];
 }
+
+/** Which writing lane a part-meter applies to. */
+export type PartId = 'chords' | 'melody' | 'bass';
+
+/**
+ * Per-part meter for polyrhythm: pulses fill the same master-bar wall-clock,
+ * so 3/4 melody over 4/4 chords = 3:4 inside each bar.
+ * `subdiv` splits each pulse (1 = beat, 2 = half, 4 = quarter) for rests / precision.
+ */
+export interface PartMeter {
+  timeSig: TimeSig;
+  subdiv: 1 | 2 | 4;
+}
+
+export const DEFAULT_PART_METER: PartMeter = { timeSig: DEFAULT_TIME_SIG, subdiv: 1 };
+
+export type PartMeters = Record<PartId, PartMeter>;
+
+export function defaultPartMeters(ts: TimeSig = DEFAULT_TIME_SIG): PartMeters {
+  const m: PartMeter = { timeSig: { ...ts }, subdiv: 1 };
+  return { chords: { ...m, timeSig: { ...ts } }, melody: { ...m, timeSig: { ...ts } }, bass: { ...m, timeSig: { ...ts } } };
+}
+
+/** Step size in part-pulses for the next note/rest. */
+export function pulseStep(subdiv: PartMeter['subdiv']): number {
+  return 1 / subdiv;
+}
+
+/** How many placeable slots fit in one part-bar. */
+export function slotsPerPartBar(pm: PartMeter): number {
+  return beatsPerBar(pm.timeSig) * pm.subdiv;
+}
+
+/** Wall-clock seconds for one part pulse given the master bar length. */
+export function partPulseSec(masterBarSec: number, pm: PartMeter): number {
+  return masterBarSec / Math.max(1, beatsPerBar(pm.timeSig));
+}
