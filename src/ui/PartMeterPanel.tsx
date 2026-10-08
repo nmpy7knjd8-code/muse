@@ -32,6 +32,7 @@ export function PartMeterPanel({
   const capacity = slotsPerPartBar(meter);
   const matched = timeSigEqual(meter.timeSig, master) && meter.subdiv === 1;
   const title = part === 'chords' ? 'Chords' : part === 'melody' ? 'Melody' : 'Bass';
+  const poly = !timeSigEqual(meter.timeSig, master);
 
   const occupied = new Map<number, TimelineNote>();
   for (const n of laneNotes) {
@@ -39,16 +40,44 @@ export function PartMeterPanel({
     if (!occupied.has(key)) occupied.set(key, n);
   }
 
+  const subdivLabel = meter.subdiv === 2 ? '½' : meter.subdiv === 4 ? '¼' : null;
+  const meta = [
+    `${pulses}/bar`,
+    subdivLabel,
+    poly ? `vs ${timeSigLabel(master)}` : null,
+  ].filter(Boolean).join(' · ');
+
   return (
     <div className="part-meter" aria-label={`${title} meter`}>
-      <p className="small muted part-meter-lead">
-        <b>{title} meter</b> sets how many pulses fill each <b>session</b> bar ({timeSigLabel(master)}).
-        Different part meters overlap as polyrhythm (e.g. melody 3/4 over chords 4/4).
-        Subdivision adds rests and precise placement.
-      </p>
+      <div className="part-meter-head">
+        <div className="part-meter-head-text">
+          <span className="part-meter-title">{title}</span>
+          <span className="part-meter-meta" title={poly
+            ? `${title} pulses fill each session ${timeSigLabel(master)} bar (polyrhythm)`
+            : `${pulses} pulses per bar${meter.subdiv > 1 ? `, ${meter.subdiv}× subdivision` : ''}`}
+          >
+            {meta}
+          </span>
+        </div>
+        <div className="part-meter-actions">
+          <button
+            type="button"
+            className={'pill quiet' + (matched ? ' on' : '')}
+            onClick={onMatchSession}
+            disabled={matched}
+            title={`Reset ${title} meter to session ${timeSigLabel(master)}`}
+          >
+            Match
+          </button>
+          {onAddRest && part !== 'chords' && (
+            <button type="button" className="pill" onClick={onAddRest} title="Insert a rest on the next pulse">
+              Rest
+            </button>
+          )}
+        </div>
+      </div>
 
-      <div className="part-meter-row">
-        <span className="muted">Meter</span>
+      <div className="part-meter-block">
         <div className="part-meter-sigs" role="group" aria-label={`${title} time signature`}>
           {TIME_SIG_PRESETS.map((p) => (
             <button
@@ -63,11 +92,7 @@ export function PartMeterPanel({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="part-meter-row">
-        <span className="muted">Precision</span>
-        <div className="part-meter-sigs" role="group" aria-label={`${title} subdivision`}>
+        <div className="part-meter-sigs part-meter-subdiv" role="group" aria-label={`${title} subdivision`}>
           {SUBDIVS.map((s) => (
             <button
               key={s.v}
@@ -81,17 +106,6 @@ export function PartMeterPanel({
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="part-meter-actions">
-        <button type="button" className={'pill' + (matched ? ' on' : '')} onClick={onMatchSession} disabled={matched}>
-          Match session {timeSigLabel(master)}
-        </button>
-        {onAddRest && part !== 'chords' && (
-          <button type="button" className="pill" onClick={onAddRest} title="Insert a rest on the next pulse">
-            ＋ Rest
-          </button>
-        )}
       </div>
 
       {part !== 'chords' && (
@@ -108,26 +122,13 @@ export function PartMeterPanel({
                 className={'pm-cell' + (tone ? ' tone' : '') + (rest ? ' rest' : '') + (i % meter.subdiv === 0 ? ' pulse' : '')}
                 title={tone ? `beat ${beat + 1}` : rest ? `rest @ ${beat + 1}` : `empty @ ${beat + 1}`}
               >
-                <span className="pm-beat">{Number.isInteger(beat) ? beat + 1 : (beat + 1).toFixed(2)}</span>
                 <span className="pm-mark">{tone ? '●' : rest ? '𝄽' : '·'}</span>
+                <span className="pm-beat">{Number.isInteger(beat) ? beat + 1 : beat + 1}</span>
               </div>
             );
           })}
         </div>
       )}
-
-      {part === 'chords' && (
-        <p className="small muted">
-          Chord changes still land once per session bar. Set this meter to match how you count the groove;
-          melody/bass meters can diverge for 3:2, 3:4, 5:4, and other overlays.
-        </p>
-      )}
-
-      <p className="small muted part-meter-foot">
-        {pulses} pulse{pulses === 1 ? '' : 's'}/bar
-        {meter.subdiv > 1 ? ` · ${meter.subdiv}× subdiv (${capacity} places)` : ''}
-        {!timeSigEqual(meter.timeSig, master) ? ` · polyrhythm vs session ${timeSigLabel(master)}` : ''}
-      </p>
     </div>
   );
 }

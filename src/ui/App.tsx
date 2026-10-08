@@ -1623,31 +1623,28 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
           </div>
         </div>
-        {/* status line always reserves its height, so loading never shifts the layout under a finger */}
-        <div className="instr-status small" aria-live="polite">
-          {partsLoading ? <span className="loading">⏳ loading parts {Math.round(loadProgress * 100)}% · synth meanwhile</span>
-            : partsError ? <span className="warn">some samples unavailable — using synth</span>
-            : partsReady ? (
-              <span className="muted">
-                ♪ {instrChip(chordInst)} chords
-                {' · '}{instrChip(melodyInst)} melody
-                {bassInst !== 'off' ? <>{' · '}{instrChip(bassInst)} bass</> : null}
-              </span>
-            )
-            : <span className="muted">Tap anything to start sound</span>}
-        </div>
+        {/* Reserve height only while loading / error / first unlock — selected pills already show the mix */}
+        {(partsLoading || partsError || !partsReady) && (
+          <div className="instr-status small" aria-live="polite">
+            {partsLoading ? <span className="loading">⏳ loading parts {Math.round(loadProgress * 100)}% · synth meanwhile</span>
+              : partsError ? <span className="warn">some samples unavailable — using synth</span>
+              : <span className="muted">Tap anything to start sound</span>}
+          </div>
+        )}
       </section>
 
       {/* Input */}
       <section className="input">
-        <div className="seg">
-          <button className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); setInputPane('write'); }}>Chords</button>
-          <button className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); setInputPane('write'); }}>Melody</button>
-          <button className={tab === 'bass' ? 'on' : ''} onClick={() => { setTab('bass'); setSelectedId(null); setInputPane('write'); if (bassInst === 'off') chooseBassInst('bass'); }}>Bass</button>
-        </div>
-        <div className="seg input-pane" role="group" aria-label={`${tab} pane`}>
-          <button type="button" className={inputPane === 'write' ? 'on' : ''} aria-pressed={inputPane === 'write'} onClick={() => setInputPane('write')}>Write</button>
-          <button type="button" className={inputPane === 'meter' ? 'on' : ''} aria-pressed={inputPane === 'meter'} onClick={() => setInputPane('meter')}>Meter</button>
+        <div className="input-head">
+          <div className="seg part-tabs" role="tablist" aria-label="Part">
+            <button type="button" role="tab" aria-selected={tab === 'chords'} className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); setInputPane('write'); }}>Chords</button>
+            <button type="button" role="tab" aria-selected={tab === 'melody'} className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); setInputPane('write'); }}>Melody</button>
+            <button type="button" role="tab" aria-selected={tab === 'bass'} className={tab === 'bass' ? 'on' : ''} onClick={() => { setTab('bass'); setSelectedId(null); setInputPane('write'); if (bassInst === 'off') chooseBassInst('bass'); }}>Bass</button>
+          </div>
+          <div className="seg input-pane" role="group" aria-label={`${tab} pane`}>
+            <button type="button" className={inputPane === 'write' ? 'on' : ''} aria-pressed={inputPane === 'write'} onClick={() => setInputPane('write')}>Write</button>
+            <button type="button" className={inputPane === 'meter' ? 'on' : ''} aria-pressed={inputPane === 'meter'} onClick={() => setInputPane('meter')}>Meter</button>
+          </div>
         </div>
         {inputPane === 'meter' ? (
           <PartMeterPanel
@@ -1740,13 +1737,11 @@ function Composer({ data }: { data: LoadedData }) {
         ) : tab === 'melody' ? (
           <div className="melody-input">
             <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" labelKeys="all" />
-            <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
-            <div className="rest-row">
-              <button type="button" className="pill" onClick={addRest} title="Insert a rest on the next pulse">＋ Rest</button>
-              <span className="small muted">or open Meter for subdivision &amp; polyrhythm</span>
+            <div className="write-tools">
+              <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
+              <button type="button" className="pill rest-btn" onClick={addRest} title="Insert a rest on the next pulse">Rest</button>
             </div>
             <FitExplainer mode="melody" keyInfo={k} underChord={noteChord} />
-            <p className="small muted">Tap keys (or 👂 Listen / 🎹 MIDI) to put notes above each chord. Notes land on successive pulses (see Meter for rests &amp; polyrhythm); a full bar spills into a new bar with no chord yet. Use <b>Find a chord</b> to pick harmony — Hear plays chord + melody together. On a filled bar, ↻ finds a better chord for that melody.</p>
           </div>
         ) : (
           <div className="melody-input bass-input">
@@ -1762,21 +1757,14 @@ function Composer({ data }: { data: LoadedData }) {
               label={`Tap to add bass · ${INSTRUMENTS[bassInst === 'off' ? 'bass' : bassInst].label}`}
               labelKeys="all"
             />
-            <div className="legend">
-              <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
-              <span><i className="dot bass" />bass notes</span>
-            </div>
-            <div className="rest-row">
-              <button type="button" className="pill" onClick={addRest} title="Insert a rest on the next pulse">＋ Rest</button>
-              <span className="small muted">or open Meter for subdivision &amp; polyrhythm</span>
+            <div className="write-tools">
+              <div className="legend">
+                <ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} />
+                <span><i className="dot bass" />bass notes</span>
+              </div>
+              <button type="button" className="pill rest-btn" onClick={addRest} title="Insert a rest on the next pulse">Rest</button>
             </div>
             <FitExplainer mode="bass" keyInfo={k} underChord={bassChord} />
-            <p className="small muted">
-              Tap low keys (or Listen / MIDI) to write a bass line under each bar. Notes pack beat-by-beat like melody.
-              Roots and fifths feel solid; other scale tones walk. ▶ Play layers composed bass with chords
-              {bassInst === 'off' ? ' (Bass part turns on when you add a note)' : ` on ${INSTRUMENTS[bassInst].label}`}.
-              Empty bass bars still get an automatic root when Bass isn’t Off.
-            </p>
           </div>
         )}
         </>

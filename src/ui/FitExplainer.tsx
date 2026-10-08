@@ -110,65 +110,71 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
       : <>Once a chord is under the bar, note tags show how each pitch sits on that harmony:</>;
     const isBass = mode === 'bass';
     return (
-      <aside className="fit-explainer" aria-label={isBass ? 'How to play bass in this key' : 'How to play melodies in this key'}>
-        <p>
-          <b>{isBass ? 'Bass' : 'Melody'} in {keyLabel}.</b>{' '}
-          {isBass
-            ? 'Low roots and fifths lock the harmony; scale walks and approaches colour the groove without stealing the tune.'
-            : tip.vibe}
-        </p>
-        <p className="fit-scale">
-          <span className="fit-label">Scale</span>
-          {scale.map((s) => (
-            <span key={s} className="fit-deg">{s}</span>
-          ))}
-        </p>
-        <p className="fit-chars">
-          <span className="fit-label">Lean on</span>
-          {chars.map((c) => (
-            <span key={c} className="fit-chip">{c}</span>
-          ))}
-          <span className="muted"> — {md.characteristic}</span>
-        </p>
-        <p>
-          <b>How to play it.</b>{' '}
-          {isBass
-            ? 'Plant the root (or slash bass) on beat 1; use 5ths and stepwise walks between chords. Keep leaps small unless you want a hooky riff.'
-            : tip.lean}
-        </p>
-        {!isBass && <p className="fit-why">{tip.colour}{tip.avoid ? ` ${tip.avoid}` : ''}</p>}
-        {isBass && (
-          <p className="fit-why">
-            Empty bass bars still get an automatic root when the Bass part isn’t Off — write notes only where you want a composed line.
+      <details className="fit-explainer" aria-label={isBass ? 'How to play bass in this key' : 'How to play melodies in this key'}>
+        <summary>{isBass ? 'Bass' : 'Melody'} tips · {keyLabel}</summary>
+        <div className="fit-explainer-body">
+          <p>
+            <b>{isBass ? 'Bass' : 'Melody'} in {keyLabel}.</b>{' '}
+            {isBass
+              ? 'Low roots and fifths lock the harmony; scale walks and approaches colour the groove without stealing the tune.'
+              : tip.vibe}
           </p>
-        )}
-        <p>
-          Purple keys are in <b>{keyLabel}</b> ({isBass ? 'safest for a solid low end' : 'safest for a singable line'}). Outside keys add colour or friction on purpose.
-          {' '}{chordBit}
-        </p>
-        <ul className="fit-rel">
-          {REL_ORDER.map((r) => (
-            <li key={r}><i style={{ background: REL_COLORS[r] }} />{REL_LABEL[r]}</li>
-          ))}
-        </ul>
-        <p className="fit-why">
-          On strong beats, prefer in-chord notes; use colour on weak beats; resolve rubs/clashes by step.
-          Ranked suggestions put the best fit first — your ear still picks.
-        </p>
-      </aside>
+          <p className="fit-scale">
+            <span className="fit-label">Scale</span>
+            {scale.map((s) => (
+              <span key={s} className="fit-deg">{s}</span>
+            ))}
+          </p>
+          <p className="fit-chars">
+            <span className="fit-label">Lean on</span>
+            {chars.map((c) => (
+              <span key={c} className="fit-chip">{c}</span>
+            ))}
+            <span className="muted"> — {md.characteristic}</span>
+          </p>
+          <p>
+            <b>How to play it.</b>{' '}
+            {isBass
+              ? 'Plant the root (or slash bass) on beat 1; use 5ths and stepwise walks between chords. Keep leaps small unless you want a hooky riff.'
+              : tip.lean}
+          </p>
+          {!isBass && <p className="fit-why">{tip.colour}{tip.avoid ? ` ${tip.avoid}` : ''}</p>}
+          {isBass && (
+            <p className="fit-why">
+              Empty bass bars still get an automatic root when the Bass part isn’t Off — write notes only where you want a composed line.
+            </p>
+          )}
+          <p>
+            Purple keys are in <b>{keyLabel}</b> ({isBass ? 'safest for a solid low end' : 'safest for a singable line'}). Outside keys add colour or friction on purpose.
+            {' '}{chordBit}
+          </p>
+          <ul className="fit-rel">
+            {REL_ORDER.map((r) => (
+              <li key={r}><i style={{ background: REL_COLORS[r] }} />{REL_LABEL[r]}</li>
+            ))}
+          </ul>
+          <p className="fit-why">
+            On strong beats, prefer in-chord notes; use colour on weak beats; resolve rubs/clashes by step.
+            Ranked suggestions put the best fit first — your ear still picks.
+          </p>
+        </div>
+      </details>
     );
   }
   return (
-    <aside className="fit-explainer" aria-label="Which chords will work">
-      <p>
-        <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (home / builds / pulls home).
-        <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture at home.
-        <b> Extra colour</b> = borrowed modal surprise. <b>Secondaries</b> = aim at another chord, then resolve.
-      </p>
-      <p className="fit-why">
-        Muse ranks next chords by key fit, voice-leading from where you are, mood, and (when harmonizing) how well they sit under your melody.
-        Safe ↔ Adventurous nudges common vs rarer picks — orange/red melody tags are allowed if you resolve them.
-      </p>
-    </aside>
+    <details className="fit-explainer" aria-label="Which chords will work">
+      <summary>Chord tips · {keyLabel}</summary>
+      <div className="fit-explainer-body">
+        <p>
+          <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (home / builds / pulls home).
+          <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture at home.
+          <b> Extra colour</b> = borrowed modal surprise. <b>Secondaries</b> = aim at another chord, then resolve.
+        </p>
+        <p className="fit-why">
+          Muse ranks next chords by key fit, voice-leading from where you are, mood, and (when harmonizing) how well they sit under your melody.
+          Safe ↔ Adventurous nudges common vs rarer picks — orange/red melody tags are allowed if you resolve them.
+        </p>
+      </div>
+    </details>
   );
 }
