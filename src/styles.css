@@ -266,6 +266,9 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 }
 .band-request-songbox { border-style: dashed; }
 .band-request-actions { display: flex; flex-direction: column; gap: 6px; }
+.cof-block { margin-top: 8px; }
+.cof-instr { flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+.cof-instr .pill { font-size: 12px; padding: 4px 8px; }
 .band-request-recent { margin-top: 2px; padding-top: 6px; border-top: 1px solid var(--line); }
 .band-request-recent ul { margin: 4px 0 0; padding-left: 18px; }
 .band-request-recent a { color: #9ecbff; }
