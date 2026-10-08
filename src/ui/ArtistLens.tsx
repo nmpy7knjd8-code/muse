@@ -226,34 +226,42 @@ function BandRequestBox() {
     setSong('');
   };
   return (
-    <form className="band-request" onSubmit={submit} aria-label="Request a band for Artist Lens">
-      <h4>Request a band</h4>
-      <p className="small muted">Missing someone? Submit a name — we’ll add it in minutes.</p>
-      <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
-      <input aria-label="Why they fit" placeholder="Why they’re interesting (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-      <textarea
-        aria-label="Optional song analysis"
-        className="band-request-song"
-        placeholder="Optional song analysis — a track, key/mood moves, or what to capture in Artist Lens"
-        value={song}
-        onChange={(e) => setSong(e.target.value)}
-        rows={3}
-      />
-      <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
-      {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
-      {recent.length > 0 && (
-        <div className="band-request-recent">
-          <div className="small muted">Recent requests</div>
-          <ul className="small">
-            {recent.slice(0, 5).map((r) => (
-              <li key={`${r.band}-${r.at}`}>
-                {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
-                {r.song ? <span className="muted"> · has song notes</span> : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <form className="band-request-stack" onSubmit={submit} aria-label="Request a band for Artist Lens">
+      <div className="band-request">
+        <h4>Request a band</h4>
+        <p className="small muted">Missing someone? Submit a name — we’ll add it in minutes.</p>
+        <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <input aria-label="Why they fit" placeholder="Why they’re interesting (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+      <div className="band-request band-request-songbox">
+        <h4>Song analysis <span className="muted" style={{ fontWeight: 500 }}>(optional)</span></h4>
+        <p className="small muted">Add a track and what to capture — key, mood moves, techniques — submitted with the band request.</p>
+        <textarea
+          aria-label="Optional song analysis"
+          className="band-request-song"
+          placeholder="e.g. Song X — verse in Am, chorus lifts to C; want the ♭VII → I move and the vocal line over it"
+          value={song}
+          onChange={(e) => setSong(e.target.value)}
+          rows={4}
+        />
+      </div>
+      <div className="band-request-actions">
+        <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
+        {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
+        {recent.length > 0 && (
+          <div className="band-request-recent">
+            <div className="small muted">Recent requests</div>
+            <ul className="small">
+              {recent.slice(0, 5).map((r) => (
+                <li key={`${r.band}-${r.at}`}>
+                  {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
+                  {r.song ? <span className="muted"> · has song notes</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </form>
   );
 }
