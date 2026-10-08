@@ -1,7 +1,7 @@
 // SVG visualisations: piano, guitar diagram, voice leading, circle of fifths, Tonnetz.
 import { useMemo, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
 import {
-  Chord, GuitarShape, VoiceLine, asTriad, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsStepTag, midiOctave, mod, pc as pcOf, tonnetzPc, layoutMoodMap,
+  Chord, GuitarShape, VoiceLine, asTriad, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsMovePlain, fifthsStepTag, midiOctave, mod, pc as pcOf, tonnetzPc, layoutMoodMap,
 } from '../core';
 
 const isBlack = (m: number) => [1, 3, 6, 8, 10].includes(mod(m, 12));
@@ -235,15 +235,15 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
   // Step tags are vs current root when present, else vs tonic — so each note shows its directional role.
   const refPc = currentPc !== undefined ? currentPc : tonicPc;
   const move = currentPc !== undefined && selected ? fifthsDistance(currentPc, selected.pc) : null;
-  const moveLabel = currentPc !== undefined && selected
-    ? fifthsMoveLabel(currentPc, selected.pc)
+  const movePlain = currentPc !== undefined && selected
+    ? fifthsMovePlain(currentPc, selected.pc)
     : selected
-      ? fifthsMoveLabel(tonicPc, selected.pc)
+      ? fifthsMovePlain(tonicPc, selected.pc)
       : null;
   const fromName = currentPc !== undefined ? spellPc(currentPc) : spellPc(tonicPc);
   const toName = selected ? spellPc(selected.pc) : null;
   return (
-    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths">
+    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — neighbors are close harmonic moves">
       <defs>
         <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill={selected?.color ?? '#fff'} />
@@ -257,11 +257,11 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
       </defs>
       <circle cx={c} cy={c} r={R + 22} fill="#17161d" stroke="#2c2a36" />
       <circle cx={c} cy={c} r={R - 30} fill="#121117" stroke="#2c2a36" />
-      {/* Direction legend: CW = sharpward / dominant; CCW = flatward / subdominant */}
+      {/* Direction legend: clockwise = brighter / homeward; counter-clockwise = opener / relax */}
       <path d={`M ${c + 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 1 ${c + R - 42} ${c - 4}`} fill="none" stroke="#7fd0a8" strokeWidth={1.4} markerEnd="url(#arrowhead-cw)" opacity={0.85} />
       <path d={`M ${c - 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 0 ${c - R + 42} ${c - 4}`} fill="none" stroke="#f0a070" strokeWidth={1.4} markerEnd="url(#arrowhead-ccw)" opacity={0.85} />
-      <text x={c + 52} y={c - R + 30} className="cdir cw">CW · ♯ · V side</text>
-      <text x={c - 52} y={c - R + 30} className="cdir ccw">CCW · ♭ · IV side</text>
+      <text x={c + 54} y={c - R + 30} className="cdir cw">→ brighter</text>
+      <text x={c - 54} y={c - R + 30} className="cdir ccw">← opens</text>
       {Array.from({ length: 12 }, (_, i) => {
         const p = mod(i * 7, 12);
         const { x, y } = pos(p, R);
@@ -314,39 +314,41 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
             key={o.id}
             cx={c + Math.cos(a) * r}
             cy={c + Math.sin(a) * r}
-            r={6}
+            r={6.5}
             fill={o.color}
+            stroke="#121117"
+            strokeWidth={1}
             onPointerDown={(e) => { e.stopPropagation(); onPick?.(o.id); }}
             style={{ cursor: onPick ? 'pointer' : undefined }}
-          />
+          >
+            <title>Suggested next — tap to hear</title>
+          </circle>
         );
       })}
       {arrow && selected && <path d={arrow} stroke={selected.color} strokeWidth={3.5} fill="none" markerEnd="url(#arrowhead)" opacity={0.95} />}
       {selected && (
         <g>
-          <text x={c} y={c - 14} className="ccenter" fill={selected.color}>{selected.label}</text>
-          {toName && move !== null && (
-            <text x={c} y={c + 6} className="cmove" fill={selected.color}>
-              {fromName}{move > 0 ? ' → ' : move < 0 ? ' ← ' : ' = '}{toName}
-              {move !== 0 ? `  (${move > 0 ? '+' : ''}${move})` : ''}
+          <text x={c} y={c - 18} className="ccenter" fill={selected.color}>{selected.label}</text>
+          {toName && (
+            <text x={c} y={c} className="cmove" fill={selected.color}>
+              {fromName}{move !== null && move < 0 ? ' ← ' : ' → '}{toName}
             </text>
           )}
-          {toName && move === null && (
-            <text x={c} y={c + 6} className="cmove" fill={selected.color}>
-              {fromName} → {toName}
-            </text>
-          )}
-          {moveLabel && (
-            <text x={c} y={c + 22} className="ceffect" fill="#cfcbe0">
-              {moveLabel.length > 42 ? `${moveLabel.slice(0, 40)}…` : moveLabel}
-            </text>
+          {movePlain && (
+            <>
+              <text x={c} y={c + 14} className="ceffect" fill="#e8e4f4">{movePlain.title}</text>
+              <text x={c} y={c + 26} className="ceffect soft" fill="#a9a3bc">
+                {movePlain.hint.length > 44 ? `${movePlain.hint.slice(0, 42)}…` : movePlain.hint}
+              </text>
+            </>
           )}
         </g>
       )}
       {!selected && (
         <g>
-          <text x={c} y={c - 4} className="ccenter" fill="#bdb8d4">{spellPc(tonicPc)}</text>
-          <text x={c} y={c + 14} className="ceffect" fill="#8f8aa3">tonic · +CW = V · −CCW = IV</text>
+          <text x={c} y={c - 10} className="ccenter" fill="#bdb8d4">{spellPc(tonicPc)}</text>
+          <text x={c} y={c + 6} className="ceffect" fill="#cfcbe0">home of this key</text>
+          <text x={c} y={c + 18} className="ceffect soft" fill="#8f8aa3">rim dots = next picks · tap to hear</text>
         </g>
       )}
     </svg>

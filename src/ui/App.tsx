@@ -550,7 +550,10 @@ function Composer({ data }: { data: LoadedData }) {
             onPick={(id) => { const s = noteSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playNoteMove(s); } }}
             onAddPc={addMelodyPc}
           />
-          <p className="small muted center">Tap a note to add melody · plays on <b>{INSTRUMENTS[instrument].label}</b> · outer dots preview</p>
+          <p className="small muted center">
+            Big letters = notes you can add · colored rim dots = Muse’s next-note picks (tap to hear) ·
+            numbers are steps from where you are (+ right/brighter, − left/opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
+          </p>
           <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
             {INSTRUMENT_IDS.map((id) => (
               <button key={id} type="button" className={'pill' + (instrument === id ? ' on' : '')} onClick={() => chooseInstrument(id)}>
@@ -577,7 +580,11 @@ function Composer({ data }: { data: LoadedData }) {
           onPick={(id) => { const s = chordSugs.find((x) => x.id === id); if (s) { setSelectedId(id); playMove(s); } }}
           onAddPc={addCircleChord}
         />
-        <p className="small muted center">Tap to add a chord · plays on <b>{INSTRUMENTS[instrument].label}</b> · outer dots preview · +N = CW/V · −N = CCW/IV</p>
+        <p className="small muted center">
+          Big letters = chords you can add · colored rim dots = Muse’s next-chord picks (tap to hear) ·
+          +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
+          plays on <b>{INSTRUMENTS[instrument].label}</b>
+        </p>
         <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
           {INSTRUMENT_IDS.map((id) => (
             <button key={id} type="button" className={'pill' + (instrument === id ? ' on' : '')} onClick={() => chooseInstrument(id)}>
@@ -590,7 +597,7 @@ function Composer({ data }: { data: LoadedData }) {
     if (!selChord) {
       return (
         <div className="vis-body">
-          <p className="muted">Suggestions appear here — or tap a note on the circle to add its chord on any instrument.</p>
+          <p className="muted">Pick a suggestion below, or tap a letter on the circle to add that chord. Colored dots on the rim are Muse’s recommended next moves.</p>
           {cofBlock()}
         </div>
       );
@@ -1033,37 +1040,39 @@ function Composer({ data }: { data: LoadedData }) {
           <div className="path-block">
             <div className="row gap" style={{ alignItems: 'center', marginBottom: 4 }}>
               <h4 style={{ margin: 0, flex: 1 }}>
-                {pathLen}-step {tab === 'chords' ? 'chord paths' : 'note lines'}
+                {tab === 'chords' ? 'Ready-made progressions' : 'Ready-made melody runs'}
               </h4>
-              <button type="button" className={'pill' + (pathLen === 2 ? ' on' : '')} onClick={() => setPathLen(2)}>2</button>
-              <button type="button" className={'pill' + (pathLen === 3 ? ' on' : '')} onClick={() => setPathLen(3)}>3</button>
+              <span className="small muted">length</span>
+              <button type="button" className={'pill' + (pathLen === 2 ? ' on' : '')} onClick={() => setPathLen(2)} aria-label="2 steps">2</button>
+              <button type="button" className={'pill' + (pathLen === 3 ? ' on' : '')} onClick={() => setPathLen(3)} aria-label="3 steps">3</button>
             </div>
             <p className="small muted" style={{ margin: '0 0 6px' }}>
               {tab === 'chords'
-                ? 'Add several chords at once. Blue notes are connecting melody between them — Hear plays the whole path.'
-                : 'Add a short melody run (2 or 3 notes) in one tap. Hear previews the line over the current chord.'}
+                ? 'A short sequence Muse thinks works next. Blue notes are sung/played between the chords so the jump feels smooth — ▶ hears the whole thing before you add it.'
+                : 'A short run of notes Muse ranks as a good next phrase. ▶ hears it over the current chord; ＋ adds every note in order.'}
             </p>
             <div className="path-row">
               {tab === 'chords' ? chordPaths.map((p) => (
                 <div key={p.id} className="path-chip">
                   <div>
                     <div className="path-syms">{formatChordPath(p)}</div>
-                    <div className="path-mel">{p.linkNames.length ? `connecting notes: ${p.linkNames.join(' · ')}` : ''}</div>
+                    <div className="path-mel">{p.linkNames.length ? `between chords, try: ${p.linkNames.join(' · ')}` : ''}</div>
+                    {p.why && <div className="path-why">{p.why}</div>}
                   </div>
                   <div className="path-actions">
-                    <button type="button" aria-label="Hear path" onClick={() => playChordPath(p)}>▶</button>
-                    <button type="button" className="add" aria-label="Add path" onClick={() => addChordPath(p)}>＋</button>
+                    <button type="button" aria-label="Hear this progression" onClick={() => playChordPath(p)}>▶</button>
+                    <button type="button" className="add" aria-label="Add this progression" onClick={() => addChordPath(p)}>＋</button>
                   </div>
                 </div>
               )) : notePaths.map((p) => (
                 <div key={p.id} className="path-chip">
                   <div>
                     <div className="path-syms">{formatNotePath(p)}</div>
-                    <div className="small muted">{p.why}</div>
+                    {p.why && <div className="path-why">{p.why}</div>}
                   </div>
                   <div className="path-actions">
-                    <button type="button" aria-label="Hear path" onClick={() => playNotePath(p)}>▶</button>
-                    <button type="button" className="add" aria-label="Add path" onClick={() => addNotePath(p)}>＋</button>
+                    <button type="button" aria-label="Hear this melody run" onClick={() => playNotePath(p)}>▶</button>
+                    <button type="button" className="add" aria-label="Add this melody run" onClick={() => addNotePath(p)}>＋</button>
                   </div>
                 </div>
               ))}

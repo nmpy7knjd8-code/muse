@@ -172,6 +172,7 @@ svg .cstep.cw { fill: #7fd0a8; }
 svg .cstep.ccw { fill: #f0a070; }
 svg .cstep.home { fill: #bdb8d4; }
 svg .ceffect { font-size: 8.5px; text-anchor: middle; }
+svg .ceffect.soft { font-size: 7.5px; font-weight: 500; }
 svg .cadd { font-size: 8px; fill: #bdb8d4; text-anchor: middle; pointer-events: none; font-weight: 600; }
 svg .cnode-hit:hover circle:nth-of-type(2) { stroke: #ECEAF4; stroke-width: 2; }
 svg .tgrid line { stroke: #34313f; stroke-width: 1; }
@@ -334,6 +335,7 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .path-chip.on { border-color: #7fd0a8; }
 .path-chip .path-syms { font-weight: 700; font-size: 14px; line-height: 1.35; }
 .path-chip .path-mel { color: #7fd3ff; font-size: 12px; margin-top: 2px; }
+.path-chip .path-why { color: var(--muted, #8f8aa3); font-size: 11px; margin-top: 3px; line-height: 1.35; }
 .path-actions { display: flex; gap: 4px; }
 .tension-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .tension-head select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; font-size: 13px; }

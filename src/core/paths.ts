@@ -129,7 +129,14 @@ export function suggestChordPaths(
       mel = [...mel, midi];
     }
     const symbols = added.map((c) => chordSymbol(c, true));
-    const why = b.sugs.map((s) => s.symbol).join(' → ') + (linkNames.length ? ` · via ${linkNames.join(' · ')}` : '');
+    // Feel-first blurb: mood of the first step + that the blue notes smooth the jumps.
+    const moodBit = b.sugs[0]?.moodShift?.text
+      ?? (b.sugs[0]?.primaryMood ? `leans ${b.sugs[0].primaryMood}` : '');
+    const why = [
+      `${steps} chords Muse ranks highly from here`,
+      moodBit,
+      linkNames.length ? 'blue notes bridge each jump' : '',
+    ].filter(Boolean).join(' · ');
     out.push({
       id: `path:${symbols.join('>')}`,
       chords: added,
@@ -192,12 +199,16 @@ export function suggestNotePaths(
     if (seen.has(key)) continue;
     seen.add(key);
     const names = added.map((m) => midiName(m, spellInKey(opts.key, m)).replace('#', '♯').replace(/b(?=\d)/, '♭'));
+    const first = b.sugs[0];
+    const feel = first?.relation?.why
+      ?? (first?.isChordTone ? 'lands on notes already in the chord — stable' : first?.why?.split(' — ')[0])
+      ?? 'fits the current chord and key';
     out.push({
       id: `npath:${key}`,
       midis: added,
       names,
       score: b.score,
-      why: names.join(' → ') + (b.sugs[0]?.relation ? ` · ${b.sugs[0].relation.label}` : ''),
+      why: feel,
     });
     if (out.length >= limit) break;
   }
