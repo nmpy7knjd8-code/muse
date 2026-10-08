@@ -742,8 +742,20 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #7fd3ff;
   background: transparent; display: inline-block; vertical-align: -1px; margin-right: 4px;
 }
+/* Selection chrome: outer frame when melody/bass lanes are present */
 .tbar.on { outline: 2px solid rgba(127, 208, 168, 0.65); outline-offset: 2px; border-radius: 12px; }
 .tbar.on .tchord { border-color: #7fd0a8; }
+/* Chord-only timeline: no empty lanes / no outer green box — highlight the card itself */
+.timeline.chords-only { min-height: 0; align-items: flex-start; }
+.timeline.chords-only .tbar.on { outline: none; outline-offset: 0; }
+.timeline.chords-only .tchord.sel,
+.timeline.chords-only .tbar.on:not(.playing) .tchord {
+  border-color: #7fd0a8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 2px rgba(127, 208, 168, 0.5),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+}
 
 /* How-to Guide */
 .guide-page { margin-top: 4px; }

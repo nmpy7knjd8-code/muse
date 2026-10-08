@@ -85,6 +85,32 @@ describe('timeline slots', () => {
     expect(ev.total).toBe(4); // 2 bars × 4 beats × 0.5s
     expect(noteDurations(slots[0].notes)[0]).toBe(4);
   });
+  it('timelineEvents startIndex plays from a mid-timeline bar', () => {
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = setSlotChord(slots, 1, ch('Am'));
+    slots = setSlotChord(slots, 2, ch('F'));
+    slots = setSlotChord(slots, 3, ch('G'));
+    const full = timelineEvents(slots, { beatSec: 0.5, chordOnlyStep: 1 });
+    expect(full.chords).toHaveLength(4);
+    expect(full.total).toBe(4);
+    const from2 = timelineEvents(slots, { beatSec: 0.5, chordOnlyStep: 1, startIndex: 2 });
+    expect(from2.chords.map((c) => c.index)).toEqual([2, 3]);
+    expect(from2.chords[0]!.at).toBe(0);
+    expect(from2.chords[1]!.at).toBe(1);
+    expect(from2.total).toBe(2);
+    // Melody from a later bar stays relative to the slice origin
+    let lined = setSlotChord([], 0, ch('C'));
+    lined = insertNote(lined, 72).slots;
+    lined = setSlotChord(lined, 1, ch('G'));
+    lined = insertNote(lined, 67, 1).slots; // bar 1
+    const mid = timelineEvents(lined, { beatSec: 0.5, startIndex: 1 });
+    expect(mid.chords.map((c) => c.index)).toEqual([1]);
+    expect(mid.chords[0]!.at).toBe(0);
+    expect(mid.notes).toHaveLength(1);
+    expect(mid.notes[0]!.index).toBe(1);
+    expect(mid.notes[0]!.at).toBe(0);
+    expect(mid.total).toBe(2); // one remaining bar
+  });
   it('inserts bass notes on a separate lane without touching melody', () => {
     let slots = setSlotChord([], 0, ch('C'));
     slots = insertNote(slots, 72).slots;

@@ -508,10 +508,13 @@ function Composer({ data }: { data: LoadedData }) {
     synth.unlock();
     synth.stopAll();
     for (const id of activeParts) void synth.ensureLoaded(id);
-    const ev = timelineEvents(slots, { timeSig, beatSec });
+    // ▶ Play from the selected bar (if any); otherwise from the start.
+    const startIndex = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? 0) : 0;
+    const ev = timelineEvents(slots, { timeSig, beatSec, startIndex });
     const origin = synth.scheduleOrigin();
     setTransport({ origin, events: ev });
     setPlaySec(0);
+    // Full progression for voice-leading; only schedule events from startIndex onward.
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
@@ -1211,14 +1214,21 @@ function Composer({ data }: { data: LoadedData }) {
         {slots.length === 0 ? (
           <p className="muted small">Tap chords below to start, or switch to Melody / Bass — all share this timeline. New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.</p>
         ) : (
-          <div className="timeline" role="list" ref={timelineRef}>
+          <div
+            className={'timeline' + (slots.some((s) => s.notes.length || slotBass(s).length) ? '' : ' chords-only')}
+            role="list"
+            ref={timelineRef}
+          >
             {slots.map((s, i) => {
               const labeled = labelSlot(s, data.kb, beats);
               const bassLabeled = labelBassSlot(s, data.kb, beats);
               const chordedIdx = s.chord ? chordedSlotIndices.indexOf(i) : -1;
-              const tensionOn = chordedIdx >= 0 && (tensionPick ?? chordedSlotIndices.length - 1) === chordedIdx;
+              // Only an explicit pick shows selection chrome (no default-to-last outline).
+              const tensionOn = chordedIdx >= 0 && tensionPick === chordedIdx;
               const playOn = playActive?.chordIndex === i;
               const bassPlayId = bassInst === 'off' ? 'bass' : bassInst;
+              const showLanes = labeled.length > 0 || bassLabeled.length > 0
+                || slots.some((x) => x.notes.length || slotBass(x).length);
               return (
                 <div
                   key={i}
@@ -1226,6 +1236,7 @@ function Composer({ data }: { data: LoadedData }) {
                   className={'tbar' + (s.locked ? ' locked' : '') + (!s.chord ? ' nc' : '') + (tensionOn || playOn ? ' on' : '') + (playOn ? ' playing' : '')}
                   role="listitem"
                 >
+                  {showLanes && (
                   <div className="tmel" aria-label={`Bar ${i + 1} melody`}>
                     {labeled.length === 0 && <span className="muted small">·</span>}
                     {labeled.map((n, j) => {
@@ -1248,8 +1259,9 @@ function Composer({ data }: { data: LoadedData }) {
                       );
                     })}
                   </div>
+                  )}
                   <div
-                    className={'tchord' + (s.locked ? ' locked' : '')}
+                    className={'tchord' + (s.locked ? ' locked' : '') + (tensionOn ? ' sel' : '')}
                     onClick={() => {
                       if (s.chord) {
                         playChord(s.chord);
@@ -1308,6 +1320,7 @@ function Composer({ data }: { data: LoadedData }) {
                       </button>
                     </div>
                   </div>
+                  {showLanes && (
                   <div className="tbass" aria-label={`Bar ${i + 1} bass`}>
                     {bassLabeled.length === 0 && <span className="muted small">·</span>}
                     {bassLabeled.map((n, j) => {
@@ -1337,6 +1350,7 @@ function Composer({ data }: { data: LoadedData }) {
                       );
                     })}
                   </div>
+                  )}
                 </div>
               );
             })}
