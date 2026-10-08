@@ -8,6 +8,7 @@ import {
   INSTRUMENTS, INSTRUMENT_IDS, chordMidis, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
   TimelineSlot, activeSlotIndex, chordTargetIndex, chordsOf, clearSlotChord, insertNote, labelSlot, melodyOf,
   nextNoteBeat, noteDurations, removeNoteAt, removeSlot, setSlotChord, timelineEvents, timelineText, toMidiTimeline,
+  harmPreviewEvents,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtTag, rootMotion,
   TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, beatsPerBar, clampSlotsToMeter, parseMeter,
@@ -163,12 +164,12 @@ function Composer({ data }: { data: LoadedData }) {
   const chordSugs: ChordSuggestion[] = useMemo(() => {
     if (tab !== 'chords') return [];
     const progression = pendingHarm ? chordsOf(slots.slice(0, chordTarget)) : chords;
-    const durs = pendingHarm ? noteDurations(pendingHarm.notes) : [];
+    const durs = pendingHarm ? noteDurations(pendingHarm.notes, beats) : [];
     const harmonize = pendingHarm
       ? pendingHarm.notes.map((n, i) => ({ midi: n.midi, beat: n.beat, dur: durs[i] }))
       : undefined;
     return engine.suggestChords({ key: k, progression, profile, adventure, limit: 28, tensionStyle: tStyle, harmonize });
-  }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, beats]); // eslint-disable-line react-hooks/exhaustive-deps
   const tState = useMemo(() => {
     const steps = slots.filter((s) => s.chord).map((s) => ({ chord: s.chord as Chord, melody: s.notes.map((n) => n.midi) }));
     return steps.length ? progressionTension(steps, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null;
@@ -228,9 +229,29 @@ function Composer({ data }: { data: LoadedData }) {
   const playChord = (c: Chord, prev?: number[]) => { synth.unlock(); synth.stopAll(); const v = pianoVoicing(c, prev); synth.playNotes(withBass(c, v)); };
   const playMove = (s: ChordSuggestion) => {
     // Hear previews only the potential next chord (not previous → next).
+    // When harmonizing a pending melody bar, overlay that bar's notes on the same grid.
     synth.unlock();
     synth.stopAll();
-    synth.playNotes(withBass(s.chord, s.voicing));
+    if (pendingHarm?.notes.length) {
+      const prev = harmPreviewEvents(pendingHarm.notes, { timeSig });
+      synth.playNotes(withBass(s.chord, s.voicing), { dur: prev.chordDur, vel: 0.62 });
+      prev.notes.forEach((n) => synth.playNotes([n.midi], { at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85 }));
+    } else {
+      synth.playNotes(withBass(s.chord, s.voicing));
+    }
+  };
+  const startHarmonize = () => {
+    setTab('chords');
+    setSelectedId(null);
+    flash(`Pick a chord for bar ${chordTarget + 1} melody`);
+  };
+  const reharmBar = (i: number) => {
+    if (!slots[i]?.chord || slots[i].locked || !slots[i].notes.length) return;
+    snapshot();
+    setSlots((s) => clearSlotChord(s, i));
+    setTab('chords');
+    setSelectedId(null);
+    flash(`Reharmonize bar ${i + 1} — Hear plays chord + melody`);
   };
   const playNoteMove = (n: NoteSuggestion) => {
     synth.unlock();
@@ -264,7 +285,6 @@ function Composer({ data }: { data: LoadedData }) {
     setSelectedId(null);
   };
   const removeAt = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => removeSlot(s, i)); };
-  const dropChord = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => clearSlotChord(s, i)); };
   const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
   const clearAll = () => { synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
@@ -653,7 +673,11 @@ function Composer({ data }: { data: LoadedData }) {
                     <div className="chip-actions">
                       {s.chord && <button aria-label="Lock chord" onClick={(e) => { e.stopPropagation(); toggleLock(i); }}>{s.locked ? '🔒' : '🔓'}</button>}
                       {s.chord && s.notes.length > 0 && !s.locked && (
-                        <button aria-label="Clear chord, keep melody" title="Clear chord, keep melody" onClick={(e) => { e.stopPropagation(); dropChord(i); }}>⌀</button>
+                        <button
+                          aria-label="Reharmonize bar"
+                          title="Clear chord and find a better fit for this melody"
+                          onClick={(e) => { e.stopPropagation(); reharmBar(i); }}
+                        >↻</button>
                       )}
                       <button aria-label="Remove bar" onClick={(e) => { e.stopPropagation(); removeAt(i); }}>×</button>
                     </div>
@@ -668,6 +692,19 @@ function Composer({ data }: { data: LoadedData }) {
             <span key={r}><i style={{ background: REL_COLORS[r] }} />{REL_LABEL[r]}</span>
           ))}
         </div>
+        {pendingHarm && (
+          <div className="harm-banner" role="status">
+            <div className="harm-banner-text">
+              <b>Bar {chordTarget + 1}</b> has melody waiting for a chord
+              <span className="muted"> · {pendingHarm.notes.map((n) => spellMidi(n.midi)).join(' ')}</span>
+            </div>
+            {tab === 'chords' ? (
+              <span className="small muted">Hear plays chord + melody together</span>
+            ) : (
+              <button type="button" className="add" onClick={startHarmonize}>Harmonize →</button>
+            )}
+          </div>
+        )}
         <div className="row gap">
           <button onClick={playAll} disabled={!slots.length}>▶ Play</button>
           <button onClick={undo} disabled={!history.length}>↶ Undo</button>
@@ -771,7 +808,7 @@ function Composer({ data }: { data: LoadedData }) {
           <div className="melody-input">
             <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" labelKeys="all" />
             <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
-            <p className="small muted">Tap keys (or 👂 Listen) to fill the melody lane above each chord. Notes land on successive beats; a full bar spills into the next (N.C. until you add a chord).</p>
+            <p className="small muted">Tap keys (or 👂 Listen) to fill the melody lane above each chord. Notes land on successive beats; a full bar spills into the next (N.C.). Use <b>Harmonize</b> to pick a chord — Hear plays chord + melody together. On a filled bar, ↻ reharmonizes.</p>
           </div>
         )}
         </>)}
@@ -914,9 +951,12 @@ function Composer({ data }: { data: LoadedData }) {
           selectedId={tab === 'chords' ? (selChord?.id ?? null) : (selNote?.id ?? null)}
           colorOf={(id) => lex.color(id)}
           labelOf={(id) => lex.label(id)}
+          harmonizing={tab === 'chords' && !!pendingHarm}
           fromChord={tab === 'chords' ? cur : undefined}
           fromLabel={tab === 'chords'
-            ? (cur ? chordSymbol(cur, true) : undefined)
+            ? (pendingHarm
+              ? `bar ${chordTarget + 1} melody`
+              : (cur ? chordSymbol(cur, true) : undefined))
             : (melody.length ? spellMidi(melody[melody.length - 1]) : undefined)}
           onSelect={(id) => {
             setSelectedId(id);
@@ -1022,7 +1062,7 @@ function Composer({ data }: { data: LoadedData }) {
               {selChord.moodShift && <span className="shift">{selChord.moodShift.arrow} {selChord.moodShift.text}</span>}
             </div>
             <div className="row gap">
-              <button onClick={() => playMove(selChord)}>▶ Hear</button>
+              <button onClick={() => playMove(selChord)}>{pendingHarm ? '▶ Hear with melody' : '▶ Hear'}</button>
               <button className="add" onClick={() => { addChord(selChord.chord); setDetail(false); }}>＋ Add</button>
             </div>
             <Dims s={selChord} />

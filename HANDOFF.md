@@ -10,6 +10,11 @@ Run: `npm install && npm run dev`. Test: `npx vitest run`. Build: `npm run build
 ## Done on main
 v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/mood map/circle/Tonnetz visuals; mood journey; lore mode; Listen mode (mic note + chord recognition); sampled instruments + picker; clearer scale tint; Artist Lens tab; tension budget + curve view; chords + melody timeline (two lanes, note↔chord labels, N.C. harmonize, shared play/MIDI); NextPickBoard; CoF tap-to-add + direction labels; root ↑/↓; key persistence; bass + electric guitar; expanded Artist Lens (virtuosic + classic rock) + request box.
 
+## Chord ↔ melody link (this branch)
+- Hear a suggested chord under a pending N.C. melody plays chord + that bar’s notes together (`harmPreviewEvents`).
+- Harmonize banner when a bar has melody waiting; NextPickBoard switches to clash→fit × calm→tense.
+- Timeline ↻ clears a chord and re-opens chord suggestions for that melody (reharm).
+
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).
 - Tune mood and tension weights with real listening.
