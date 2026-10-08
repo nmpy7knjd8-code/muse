@@ -26,6 +26,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Guide: “Which notes & chords will work” (relation tags + ranking) and Mic/MIDI section.
 - In-context FitExplainer under Melody piano / Chords palettes (key tint + relation chips + ranking why).
 - “Best fit first” suggestion cards sit directly under the Circle of Fifths (not below the next-pick board).
+- Circle of fifths letter nodes brighten by next-pick rank (top suggestions most visible; unranked dim).
 
 ## Artist Lens band requests
 - UI: Artist Lens → Request a band opens a prefilled GitHub issue (`Artist Lens request: …`, label `enhancement`). User must tap **Create** on GitHub. Also offers **Ask Cursor** (prompt deeplink) and **Copy muse.bandRequests JSON**.
