@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseMeter, beatsPerBar, strongBeats, midiTimeSigBytes, timeSigLabel,
+  beatSecFromBpm, clampBpm, DEFAULT_BPM,
   clampSlotsToMeter, insertNote, setSlotChord, timelineEvents, toMidiTimeline,
   parseChord, loadTryIt, normalizeArtists,
 } from '../src/core';
@@ -27,6 +28,12 @@ describe('parseMeter', () => {
     expect(strongBeats({ num: 7, den: 8 })).toEqual([0, 2, 4]);
     expect(beatsPerBar({ num: 3, den: 4 })).toBe(3);
   });
+  it('maps BPM to beat seconds for playback', () => {
+    expect(clampBpm(120)).toBe(120);
+    expect(clampBpm(10)).toBe(40);
+    expect(beatSecFromBpm(120)).toBeCloseTo(0.5);
+    expect(beatSecFromBpm(DEFAULT_BPM)).toBeCloseTo(60 / DEFAULT_BPM);
+  });
 });
 
 describe('timeline respects meter', () => {
@@ -38,12 +45,15 @@ describe('timeline respects meter', () => {
     const clamped = clampSlotsToMeter(slots, 2);
     expect(clamped[0].notes).toHaveLength(2);
   });
-  it('playback length scales with beats per bar', () => {
+  it('playback length scales with beats per bar and BPM', () => {
     const slots = setSlotChord([], 0, ch('C'));
     const a = timelineEvents(slots, { timeSig: { num: 4, den: 4 }, beatSec: 0.5 });
     const b = timelineEvents([{ chord: ch('C'), notes: [{ midi: 60, beat: 0 }] }], { timeSig: { num: 3, den: 4 }, beatSec: 0.5 });
     expect(b.total).toBe(1.5);
-    expect(a.total).toBe(0.9); // chord-only step when no melody
+    expect(a.total).toBeCloseTo(0.5 * 2.14); // chord-only step scales with beat
+    const fast = timelineEvents(slots, { timeSig: { num: 4, den: 4 }, bpm: 180 });
+    const slow = timelineEvents(slots, { timeSig: { num: 4, den: 4 }, bpm: 90 });
+    expect(fast.total).toBeLessThan(slow.total);
     const mid = toMidiTimeline(slots, 90, { num: 5, den: 4 });
     expect(mid[0]).toBe(0x4d);
   });

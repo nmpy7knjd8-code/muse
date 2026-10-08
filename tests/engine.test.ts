@@ -141,6 +141,51 @@ describe('melody suggestions', () => {
     const clash = s.find((n) => n.relation?.kind === 'clash');
     if (clash) expect(bestChord.score).toBeGreaterThan(clash.score);
   });
+
+  it('names the arrival chord of a 4-chord stretch in the why line', () => {
+    const prog = [ch('C'), ch('Am'), ch('F'), ch('G')];
+    const s = eng.suggestNotes({
+      key: key('C'),
+      melody: [60, 64],
+      chord: ch('G'),
+      progression: prog,
+      beat: 0,
+      limit: 12,
+    });
+    expect(s.length).toBeGreaterThan(3);
+    // Chord tones of the arrival (G) should mention G and the stretch in why.
+    const tone = s.find((n) => n.isChordTone && n.relation?.kind === 'chord');
+    expect(tone).toBeDefined();
+    expect(tone!.why).toMatch(/G/);
+    expect(tone!.why).toMatch(/C–Am–F–G|end of/);
+  });
+
+  it('boosts arrival-chord tones over leftovers from the previous chord in a stretch', () => {
+    // C–G: A is in C (vi-ish colour / 6th) but not a G triad tone; B is the 3rd of G (new arrival colour).
+    const withStretch = eng.suggestNotes({
+      key: key('C'),
+      melody: [64],
+      chord: ch('G'),
+      progression: [ch('C'), ch('G')],
+      beat: 0,
+      limit: 20,
+    });
+    const alone = eng.suggestNotes({
+      key: key('C'),
+      melody: [64],
+      chord: ch('G'),
+      beat: 0,
+      limit: 20,
+    });
+    const bStretch = withStretch.find((n) => n.midi % 12 === 11)!; // B
+    const bAlone = alone.find((n) => n.midi % 12 === 11)!;
+    expect(bStretch).toBeDefined();
+    expect(bAlone).toBeDefined();
+    // Relative: arrival 3rd should rank at least as well once stretch context is added.
+    const rank = (list: typeof withStretch, pc: number) => list.findIndex((n) => n.midi % 12 === pc);
+    expect(rank(withStretch, 11)).toBeLessThanOrEqual(rank(alone, 11) + 1);
+    expect(withStretch.slice(0, 5).some((n) => n.isChordTone)).toBe(true);
+  });
 });
 
 describe('free-text mood lexicon', () => {

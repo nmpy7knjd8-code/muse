@@ -36,7 +36,7 @@ const SECTIONS: Section[] = [
     title: 'The timeline (two lanes)',
     use: 'Each bar has a chord underneath (staff of its notes above the name) and optional melody notes on top. Tap a chord to hear it; tap a melody note’s label to hear that pitch. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
     musicality: 'Harmony and melody are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are.',
-    tip: '▶ Play hears chords and melody together in time.',
+    tip: '▶ Play hears chords and melody together in time. Use the BPM control next to Play (or beside Meter) to slow down or speed up.',
   },
   {
     id: 'chords',
@@ -102,7 +102,7 @@ const SECTIONS: Section[] = [
   {
     id: 'circle',
     title: 'Circle of fifths',
-    use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking (strongest suggestions glow most). Rim dots are Muse’s next picks — variants of the same root fan out so each is tappable; bigger / brighter / lower number = better. Tap a dot to hear. Same-root colour (e.g. C→Cmaj7) shows “same root” instead of a looping arrow. +1/−1 under letters = steps from where you are. Ranked “Best fit first” cards sit directly under the circle.',
+    use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking (strongest suggestions glow most). Rim chips are Muse’s next picks — variants of the same root stack outward on that spoke so nothing overlaps; bigger / brighter / lower number = better, with a short quality tag (Δ7, m, 7…) beside each chip. Tap a chip to hear. Same-root colour (e.g. C→Cmaj7) shows “same root” instead of a looping arrow. +1/−1 under letters = steps from where you are. Ranked “Best fit first” cards sit directly under the circle.',
     musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
     tip: 'Under the timeline, set Chords / Melody / Bass instruments separately — ▶ Play layers them.',
   },
@@ -121,7 +121,7 @@ const SECTIONS: Section[] = [
   {
     id: 'instruments',
     title: 'Instrument sounds',
-    use: 'Assign instruments per part: Chords, Melody, and optional Bass (Off keeps the old single-timbral mix). Piano, nylon/steel/metal guitar, Rhodes, pad, or bass — metal runs a high-gain amp; a dedicated Bass part plays the root while chords stay upper voices.',
+    use: 'Assign instruments per part: Chords, Melody, and optional Bass (Off keeps the old single-timbral mix). Piano, nylon/steel/metal guitar, Rhodes, pad, or bass — metal is clean electric guitar through a high-gain amp/cab; a dedicated Bass part plays the root while chords stay upper voices.',
     musicality: 'Register and timbre change meaning: pad chords under a bright melody (or a separate bass line) already feels like an arrangement. Hear options in the texture you’ll actually write in.',
   },
   {
