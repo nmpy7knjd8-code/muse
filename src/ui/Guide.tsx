@@ -36,7 +36,7 @@ const SECTIONS: Section[] = [
     title: 'The timeline (two lanes)',
     use: 'Each bar has a chord underneath (staff of its notes above the name) and optional melody notes on top. Tap a chord to hear it; tap a melody note’s label to hear that pitch. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
     musicality: 'Harmony and melody are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are.',
-    tip: '▶ Play hears chords and melody together in time.',
+    tip: '▶ Play hears chords and melody together in time. Use the BPM control next to Play (or beside Meter) to slow down or speed up.',
   },
   {
     id: 'chords',
@@ -121,7 +121,7 @@ const SECTIONS: Section[] = [
   {
     id: 'instruments',
     title: 'Instrument sounds',
-    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, or bass. Muse voices chords for that instrument (bass plays a single low root; metal runs a high-gain amp). Melody notes fold into each instrument’s playable range.',
+    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, or bass. Muse voices chords for that instrument (bass plays a single low root; metal is clean electric guitar through a high-gain amp/cab). Melody notes fold into each instrument’s playable range.',
     musicality: 'Register and timbre change meaning: the same progression on bass vs pad feels like different arrangements. Hear options in the texture you’ll actually write in.',
   },
   {
