@@ -116,6 +116,8 @@ section { margin-top: 10px; }
 svg .kname { font-size: 9px; fill: #555; text-anchor: middle; }
 svg .kname.on { fill: #111; font-weight: 700; font-size: 10px; }
 svg .kname.tonic { fill: #1f8f80; font-weight: 700; }
+svg .kname.black { fill: #d8d4e8; font-size: 8px; }
+svg .kname.black.tonic { fill: #7fd9c8; }
 svg .finger circle { fill: #111; stroke: #fff; stroke-width: 1.2; }
 svg .finger text { fill: #fff; font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
 svg .meldot { fill: #FFD54F; stroke: #111; stroke-width: 1; }

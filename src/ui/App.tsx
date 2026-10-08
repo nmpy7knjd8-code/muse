@@ -424,7 +424,7 @@ function Composer({ data }: { data: LoadedData }) {
       };
       return (
         <div className="vis-body">
-          <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={noteChord ? underV : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" />
+          <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={noteChord ? underV : []} suggested={selNote ? [selNote.midi] : []} fingers={[]} melody={melody.slice(-8)} color={selColor} spell={spell} minLow={55} minHigh={84} label="Melody on piano" labelKeys="all" />
           <div className="legend">
             {noteChord && <span><i style={{ background: CURRENT_COLOR }} />under: {chordSymbol(noteChord, true)}</span>}
             {selNote && <span><i style={{ background: selColor }} />next: {spellMidi(selNote.midi)}</span>}
@@ -725,7 +725,7 @@ function Composer({ data }: { data: LoadedData }) {
           </>
         ) : (
           <div className="melody-input">
-            <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" />
+            <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} melody={melody.slice(-1)} spell={spell} onKey={addNote} minLow={60} minHigh={83} height={130} label="Tap to add melody notes" labelKeys="all" />
             <div className="legend"><ScaleLegend keyLabel={keyName(k)} tonic={noteName(k.tonic, true)} /><span><i className="dot" />your notes</span></div>
             <p className="small muted">Tap keys (or 👂 Listen) to fill the melody lane above each chord. Notes land on successive beats; a full bar spills into the next (N.C. until you add a chord).</p>
           </div>
