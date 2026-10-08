@@ -476,11 +476,11 @@ export class SuggestionEngine {
       const roman = rn.secondary ?? rn.text;
       let why = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
-        : `${rn.diatonic ? 'Diatonic' : 'Chromatic'} ${roman} in ${keyName(k)}.`;
+        : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
       if (harmony) {
         const n = harmony.relations.length, ct = harmony.relations.filter((r) => r.kind === 'chord').length;
         const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
-        why = `Melody → ${harmony.relations.map((r) => r.label).join(' · ')}: ${ct}/${n} chord tones${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
+        why = `Melody fit — ${harmony.relations.map((r) => r.label).join(' · ')}: ${ct}/${n} notes sit in the chord${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
       }
       out.push({
         id: chordSymbol(chord),

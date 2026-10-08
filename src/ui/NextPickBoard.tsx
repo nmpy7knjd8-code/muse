@@ -77,9 +77,9 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
     : (fromLabel ? `Next after ${fromLabel}` : 'Next note');
 
   const xAxis = mode === 'chords'
-    ? (harmMode ? ['clash', 'fits melody'] : ['familiar', 'colourful'])
+    ? (harmMode ? ['clashes', 'fits melody'] : ['familiar', 'colourful'])
     : ['lower', 'higher'];
-  const yAxis = mode === 'chords' ? ['calm', 'tense'] : ['chord tone', 'clash'];
+  const yAxis = mode === 'chords' ? ['calm', 'tense'] : ['in the chord', 'clashes'];
 
   return (
     <div className="nextpick" aria-label="Next pick board">
@@ -148,7 +148,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
               <span className="nprank-meta">
                 <span className="muted">{isChord(s) ? s.roman : s.degree}</span>
                 {harmMode && isChord(s) && s.harmony && (
-                  <span className="fit-badge">{Math.round(((s.harmony.fit + 1) / 2) * 100)}% mel</span>
+                  <span className="fit-badge" title="How well this chord fits the waiting melody">{Math.round(((s.harmony.fit + 1) / 2) * 100)}% fit</span>
                 )}
                 {root && <span className={'root-badge tight ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')}>{root.label}</span>}
               </span>
@@ -164,14 +164,14 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
               {isChord(selected) ? selected.symbol : selected.name.replace('#', '♯')}
             </b>
             <span className="muted">
-              {isChord(selected) ? selected.roman : `degree ${selected.degree}`}
+              {isChord(selected) ? selected.roman : `degree ${selected.degree} from home`}
               {isChord(selected) && fromChord && !harmMode ? (() => {
                 const r = rootMotion(fromChord, selected.chord);
                 return <span className={'root-badge ' + (r.dir === '↑' ? 'root-up' : r.dir === '↓' ? 'root-down' : 'root-same')}>{r.label}</span>;
               })() : null}
               {' · '}{labelOf(selected.primaryMood).toLowerCase()}
               {isChord(selected) && selected.moodShift ? ` · ${selected.moodShift.arrow} ${selected.moodShift.text}` : ''}
-              {!isChord(selected) && selected.relation ? ` · ${selected.relation.label} ${REL_LABEL[selected.relation.kind]}` : ''}
+              {!isChord(selected) && selected.relation ? ` · ${selected.relation.label} (${REL_LABEL[selected.relation.kind]})` : ''}
             </span>
           </div>
           <p className="small why">{selected.why}</p>
@@ -182,26 +182,26 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
                   <>
                     melody fit {Math.round(((selected.harmony.fit + 1) / 2) * 100)}%
                     {' · '}
-                    {selected.harmony.relations.filter((r) => r.kind === 'chord').length}/{selected.harmony.relations.length} chord tones
+                    {selected.harmony.relations.filter((r) => r.kind === 'chord').length}/{selected.harmony.relations.length} notes in the chord
                     {' · '}
                   </>
                 ) : null}
-                familiar {Math.round(selected.commonness * 100)}
-                {' · '}tense {Math.round((selected.tension?.level ?? selected.features.tension) * 100)}
+                how common {Math.round(selected.commonness * 100)}
+                {' · '}how tense {Math.round((selected.tension?.level ?? selected.features.tension) * 100)}
                 {selected.tension?.reasons[0] ? ` · ${selected.tension.reasons[0]}` : ''}
-                {!harmMode && selected.harmony ? ` · melody ${Math.round(((selected.harmony.fit + 1) / 2) * 100)}%` : ''}
-                {selected.match ? ` · mood fit ${Math.round(selected.match.total * 100)}%` : ''}
+                {!harmMode && selected.harmony ? ` · melody fit ${Math.round(((selected.harmony.fit + 1) / 2) * 100)}%` : ''}
+                {selected.match ? ` · mood match ${Math.round(selected.match.total * 100)}%` : ''}
               </>
             ) : (
               <>
-                {selected.inScale ? 'in scale' : 'chromatic'}
-                {selected.isChordTone ? ' · chord tone' : ''}
+                {selected.inScale ? 'in the key' : 'outside the key'}
+                {selected.isChordTone ? ' · in the chord' : ''}
                 {selected.relation ? (
                   <span style={{ color: REL_COLORS[selected.relation.kind] }}>
                     {' · '}{REL_LABEL[selected.relation.kind]}
                   </span>
                 ) : null}
-                {selected.match ? ` · mood fit ${Math.round(selected.match.total * 100)}%` : ''}
+                {selected.match ? ` · mood match ${Math.round(selected.match.total * 100)}%` : ''}
               </>
             )}
           </div>
@@ -225,7 +225,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
           )
         ) : (
           <>
-            <span>left = lower</span><span>right = higher</span><span>up = more dissonant vs chord</span>
+            <span>left = lower</span><span>right = higher</span><span>up = rubs the chord more</span>
           </>
         )}
       </div>

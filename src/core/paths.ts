@@ -133,9 +133,9 @@ export function suggestChordPaths(
     const moodBit = b.sugs[0]?.moodShift?.text
       ?? (b.sugs[0]?.primaryMood ? `leans ${b.sugs[0].primaryMood}` : '');
     const why = [
-      `${steps} chords Muse ranks highly from here`,
+      `${steps} chords Muse thinks work well next`,
       moodBit,
-      linkNames.length ? 'blue notes bridge each jump' : '',
+      linkNames.length ? 'passing notes smooth each jump' : '',
     ].filter(Boolean).join(' · ');
     out.push({
       id: `path:${symbols.join('>')}`,

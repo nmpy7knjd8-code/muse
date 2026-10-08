@@ -115,8 +115,8 @@ export function ScaleLegend({ keyLabel, tonic }: { keyLabel: string; tonic: stri
   return (
     <>
       <span><i className="bar" style={{ background: SCALE_COLOR }} />in {keyLabel}</span>
-      <span><i className="bar" style={{ background: TONIC_COLOR }} />tonic {tonic}</span>
-      <span><i style={{ background: '#C2BFCD' }} />outside</span>
+      <span><i className="bar" style={{ background: TONIC_COLOR }} />home (tonic) {tonic}</span>
+      <span><i style={{ background: '#C2BFCD' }} />outside the key</span>
     </>
   );
 }
@@ -170,7 +170,7 @@ export function VoiceLeadingViz({ lines, fromLabel, toLabel, spell, color }: { l
   const W = 320, H = Math.max(150, (hi - lo) * 11 + 50), x1 = 78, x2 = W - 78;
   const y = (m: number) => 34 + ((hi - m) / (hi - lo)) * (H - 50);
   return (
-    <svg className="vl" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Voice leading">
+    <svg className="vl" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="How each note moves">
       <text x={x1} y={16} className="vlhead">{fromLabel}</text>
       <text x={x2} y={16} className="vlhead" fill={color}>{toLabel}</text>
       {lines.map((l, i) => {
@@ -195,7 +195,10 @@ export function VoiceLegend() {
   return (
     <div className="legend">
       {(['common', 'half', 'whole', 'leap'] as const).map((k) => (
-        <span key={k}><i style={{ background: KIND_COLORS[k] }} />{k === 'common' ? 'common tone' : k === 'half' ? 'half step' : k === 'whole' ? 'whole step' : 'leap'}</span>
+        <span key={k}>
+          <i style={{ background: KIND_COLORS[k] }} />
+          {k === 'common' ? 'same note held' : k === 'half' ? 'half-step (1 fret)' : k === 'whole' ? 'whole step (2 frets)' : 'larger jump'}
+        </span>
       ))}
     </div>
   );
@@ -403,7 +406,7 @@ export function TonnetzViz({ tonicPc, current, suggested, color, nrt, spellPc }:
           </g>
         );
       })}
-      <text x={8} y={height - 8} className="tcap">{nrt === null ? 'Not a major/minor triad pair — no P/L/R path' : nrt === '' ? 'Same triad' : `Neo-Riemannian path: ${nrt.split('').join(' → ')}`}</text>
+      <text x={8} y={height - 8} className="tcap">{nrt === null ? 'Only plain major/minor triads get this move map' : nrt === '' ? 'Same triad' : `Simple triad move: ${nrt.split('').join(' → ')}`}</text>
     </svg>
   );
 }

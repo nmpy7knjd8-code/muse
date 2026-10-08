@@ -29,8 +29,8 @@ export function fifthsStepTag(from: number, to: number): string {
 export function fifthsMovePlain(from: number, to: number): { title: string; hint: string } {
   const d = fifthsDistance(from, to);
   if (d === 0) return { title: 'Same place', hint: 'Still on this note — no circle move' };
-  if (d === 1) return { title: '1 step right', hint: 'Brighter · pulls toward home (V / dominant)' };
-  if (d === -1) return { title: '1 step left', hint: 'Opens up · feels relaxed (IV / subdominant)' };
+  if (d === 1) return { title: '1 step right', hint: 'Brighter · pulls toward home (V)' };
+  if (d === -1) return { title: '1 step left', hint: 'Opens up · feels relaxed (IV)' };
   if (d === 2) return { title: '2 steps right', hint: 'More pull · brighter (toward V of V)' };
   if (d === -2) return { title: '2 steps left', hint: 'Opens further · a bit darker' };
   if (d === 3) return { title: '3 steps right', hint: 'Restless / bright climb' };
@@ -112,7 +112,20 @@ export function tonnetzPc(centre: number, x: number, y: number): number {
 }
 
 export const NRT_NAMES: Record<string, string> = {
-  P: 'Parallel (P): flip major↔minor, same root',
-  L: 'Leading-tone exchange (L): one note moves by semitone',
-  R: 'Relative (R): one note moves by whole tone',
+  P: 'P — flip major↔minor, same root',
+  L: 'L — one note slides by a half-step',
+  R: 'R — one note slides by a whole step',
 };
+
+/** Compact gloss for a P/L/R path string, e.g. "PL" → "P→L (flip major↔minor, then half-step slide)". */
+export function nrtPathLabel(path: string): string {
+  if (!path) return 'Same triad';
+  const steps = path.split('').map((op) => NRT_NAMES[op]?.split(' — ')[0] ?? op);
+  const gloss = path.split('').map((op) => {
+    if (op === 'P') return 'flip major↔minor';
+    if (op === 'L') return 'half-step slide';
+    if (op === 'R') return 'whole-step slide';
+    return op;
+  });
+  return `${steps.join('→')} (${gloss.join(', then ')})`;
+}

@@ -20,7 +20,13 @@ export interface NoteRelation {
 }
 
 export const REL_COLORS: Record<RelKind, string> = { chord: '#4fd1a5', tension: '#7fb2ff', avoid: '#f0a050', clash: '#ef5b5b' };
-export const REL_LABEL: Record<RelKind, string> = { chord: 'chord tone', tension: 'tension', avoid: 'avoid', clash: 'clash' };
+/** Novice-facing labels (kinds stay chord/tension/avoid/clash in code). */
+export const REL_LABEL: Record<RelKind, string> = {
+  chord: 'in the chord',
+  tension: 'colour note',
+  avoid: 'rubby if held',
+  clash: 'clashes',
+};
 /** Contribution of a note's relation to how well a chord harmonizes it (−1..1). HEURISTIC. */
 export const REL_FIT: Record<RelKind, number> = { chord: 1, tension: 0.55, avoid: -0.35, clash: -1 };
 
@@ -63,7 +69,7 @@ export function noteRelation(midi: number, chord: Chord, kb?: TheoryKB | null): 
   if (inChord) {
     kind = 'chord';
     label = chordToneLabel(i, s, chord);
-    why = label === 'R' ? 'the root — fully at rest' : `the chord's ${label}`;
+    why = label === 'R' ? 'the root (home of the chord) — fully at rest' : `in the chord (${label})`;
     if (label === '♭7' && s.dom) kbId = 'ct_b7_dom';
     else if (label === '7') kbId = 'ct_maj7';
     else if (label === '6') kbId = 'ct_6';
@@ -72,54 +78,54 @@ export function noteRelation(midi: number, chord: Chord, kb?: TheoryKB | null): 
     // non-chord tone
     const semitoneAboveChordTone = s.has(mod(i - 1, 12));
     switch (i) {
-      case 2: kind = 'tension'; label = '9'; why = 'the 9th — adds colour without fighting the chord'; kbId = 'ct_9'; break;
+      case 2: kind = 'tension'; label = '9'; why = 'the 9th — colour note that sits well over the chord'; kbId = 'ct_9'; break;
       case 9:
         kind = 'tension';
         label = s.dom ? '13' : s.min3 ? '13' : '6';
-        why = s.dom ? 'the 13th — a warm dominant colour' : s.min3 ? 'the 13th (Dorian 6th) over a minor chord' : 'the added 6th — warm, nostalgic';
+        why = s.dom ? 'the 13th — warm colour over a pull-home (dominant) chord' : s.min3 ? 'the 13th — warm sixth colour over minor (Dorian feel)' : 'the added 6th — warm, nostalgic colour';
         kbId = s.dom ? 'ct_13' : s.min3 ? undefined : 'ct_6';
-        if (!s.dom && s.min3 && s.has(8)) { kind = 'clash'; why = 'major 6th against the chord\'s ♭6'; }
+        if (!s.dom && s.min3 && s.has(8)) { kind = 'clash'; why = 'major 6th against the chord\'s ♭6 — they fight'; }
         break;
       case 6:
-        if (s.maj3) { kind = 'tension'; label = '♯11'; why = 'the ♯11 — Lydian shimmer over a major or dominant chord'; kbId = 'ct_s11'; }
-        else if (s.p5) { kind = 'avoid'; label = '♭5'; why = 'a ♭5 rubbing against the chord\'s 5th'; }
-        else { kind = 'tension'; label = '♯11'; why = 'the ♯11'; kbId = 'ct_s11'; }
+        if (s.maj3) { kind = 'tension'; label = '♯11'; why = 'the ♯11 — bright “Lydian” shimmer over major or pull-home chords'; kbId = 'ct_s11'; }
+        else if (s.p5) { kind = 'avoid'; label = '♭5'; why = 'a ♭5 rubbing against the chord’s 5th — fine while moving, harsh if held' }
+        else { kind = 'tension'; label = '♯11'; why = 'the ♯11 — bright colour note'; kbId = 'ct_s11'; }
         break;
       case 5:
-        if (s.maj3) { kind = 'avoid'; label = '11'; why = 'natural 11 sits a semitone above the 3rd — fine passing, rubs if held'; kbId = 'ct_11_maj'; }
-        else { kind = 'tension'; label = '11'; why = 'the 11th — open, modal colour over a minor chord'; kbId = 'ct_11_min'; }
+        if (s.maj3) { kind = 'avoid'; label = '11'; why = 'natural 11 sits a half-step above the 3rd — fine while moving, rubs if held'; kbId = 'ct_11_maj'; }
+        else { kind = 'tension'; label = '11'; why = 'the 11th — open colour over a minor chord'; kbId = 'ct_11_min'; }
         break;
       case 1:
-        if (s.dom) { kind = 'tension'; label = '♭9'; why = 'the ♭9 — dark altered-dominant tension that wants to resolve'; kbId = 'ct_b9'; }
-        else { kind = 'avoid'; label = '♭9'; why = 'a semitone above the root — a harsh ♭9 outside a dominant chord'; kbId = 'ct_b9'; }
+        if (s.dom) { kind = 'tension'; label = '♭9'; why = 'the ♭9 — dark spice on a pull-home chord; wants to settle'; kbId = 'ct_b9'; }
+        else { kind = 'avoid'; label = '♭9'; why = 'a half-step above the root — harsh outside a pull-home chord'; kbId = 'ct_b9'; }
         break;
       case 3:
-        if (s.dom) { kind = 'tension'; label = '♯9'; why = 'the ♯9 — bluesy altered tension'; kbId = 'ct_s9'; }
-        else if (s.maj3) { kind = 'clash'; label = '♭3'; why = 'minor 3rd against the chord\'s major 3rd — a blues rub at best'; kbId = 'ct_s9'; }
+        if (s.dom) { kind = 'tension'; label = '♯9'; why = 'the ♯9 — bluesy spice on a pull-home chord'; kbId = 'ct_s9'; }
+        else if (s.maj3) { kind = 'clash'; label = '♭3'; why = 'minor 3rd against the chord’s major 3rd — bluesy rub at best'; kbId = 'ct_s9'; }
         else { kind = 'tension'; label = '♭3'; why = 'a minor 3rd over a sus/power chord — darkens it'; }
         break;
       case 4:
-        if (s.min3) { kind = 'clash'; label = '3'; why = 'major 3rd against the chord\'s minor 3rd'; }
-        else { kind = 'tension'; label = '3'; why = 'the 3rd the sus chord was holding back'; }
+        if (s.min3) { kind = 'clash'; label = '3'; why = 'major 3rd against the chord’s minor 3rd — they fight' }
+        else { kind = 'tension'; label = '3'; why = 'the 3rd the sus chord was holding back — settles the sound' }
         break;
       case 7:
-        kind = 'clash'; label = '5'; why = 'a perfect 5th against the chord\'s altered 5th'; break;
+        kind = 'clash'; label = '5'; why = 'a plain 5th against the chord’s altered 5th — they fight'; break;
       case 8:
-        if (s.dom) { kind = 'tension'; label = '♭13'; why = 'the ♭13 — dark dominant colour'; kbId = 'ct_b13'; }
-        else if (s.p5) { kind = 'avoid'; label = '♭13'; why = 'a ♭6 a semitone above the 5th — leans hard back down'; kbId = 'ct_b13'; }
-        else { kind = 'tension'; label = '♯5'; why = 'a raised 5th colour'; }
+        if (s.dom) { kind = 'tension'; label = '♭13'; why = 'the ♭13 — dark colour over a pull-home chord'; kbId = 'ct_b13'; }
+        else if (s.p5) { kind = 'avoid'; label = '♭13'; why = 'a ♭6 a half-step above the 5th — leans hard back down'; kbId = 'ct_b13'; }
+        else { kind = 'tension'; label = '♯5'; why = 'a raised 5th — brighter, more restless colour' }
         break;
       case 10:
-        if (s.maj7) { kind = 'clash'; label = '♭7'; why = '♭7 against the chord\'s major 7th'; }
-        else { kind = 'tension'; label = '♭7'; why = s.maj3 ? 'the ♭7 — turns it bluesy/dominant' : 'the ♭7 — a soft minor-7th colour'; kbId = s.maj3 ? 'ct_b7_dom' : undefined; }
+        if (s.maj7) { kind = 'clash'; label = '♭7'; why = '♭7 against the chord’s major 7th — they fight' }
+        else { kind = 'tension'; label = '♭7'; why = s.maj3 ? 'the ♭7 — turns it bluesy / pull-home' : 'the ♭7 — soft minor-7th colour'; kbId = s.maj3 ? 'ct_b7_dom' : undefined; }
         break;
       case 11:
-        if (s.b7) { kind = 'clash'; label = '7'; why = 'major 7th against the chord\'s ♭7'; }
-        else if (s.min3) { kind = 'tension'; label = '7'; why = 'major 7th over minor — dark, film-noir colour'; }
-        else { kind = 'tension'; label = '7'; why = 'the major 7th — dreamy, yearning'; kbId = 'ct_maj7'; }
+        if (s.b7) { kind = 'clash'; label = '7'; why = 'major 7th against the chord’s ♭7 — they fight' }
+        else if (s.min3) { kind = 'tension'; label = '7'; why = 'major 7th over minor — dark, film-noir colour' }
+        else { kind = 'tension'; label = '7'; why = 'the major 7th — dreamy, yearning colour'; kbId = 'ct_maj7'; }
         break;
       default:
-        kind = semitoneAboveChordTone ? 'avoid' : 'tension'; label = String(i); why = 'non-chord tone';
+        kind = semitoneAboveChordTone ? 'avoid' : 'tension'; label = String(i); why = 'not in the chord — colour or clash depending on context';
     }
   }
   const m: KbMelodicMove | undefined = kbId && kb ? kb.melodicMoves.find((x) => x.id === kbId) : undefined;

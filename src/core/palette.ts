@@ -19,7 +19,7 @@ function motionName(abs: number): string {
   if (abs <= 2) return 'step';
   if (abs <= 4) return '3rd';
   if (abs === 5) return '4th';
-  if (abs === 6) return 'tt';
+  if (abs === 6) return 'tritone';
   return `${abs}`;
 }
 
@@ -47,9 +47,9 @@ export function nrtTag(prev: Chord, next: Chord): string | null {
 
 /** Functional family of a diatonic degree (1..7), for when there is no previous chord. */
 export function degreeRole(degree: number): string {
-  if (degree === 1 || degree === 6 || degree === 3) return 'tonic';
-  if (degree === 4 || degree === 2) return 'pre-dom';
-  return 'dom';
+  if (degree === 1 || degree === 6 || degree === 3) return 'home';
+  if (degree === 4 || degree === 2) return 'builds toward home';
+  return 'pulls home';
 }
 
 /**
