@@ -7,7 +7,7 @@
 import { HoldTracker, chromaFromSpectrum, dbToMagnitudes, detectPitch, freqToMidi, matchChord, rms, type ChordMatch } from '../core';
 import { setAudioSession } from './audio';
 
-export type ListenTarget = 'melody' | 'chords';
+export type ListenTarget = 'melody' | 'bass' | 'chords';
 export interface ListenStatus {
   state: 'listening' | 'paused' | 'quiet';
   /** what is being heard right now (may not be accepted yet) */
@@ -102,8 +102,12 @@ export async function startListening(o: ListenOptions): Promise<ListenSession> {
       status({ state: 'quiet', label: null, confidence: 0, hold: 0, level }, now);
       return;
     }
-    if (target === 'melody') {
-      const p = detectPitch(recent, ctx.sampleRate, { minFreq: 70, maxFreq: 1100, minRms });
+    if (target === 'melody' || target === 'bass') {
+      const p = detectPitch(recent, ctx.sampleRate, {
+        minFreq: target === 'bass' ? 40 : 70,
+        maxFreq: target === 'bass' ? 400 : 1100,
+        minRms,
+      });
       const m = p ? freqToMidi(p.freq) : null;
       const r = m !== null ? Math.round(m) : null;
       const ok = p !== null && r !== null && p.clarity >= 0.75 && Math.abs((m as number) - r) <= 0.4;
