@@ -29,6 +29,17 @@ h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); text-transform: u
 section { margin-top: 10px; }
 
 .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, var(--bg) 70%, transparent); padding: 8px 0 10px; }
+.top-left { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.menu-btn {
+  width: 36px; height: 36px; padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.menu-btn:hover { border-color: #5a5470; }
 .brand {
   display: inline-flex; align-items: center; gap: 8px;
   user-select: none;
@@ -577,3 +588,111 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .nextpick-break-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .nextpick-break-top b { font-size: 18px; }
 .nextpick-break .why { margin: 4px 0 2px; line-height: 1.35; }
+
+/* Left drawer — Guide, Artist Lens, Moods & chords */
+.drawer-root {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(8, 7, 12, 0.55);
+  display: flex; justify-content: flex-start;
+  animation: drawer-fade 0.18s ease-out;
+}
+.drawer {
+  width: min(100%, 420px);
+  height: 100%;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column;
+  animation: drawer-slide 0.22s ease-out;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.drawer-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700; font-size: 18px;
+  letter-spacing: 0.01em;
+}
+.drawer-nav { display: flex; flex-direction: column; gap: 6px; padding: 12px; overflow-y: auto; }
+.drawer-link {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  text-align: left; width: 100%;
+  padding: 12px 14px; border-radius: 12px;
+  background: linear-gradient(165deg, #2c2936 0%, #1d1b24 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.drawer-link b { font-size: 15px; }
+.drawer-link span { font-size: 12.5px; line-height: 1.3; }
+.drawer-link:hover { border-color: rgba(156, 124, 244, 0.45); }
+.drawer-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 0 12px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+@keyframes drawer-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawer-slide { from { transform: translateX(-12px); opacity: 0.85; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .drawer-root, .drawer { animation: none; }
+}
+
+/* Mood ↔ chord reference */
+.mref { padding-bottom: 12px; }
+.mref-hero h2 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 22px; margin: 10px 0 4px; font-weight: 700;
+}
+.mref-hero p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.4; }
+.mref-seg {
+  display: flex; gap: 2px; padding: 3px; margin-bottom: 8px;
+  background: var(--panel2); border-radius: 10px;
+}
+.mref-seg button {
+  flex: 1; border: none; background: transparent;
+  padding: 7px 4px; border-radius: 8px; font-size: 12.5px;
+}
+.mref-seg button.on { background: #3a3550; font-weight: 600; }
+.mref-search {
+  width: 100%; margin-bottom: 10px;
+  background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 10px; font-size: 15px;
+}
+.mref-list { display: flex; flex-direction: column; gap: 8px; }
+.mref-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.mref-card-top {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+}
+.mref-pill {
+  color: #111; border-radius: 999px; padding: 2px 10px;
+  font-size: 13px; font-weight: 700;
+}
+.mref-desc { margin: 6px 0 4px; font-size: 13.5px; line-height: 1.35; color: #cfcbe0; }
+.mref-axes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 6px 0; }
+.mref-axis { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.mref-axis span { width: 52px; flex: 0 0 auto; }
+.mref-axis i {
+  flex: 1; height: 5px; border-radius: 3px; background: var(--panel2); overflow: hidden; display: block;
+}
+.mref-axis i b { display: block; height: 100%; background: var(--accent); }
+.mref-block { margin-top: 8px; }
+.mref-block h4 {
+  margin: 0 0 4px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); font-weight: 600;
+}
+.mref-block ul { margin: 0; padding-left: 16px; }
+.mref-block li { margin-bottom: 6px; font-size: 13px; line-height: 1.3; }
+.tag.soft {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+  font-weight: 500;
+}
+.mref-note { margin: 0 0 8px; line-height: 1.35; }
