@@ -26,6 +26,13 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Guide: “Which notes & chords will work” (relation tags + ranking) and Mic/MIDI section.
 - In-context FitExplainer under Melody piano / Chords palettes (key tint + relation chips + ranking why).
 
+## Artist Lens band requests
+- UI: Artist Lens → Request a band opens a prefilled GitHub issue (`Artist Lens request: …`, label `enhancement`). User must tap **Create** on GitHub. Also offers **Ask Cursor** (prompt deeplink) and **Copy muse.bandRequests JSON**.
+- Agent watch: process open issues via `parseArtistLensIssue` / `scripts/list-artist-requests.sh`, or a localStorage dump via `parseBandRequestEntries` / `scripts/list-band-requests-json.sh`. Add to `public/artists.json` + update `tests/artists.test.ts`.
+- Workflow `.github/workflows/artist-lens-request.yml` acknowledges new requests (suggests `@cursor` for a fast kick) and closes smoke-test placeholders.
+- Device queue: `localStorage.muse.bandRequests` — copy JSON from the Request box (or Ask Cursor) so the agent can see it without a GitHub issue.
+- Skip bands matching `isSmokeArtistRequest` (e.g. `PIPELINE-SMOKE-TEST`).
+
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).
 - Tune mood and tension weights with real listening.

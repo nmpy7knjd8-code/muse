@@ -1,0 +1,99 @@
+# When someone opens an Artist Lens band request, acknowledge it.
+# Also auto-close intentional smoke-test issues left by pipeline checks.
+name: Artist Lens request intake
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  cleanup-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close open smoke-test Artist Lens issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+              const t = issue.title || '';
+              if (!/^Artist Lens request:/i.test(t)) continue;
+              if (!/PIPELINE-SMOKE|SMOKE-TEST/i.test(t)) continue;
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'not_planned',
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: 'Closed automatic smoke-test placeholder — not a real Artist Lens band request.',
+              });
+              core.info(`Closed #${issue.number}`);
+            }
+
+  intake:
+    if: github.event_name == 'issues' && startsWith(github.event.issue.title, 'Artist Lens request:')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close smoke-test placeholders
+        if: contains(github.event.issue.title, 'PIPELINE-SMOKE') || contains(github.event.issue.title, 'SMOKE-TEST')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed',
+              state_reason: 'not_planned',
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 'Closed automatic smoke-test placeholder — not a real Artist Lens band request.',
+            });
+      - name: Acknowledge real requests
+        if: ${{ !contains(github.event.issue.title, 'PIPELINE-SMOKE') && !contains(github.event.issue.title, 'SMOKE-TEST') }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                'Thanks — this is queued for Artist Lens.',
+                '',
+                'A Muse cloud agent watches for issues titled `Artist Lens request: …`, then researches the artist and opens a PR adding them to `public/artists.json` (techniques, sources, try-it exercise + tests).',
+                '',
+                'Optional fast path: comment `@cursor` on this issue to kick a cloud agent immediately.',
+                '',
+                '_If this was opened by mistake, close the issue._',
+              ].join('\n'),
+            });
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['enhancement'],
+              });
+            } catch (e) {
+              core.warning(`Could not add enhancement label: ${e}`);
+            }
