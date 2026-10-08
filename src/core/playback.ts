@@ -31,7 +31,8 @@ export const INSTRUMENTS: Record<InstrumentId, InstrumentDef> = {
   piano: { id: 'piano', label: 'Piano', voicing: 'keys', samples: { from: 33, to: 96, step: 3 }, attack: 0.004, release: 0.28, ring: 0.25, strumMs: 6, reverb: 0.22, gain: 0.9, velocityFilter: true, source: SALAMANDER },
   nylon: { id: 'nylon', label: 'Nylon guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.35, ring: 0.6, strumMs: 24, reverb: 0.2, gain: 0.95, velocityFilter: true, source: FLUID },
   steel: { id: 'steel', label: 'Steel guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.35, ring: 0.6, strumMs: 20, reverb: 0.18, gain: 1.0, velocityFilter: true, source: FLUID },
-  electric: { id: 'electric', label: 'Electric guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.002, release: 0.45, ring: 0.85, strumMs: 16, reverb: 0.32, gain: 0.78, velocityFilter: true, source: FLUID },
+  // Distortion-guitar samples + live metal amp stack in audio.ts (tight, mid-scooped, present).
+  electric: { id: 'electric', label: 'Metal guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.001, release: 0.22, ring: 0.35, strumMs: 10, reverb: 0.08, gain: 0.62, velocityFilter: true, source: FLUID },
   rhodes: { id: 'rhodes', label: 'Rhodes', voicing: 'keys', samples: { from: 36, to: 90, step: 3 }, attack: 0.006, release: 0.3, ring: 0.2, strumMs: 5, reverb: 0.28, gain: 0.55, velocityFilter: true, source: FLUID },
   pad: { id: 'pad', label: 'Soft pad', voicing: 'keys', samples: { from: 36, to: 84, step: 3 }, attack: 0.16, release: 0.55, ring: 0.1, strumMs: 0, reverb: 0.4, gain: 0.85, velocityFilter: false, source: FLUID },
   bass: { id: 'bass', label: 'Bass guitar', voicing: 'bass', samples: { from: 28, to: 55, step: 3 }, attack: 0.004, release: 0.32, ring: 0.45, strumMs: 0, reverb: 0.12, gain: 1.05, velocityFilter: true, source: FLUID },
@@ -49,6 +50,21 @@ export function nearestSample(midi: number, available: number[]): { sample: numb
   let best = available[0];
   for (const s of available) if (Math.abs(s - midi) < Math.abs(best - midi) || (Math.abs(s - midi) === Math.abs(best - midi) && s > best)) best = s;
   return { sample: best, rate: Math.pow(2, (midi - best) / 12) };
+}
+
+/**
+ * Fold a MIDI note into an instrument's sample range by octaves (same pitch class).
+ * Bass samples only cover ~E1–G3; melody UI notes sit much higher, so without this
+ * the engine extreme-pitch-shifts (or barely sounds) instead of playing a real bass tone.
+ */
+export function fitMidiToInstrument(midi: number, def: InstrumentDef): number {
+  const { from: lo, to: hi } = def.samples;
+  let x = Math.round(midi);
+  // Range is always ≥ an octave for our instruments; one direction then the other is enough.
+  while (x < lo) x += 12;
+  while (x > hi) x -= 12;
+  if (x < lo) x += 12; // tiny ranges (< octave) — pull back up once
+  return x;
 }
 
 /**
@@ -86,11 +102,7 @@ export function chordMidis(chord: Chord, upper: number[], def: InstrumentDef): n
   }
   if (def.voicing === 'bass') {
     // Single low root (or slash-bass) in the sample range — bass guitar, not a full chord stack.
-    const lo = def.samples.from, hi = def.samples.to;
-    let m = bassNote(chord, lo);
-    while (m < lo) m += 12;
-    while (m > hi) m -= 12;
-    return [m];
+    return [fitMidiToInstrument(bassNote(chord, def.samples.from), def)];
   }
   return keysVoicing(chord, upper);
 }

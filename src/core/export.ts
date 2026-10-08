@@ -103,7 +103,7 @@ export function timelineText(k: Key, slots: TimelineSlot[], timeSig: TimeSig = D
   const beats = beatsPerBar(timeSig);
   const lines = [`Key: ${keyName(k)}`, `Meter: ${timeSigLabel(timeSig)}`];
   slots.forEach((s, i) => {
-    const sym = s.chord ? `${chordSymbol(s.chord, true)} (${romanOf(s.chord, k)})` : 'N.C.';
+    const sym = s.chord ? `${chordSymbol(s.chord, true)} (${romanOf(s.chord, k)})` : 'no chord';
     const notes = labelSlot(s, null, beats).map((n) => `${midiName(n.midi, spellInKey(k, n.midi))}@${n.beat + 1}${n.relation ? `[${n.relation.label}]` : ''}`).join(' ');
     lines.push(`Bar ${i + 1}: ${sym}${notes ? ` — ${notes}` : ''}`);
   });

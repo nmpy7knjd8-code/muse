@@ -122,8 +122,8 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
             </div>
             {l && <div className="tryit-chords">{tryItText(l)}</div>}
             {t.meter && <div className="small muted">Meter: {t.meter}{l?.timeSig ? ` → loads as ${timeSigLabel(l.timeSig)}` : ''}</div>}
-            {t.bassPedal && <div className="small muted">Pedal / held bass: {t.bassPedal}</div>}
-            {t.melodyDegrees && <div className="small muted">Melody degrees: {t.melodyDegrees.join(' ')}</div>}
+            {t.bassPedal && <div className="small muted">Bass note held under changing chords: {t.bassPedal}</div>}
+            {t.melodyDegrees && <div className="small muted">Melody scale degrees (from home): {t.melodyDegrees.join(' ')}</div>}
             {t.howToPlay && <p className="small">{t.howToPlay}</p>}
             <MoodChips moods={t.moods.map((m) => ({ mood: m }))} lex={lex} />
           </div>
@@ -171,7 +171,7 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
 
 const REQUEST_ISSUE = 'https://github.com/nmpy7knjd8-code/muse/issues/new';
 const REQUEST_STORAGE = 'muse.bandRequests';
-type BandRequest = { band: string; note: string; at: number; taskUrl?: string };
+type BandRequest = { band: string; note: string; song?: string; at: number; taskUrl?: string };
 
 function loadRequests(): BandRequest[] {
   try {
@@ -182,32 +182,33 @@ function loadRequests(): BandRequest[] {
 
 function BandRequestBox() {
   const [name, setName] = useState('');
-  const [note, setNote] = useState('');
+  const [song, setSong] = useState('');
   const [sent, setSent] = useState<string | null>(null);
   const [recent, setRecent] = useState<BandRequest[]>(() => loadRequests());
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const band = name.trim();
     if (!band) return;
-    const why = note.trim();
+    const songReq = song.trim();
     const title = `Artist Lens request: ${band}`;
     const body = [
       '## Band / artist request',
       '',
       `**Name:** ${band}`,
       '',
-      '**Why / notes:**',
-      why || '(none)',
+      '## Song to include in analysis (optional)',
+      songReq || '(none)',
       '',
-      '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`._',
+      '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`, and if a song is named, include it in the Artist Lens analysis / try-it material._',
       '',
       '### Checklist',
       '- [ ] Research techniques + sources',
       '- [ ] Add artist entry with try-it exercise',
       '- [ ] Update `tests/artists.test.ts` counts',
-    ].join('\n');
+      songReq ? '- [ ] Include the requested song in the analysis' : '',
+    ].filter(Boolean).join('\n');
     const taskUrl = `${REQUEST_ISSUE}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent('artist-lens-request')}`;
-    const entry: BandRequest = { band, note: why, at: Date.now(), taskUrl };
+    const entry: BandRequest = { band, note: '', song: songReq || undefined, at: Date.now(), taskUrl };
     const next = [entry, ...loadRequests().filter((r) => r.band.toLowerCase() !== band.toLowerCase())].slice(0, 20);
     try { localStorage.setItem(REQUEST_STORAGE, JSON.stringify(next)); } catch { /* private mode */ }
     setRecent(next);
@@ -216,28 +217,44 @@ function BandRequestBox() {
     if (!win) window.location.assign(taskUrl);
     setSent(band);
     setName('');
-    setNote('');
+    setSong('');
   };
   return (
-    <form className="band-request" onSubmit={submit} aria-label="Request a band for Artist Lens">
-      <h4>Request a band</h4>
-      <p className="small muted">Missing someone? Submit a name — Muse opens a GitHub task to add them to Artist Lens.</p>
-      <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
-      <input aria-label="Why they fit" placeholder="Why they’re interesting (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-      <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
-      {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
-      {recent.length > 0 && (
-        <div className="band-request-recent">
-          <div className="small muted">Recent requests</div>
-          <ul className="small">
-            {recent.slice(0, 5).map((r) => (
-              <li key={`${r.band}-${r.at}`}>
-                {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <form className="band-request-stack" onSubmit={submit} aria-label="Request a band for Artist Lens">
+      <div className="band-request">
+        <h4>Request a band</h4>
+        <p className="small muted">Missing someone? Submit a name — we’ll add it in minutes.</p>
+        <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
+      </div>
+      <div className="band-request band-request-songbox">
+        <h4>Song to analyze <span className="muted" style={{ fontWeight: 500 }}>(optional)</span></h4>
+        <p className="small muted">Name a particular song to include in the Artist Lens analysis for this artist.</p>
+        <textarea
+          aria-label="Song to include in analysis"
+          className="band-request-song"
+          placeholder="e.g. Bohemian Rhapsody — focus on the ballad→opera→rock section changes"
+          value={song}
+          onChange={(e) => setSong(e.target.value)}
+          rows={3}
+        />
+      </div>
+      <div className="band-request-actions">
+        <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
+        {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
+        {recent.length > 0 && (
+          <div className="band-request-recent">
+            <div className="small muted">Recent requests</div>
+            <ul className="small">
+              {recent.slice(0, 5).map((r) => (
+                <li key={`${r.band}-${r.at}`}>
+                  {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
+                  {r.song ? <span className="muted"> · song requested</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </form>
   );
 }

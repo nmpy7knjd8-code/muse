@@ -131,6 +131,19 @@ export function chromaFromSignal(samples: ArrayLike<number>, sampleRate: number,
   return chromaFromSpectrum(mags, sampleRate, mags.length * 2, opts);
 }
 
+/**
+ * Chroma from held MIDI notes (Web MIDI / keyboard). Uses the same harmonic-aware
+ * templates as mic recognition so `matchChord` stays consistent across input modes.
+ */
+export function chromaFromMidis(midis: number[]): ChromaFrame {
+  if (!midis.length) return { chroma: new Array(12).fill(0), bass: new Array(12).fill(0), energy: 0 };
+  const pcs = [...new Set(midis.map((m) => mod12(Math.round(m))))];
+  const sorted = [...midis].map((m) => Math.round(m)).sort((a, b) => a - b);
+  const bass = new Array(12).fill(0);
+  bass[mod12(sorted[0])] = 1;
+  return { chroma: chordTemplate(pcs), bass: norm(bass), energy: midis.length };
+}
+
 export interface ChordMatch {
   kind: 'chord' | 'note';
   root: number; // pitch class

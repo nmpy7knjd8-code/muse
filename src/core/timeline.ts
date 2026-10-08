@@ -132,3 +132,19 @@ export function timelineEvents(
   });
   return ev;
 }
+
+/** One-bar preview: chord under a pending (N.C.) melody — same grid as timelineEvents. */
+export function harmPreviewEvents(
+  notes: TimelineNote[],
+  o: { beatSec?: number; timeSig?: TimeSig } = {},
+): { notes: Array<{ midi: number; at: number; dur: number; beat: number }>; chordDur: number; total: number } {
+  const beats = bpb(o.timeSig ?? DEFAULT_TIME_SIG);
+  const beat = o.beatSec ?? (o.timeSig?.den === 8 ? 0.28 : 0.42);
+  const total = beat * beats;
+  const d = noteDurations(notes, beats);
+  return {
+    chordDur: total * 0.95,
+    total,
+    notes: notes.map((n, j) => ({ midi: n.midi, at: n.beat * beat, dur: d[j] * beat * 0.95, beat: n.beat })),
+  };
+}

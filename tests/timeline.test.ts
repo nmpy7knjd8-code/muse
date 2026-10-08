@@ -3,7 +3,7 @@ import { loadKB } from './helpers';
 import {
   SuggestionEngine, parseChord, key, noteRelation, melodyFit, REL_FIT,
   insertNote, setSlotChord, chordTargetIndex, activeSlotIndex, nextNoteBeat,
-  labelSlot, timelineEvents, melodyOf, chordsOf, removeNoteAt, clearSlotChord,
+  labelSlot, timelineEvents, harmPreviewEvents, melodyOf, chordsOf, removeNoteAt, clearSlotChord,
   toMidiTimeline, timelineText, noteDurations,
 } from '../src/core';
 
@@ -83,6 +83,16 @@ describe('timeline slots', () => {
     expect(ev.notes[0].at).toBe(0);
     expect(ev.total).toBe(4); // 2 bars × 4 beats × 0.5s
     expect(noteDurations(slots[0].notes)[0]).toBe(4);
+  });
+  it('harmPreviewEvents overlays melody on one pending bar', () => {
+    const notes = [{ midi: 64, beat: 0 }, { midi: 67, beat: 2 }];
+    const prev = harmPreviewEvents(notes, { beatSec: 0.5 });
+    expect(prev.total).toBe(2); // 4 beats × 0.5s
+    expect(prev.chordDur).toBeCloseTo(1.9);
+    expect(prev.notes).toHaveLength(2);
+    expect(prev.notes[0].at).toBe(0);
+    expect(prev.notes[1].at).toBe(1);
+    expect(prev.notes[0].dur).toBeCloseTo(0.95); // 2 beats × 0.5s × 0.95
   });
 });
 

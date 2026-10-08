@@ -20,27 +20,33 @@ export function fifthsDistance(a: number, b: number): number {
 /** Compact signed fifths-step tag for a pitch relative to a reference (tonic or current root). */
 export function fifthsStepTag(from: number, to: number): string {
   const d = fifthsDistance(from, to);
-  if (d === 0) return '·';
-  if (d === 6 || d === -6) return 'tt';
+  if (d === 0) return 'home';
+  if (d === 6 || d === -6) return 'opp';
   return d > 0 ? `+${d}` : `${d}`;
 }
 
+/** Feel-first copy for a circle-of-fifths move (title + short hint for the center of the dial). */
+export function fifthsMovePlain(from: number, to: number): { title: string; hint: string } {
+  const d = fifthsDistance(from, to);
+  if (d === 0) return { title: 'Same place', hint: 'Still on this note — no circle move' };
+  if (d === 1) return { title: '1 step right', hint: 'Brighter · pulls toward home (V)' };
+  if (d === -1) return { title: '1 step left', hint: 'Opens up · feels relaxed (IV)' };
+  if (d === 2) return { title: '2 steps right', hint: 'More pull · brighter (toward V of V)' };
+  if (d === -2) return { title: '2 steps left', hint: 'Opens further · a bit darker' };
+  if (d === 3) return { title: '3 steps right', hint: 'Restless / bright climb' };
+  if (d === -3) return { title: '3 steps left', hint: 'Earthy / darker sink' };
+  if (d === 6 || d === -6) return { title: 'Opposite side', hint: 'Farthest apart · unstable (tritone)' };
+  if (d > 0) return { title: `${d} steps right`, hint: 'Sharp / brighter side of the circle' };
+  return { title: `${Math.abs(d)} steps left`, hint: 'Flat / opener side of the circle' };
+}
+
 /**
- * Plain-language label for a root move on the circle of fifths.
+ * Single-line label for a root move on the circle of fifths (tooltips, tests).
  * Positive steps = clockwise / sharpward (dominant side); negative = counter-clockwise / flatward (subdominant).
  */
 export function fifthsMoveLabel(from: number, to: number): string {
-  const d = fifthsDistance(from, to);
-  if (d === 0) return 'same root · no circle move';
-  if (d === 1) return 'CW +1 · dominant side — pulls toward home';
-  if (d === -1) return 'CCW −1 · subdominant — opens / relaxes';
-  if (d === 2) return 'CW +2 · toward V of V — brightens, more pull';
-  if (d === -2) return 'CCW −2 · deeper subdominant — darker open';
-  if (d === 3) return 'CW +3 · sharpward climb — restless / bright';
-  if (d === -3) return 'CCW −3 · flatward sink — earthy / dark';
-  if (d === 6 || d === -6) return 'tritone · opposite — maximum distance / unstable';
-  if (d > 0) return `CW +${d} · sharpward (dominant side of the circle)`;
-  return `CCW ${d} · flatward (subdominant side of the circle)`;
+  const { title, hint } = fifthsMovePlain(from, to);
+  return `${title} — ${hint}`;
 }
 
 export type Triad = { root: number; minor: boolean };
@@ -106,7 +112,20 @@ export function tonnetzPc(centre: number, x: number, y: number): number {
 }
 
 export const NRT_NAMES: Record<string, string> = {
-  P: 'Parallel (P): flip major↔minor, same root',
-  L: 'Leading-tone exchange (L): one note moves by semitone',
-  R: 'Relative (R): one note moves by whole tone',
+  P: 'P — flip major↔minor, same root',
+  L: 'L — one note slides by a half-step',
+  R: 'R — one note slides by a whole step',
 };
+
+/** Compact gloss for a P/L/R path string, e.g. "PL" → "P→L (flip major↔minor, then half-step slide)". */
+export function nrtPathLabel(path: string): string {
+  if (!path) return 'Same triad';
+  const steps = path.split('').map((op) => NRT_NAMES[op]?.split(' — ')[0] ?? op);
+  const gloss = path.split('').map((op) => {
+    if (op === 'P') return 'flip major↔minor';
+    if (op === 'L') return 'half-step slide';
+    if (op === 'R') return 'whole-step slide';
+    return op;
+  });
+  return `${steps.join('→')} (${gloss.join(', then ')})`;
+}

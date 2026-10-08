@@ -13,6 +13,10 @@ describe('Artist Lens data', () => {
   it('loads 23 artists, TOOL first, with sources resolving every citation', () => {
     expect(file.artists.length).toBe(23);
     expect(file.artists[0].id).toBe('tool');
+    const ids = new Set(file.artists.map((a) => a.id));
+    expect(ids.has('polyphia')).toBe(false);
+    expect(ids.has('jacob-collier')).toBe(false);
+    for (const id of ['led-zeppelin', 'the-beatles', 'rush', 'queen', 'pink-floyd']) expect(ids.has(id)).toBe(true);
     for (const a of file.artists) {
       const ids = new Set(a.sources.map((s) => s.id));
       for (const t of a.techniques) for (const s of t.sourceIds) expect(ids.has(s), `${a.id}/${t.id} → ${s}`).toBe(true);

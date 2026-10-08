@@ -121,6 +121,26 @@ describe('melody suggestions', () => {
     const s = eng.suggestNotes({ key: key('F', 'lydian'), melody: [65, 67], targetMoods: ['mystical'], limit: 6 });
     expect(s.some((n) => n.degree === '♯4')).toBe(true);
   });
+  it('orders by chord/melodic fit even when a mood profile would favour clashy aesthetics', () => {
+    // “tense” moods often tag chromatic colour; fit must still outrank that on a strong beat over C.
+    const s = eng.suggestNotes({
+      key: key('C'),
+      melody: [60],
+      chord: ch('C'),
+      beat: 0,
+      targetMoods: ['tense', 'dark'],
+      limit: 12,
+    });
+    expect(s.length).toBeGreaterThan(4);
+    // Scores are non-increasing (best fit first).
+    for (let i = 1; i < s.length; i++) expect(s[i - 1].score).toBeGreaterThanOrEqual(s[i].score);
+    const top = s.slice(0, 4);
+    expect(top.every((n) => n.relation?.kind !== 'clash')).toBe(true);
+    expect(top.some((n) => n.isChordTone)).toBe(true);
+    const bestChord = s.find((n) => n.isChordTone)!;
+    const clash = s.find((n) => n.relation?.kind === 'clash');
+    if (clash) expect(bestChord.score).toBeGreaterThan(clash.score);
+  });
 });
 
 describe('free-text mood lexicon', () => {

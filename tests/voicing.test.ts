@@ -114,13 +114,13 @@ describe('relationships', () => {
     expect(fifthsDistance(0, 7)).toBe(1);
     expect(fifthsDistance(0, 5)).toBe(-1);
     expect(fifthsDistance(0, 6)).toBe(-6);
-    expect(fifthsMoveLabel(0, 7)).toMatch(/dominant/i);
-    expect(fifthsMoveLabel(0, 5)).toMatch(/subdominant/i);
-    expect(fifthsMoveLabel(0, 0)).toMatch(/same root/i);
+    expect(fifthsMoveLabel(0, 7)).toMatch(/brighter|dominant|home/i);
+    expect(fifthsMoveLabel(0, 5)).toMatch(/open|relax|subdominant/i);
+    expect(fifthsMoveLabel(0, 0)).toMatch(/same place|no circle move/i);
     expect(fifthsStepTag(0, 7)).toBe('+1');
     expect(fifthsStepTag(0, 5)).toBe('-1');
-    expect(fifthsStepTag(0, 0)).toBe('·');
-    expect(fifthsStepTag(0, 6)).toBe('tt');
+    expect(fifthsStepTag(0, 0)).toBe('home');
+    expect(fifthsStepTag(0, 6)).toBe('opp');
   });
   it('tonnetz coordinates', () => {
     const g = tonnetzCoord(7);
