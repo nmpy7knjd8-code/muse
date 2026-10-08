@@ -249,7 +249,20 @@ function Composer({ data }: { data: LoadedData }) {
     if (tensionPick !== null && tensionPick >= chordedSlotIndices.length) setTensionPick(chordedSlotIndices.length ? chordedSlotIndices.length - 1 : null);
   }, [chordedSlotIndices.length, tensionPick]);
   const noteSugs: NoteSuggestion[] = useMemo(
-    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat, timeSig }) : []),
+    () => (tab === 'melody'
+      ? engine.suggestNotes({
+        key: k,
+        melody,
+        chord: noteChord,
+        // Last few chords so ranking / why text respect the arrival of the sequence.
+        progression: chords.slice(-4),
+        profile,
+        adventure,
+        limit: 12,
+        beat: noteBeat,
+        timeSig,
+      })
+      : []),
     [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, timeSig.num, timeSig.den], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const [pathLen, setPathLen] = useState<2 | 3>(2);
@@ -263,7 +276,7 @@ function Composer({ data }: { data: LoadedData }) {
   const notePaths: NotePath[] = useMemo(() => {
     if (tab !== 'melody') return [];
     return suggestNotePaths(engine, {
-      key: k, melody, chord: noteChord, profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
+      key: k, melody, chord: noteChord, progression: chords.slice(-4), profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
     });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
@@ -703,7 +716,7 @@ function Composer({ data }: { data: LoadedData }) {
             onAddPc={addMelodyPc}
           />
           <p className="small muted center">
-            Big letters = notes you can add (brighter = stronger next pick) · rim dots = next-note picks (bigger / brighter = better; numbers = rank; tap to hear) ·
+            Big letters = notes you can add (brighter = stronger next pick) · rim chips = next-note picks (stack outward by root — bigger / brighter / lower number = better; quality tag beside each; tap to hear) ·
             +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
           </p>
           <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
@@ -734,7 +747,7 @@ function Composer({ data }: { data: LoadedData }) {
           onAddPc={addCircleChord}
         />
         <p className="small muted center">
-          Big letters = chords you can add (brighter = stronger next pick) · rim dots = next-chord picks (variants of the same root fan out — bigger / brighter / lower number = better; tap to hear) ·
+          Big letters = chords you can add (brighter = stronger next pick) · rim chips = next-chord picks (variants of the same root stack outward — bigger / brighter / lower number = better; quality tag beside each; tap to hear) ·
           +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
           plays on <b>{INSTRUMENTS[instrument].label}</b>
         </p>
@@ -1392,7 +1405,7 @@ function Composer({ data }: { data: LoadedData }) {
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('guide')}>Open the Guide</button> for how each feature connects to musicality.
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('moods')}>Moods &amp; chords</button> lists every mood tag and the moves that carry it.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
-          Nylon, steel &amp; metal guitar (distortion samples + live amp), bass guitar, Rhodes and pad: FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
+          Nylon &amp; steel guitar, bass, Rhodes and pad: FluidR3_GM (Frank Wen). Metal guitar: MusyngKite clean electric samples through a live amp/cab. MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
           Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>
         <p><b>No sound on iPhone?</b> Flip off Silent mode (the switch on the side), turn the volume up, and tap again — Safari only starts audio after a tap.</p>
         <p><b>Theory &amp; moods.</b> Mood labels come from the bundled research knowledge base and mood lexicon (sources listed inside the data files). Lore mode notes are folklore, not science.</p>

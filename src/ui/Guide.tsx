@@ -102,7 +102,7 @@ const SECTIONS: Section[] = [
   {
     id: 'circle',
     title: 'Circle of fifths',
-    use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking (strongest suggestions glow most). Rim dots are Muse’s next picks — variants of the same root fan out so each is tappable; bigger / brighter / lower number = better. Tap a dot to hear. Same-root colour (e.g. C→Cmaj7) shows “same root” instead of a looping arrow. +1/−1 under letters = steps from where you are. Ranked “Best fit first” cards sit directly under the circle.',
+    use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking (strongest suggestions glow most). Rim chips are Muse’s next picks — variants of the same root stack outward on that spoke so nothing overlaps; bigger / brighter / lower number = better, with a short quality tag (Δ7, m, 7…) beside each chip. Tap a chip to hear. Same-root colour (e.g. C→Cmaj7) shows “same root” instead of a looping arrow. +1/−1 under letters = steps from where you are. Ranked “Best fit first” cards sit directly under the circle.',
     musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
     tip: 'Switch instruments under the circle — taps play on the sound you chose (including bass).',
   },
@@ -121,7 +121,7 @@ const SECTIONS: Section[] = [
   {
     id: 'instruments',
     title: 'Instrument sounds',
-    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, or bass. Muse voices chords for that instrument (bass plays a single low root; metal runs a high-gain amp). Melody notes fold into each instrument’s playable range.',
+    use: 'Pick Piano, nylon/steel/metal guitar, Rhodes, pad, or bass. Muse voices chords for that instrument (bass plays a single low root; metal is clean electric guitar through a high-gain amp/cab). Melody notes fold into each instrument’s playable range.',
     musicality: 'Register and timbre change meaning: the same progression on bass vs pad feels like different arrangements. Hear options in the texture you’ll actually write in.',
   },
   {
