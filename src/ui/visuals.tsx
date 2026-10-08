@@ -357,15 +357,21 @@ export interface CircleProps {
 }
 
 /** Max rim variants shown per pitch class (best-first); keeps the circle readable/tappable. */
-export const COF_MAX_VARIANTS_PER_PC = 4;
-/** Only the top-N suggestions appear as rim dots (best-first). */
-export const COF_MAX_RIM_DOTS = 14;
+export const COF_MAX_VARIANTS_PER_PC = 3;
+/** Only the top-N suggestions appear as rim chips (best-first). */
+export const COF_MAX_RIM_DOTS = 12;
+/** Radial gap between stacked augmentations on one root’s spoke (center-to-center). */
+export const COF_VARIANT_RADIAL_STEP = 30;
+/** Clearance from pitch-class node center to the first (best) rim chip. */
+export const COF_VARIANT_INNER_GAP = 40;
 
 export interface CofVariantSlot {
   id: string;
   pc: number;
   color: string;
   label?: string;
+  /** Short quality tag (e.g. Δ7, 7, m) for the augmentation chip. */
+  tag: string;
   /** Global suggestion index (0 = best overall). */
   rank: number;
   /** Index among this pc’s shown variants (0 = best of that root). */
@@ -373,10 +379,26 @@ export interface CofVariantSlot {
   localCount: number;
   x: number;
   y: number;
-  /** Drawn dot radius — larger = better. */
+  /** Angle of this root’s spoke (radians). */
+  angle: number;
+  /** Drawn chip radius — larger = better. */
   r: number;
   /** 0..1 strength for opacity / stroke (1 = best overall). */
   strength: number;
+}
+
+/** Compact quality suffix for a suggestion label (Cmaj7 → Δ7, Am → m). */
+export function cofVariantTag(label?: string): string {
+  if (!label) return '';
+  const q = label.replace(/^[A-G](?:[#♯b♭])?/, '').trim();
+  if (!q) return '';
+  return q
+    .replace(/maj7/i, 'Δ7')
+    .replace(/maj/i, 'Δ')
+    .replace(/min/i, 'm')
+    .replace(/dim/i, '°')
+    .replace(/aug/i, '+')
+    .slice(0, 4);
 }
 
 /**
@@ -404,9 +426,9 @@ export function cofPcVisibility(others: Array<{ pc: number }>): Map<number, numb
 }
 
 /**
- * Lay out rim suggestion dots so variants of the same root fan along the arc
- * (tappable spacing) instead of stacking on one spot. Best of each root sits
- * nearest the letter; worse variants step outward in angle and size/opacity.
+ * Lay out rim suggestion chips on each root’s radial spoke: best nearest the
+ * letter, weaker variants step straight outward. Same angle → no arc fan clutter;
+ * fixed radial step keeps finger targets clear of each other and of neighbors.
  */
 export function cofVariantSlots(
   others: CofOther[],
@@ -415,7 +437,7 @@ export function cofVariantSlots(
   const { cx, cy, nodeR } = opts;
   const byPc = new Map<number, CofOther[]>();
   const rankOf = new Map<string, number>();
-  // Brightness map still uses the full list; rim dots only show the strongest picks.
+  // Brightness map still uses the full list; rim chips only show the strongest picks.
   const rim = others.slice(0, COF_MAX_RIM_DOTS);
   rim.forEach((o, i) => {
     rankOf.set(o.id, i);
@@ -424,37 +446,34 @@ export function cofVariantSlots(
     byPc.set(o.pc, list);
   });
   const nAll = Math.max(1, rim.length - 1);
-  const rimR = nodeR + 42;
+  const rimR = nodeR + COF_VARIANT_INNER_GAP;
   const out: CofVariantSlot[] = [];
   for (const [pitch, list] of byPc) {
-    const baseA = (fifthsIndex(pitch) / 12) * Math.PI * 2 - Math.PI / 2;
+    const angle = (fifthsIndex(pitch) / 12) * Math.PI * 2 - Math.PI / 2;
     const k = list.length;
-    // Wider arc fan + radial step so ~28px finger targets don’t overlap.
-    // k=2 → ~0.34 rad; k=3 → ~0.30; k=4 → ~0.28 (capped).
-    const spread = k <= 1 ? 0 : Math.min(0.34, 0.9 / Math.max(1, k - 0.35));
     list.forEach((o, localRank) => {
       const rank = rankOf.get(o.id) ?? localRank;
-      const a = baseA + (localRank - (k - 1) / 2) * spread;
-      // Push weaker variants outward so they never sit under the best.
-      const rOrbit = rimR + localRank * 14;
+      const rOrbit = rimR + localRank * COF_VARIANT_RADIAL_STEP;
       const strength = 1 - rank / nAll;
-      const r = 5.4 + 3.8 * strength; // best ~9.2px, worst ~5.4px
+      const r = 6.2 + 3.6 * strength; // best ~9.8px, worst ~6.2px
       out.push({
         id: o.id,
         pc: pitch,
         color: o.color,
         label: o.label,
+        tag: cofVariantTag(o.label),
         rank,
         localRank,
         localCount: k,
-        x: cx + Math.cos(a) * rOrbit,
-        y: cy + Math.sin(a) * rOrbit,
+        x: cx + Math.cos(angle) * rOrbit,
+        y: cy + Math.sin(angle) * rOrbit,
+        angle,
         r,
         strength,
       });
     });
   }
-  // Draw worse (smaller) first so best dots sit on top for hit-testing.
+  // Draw worse (smaller) first so best chips sit on top for hit-testing.
   out.sort((a, b) => a.strength - b.strength);
   return out;
 }
@@ -481,8 +500,9 @@ function cofNodeStroke(inKey: boolean, t: number, isTonic: boolean, hit: boolean
 }
 
 export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
-  // Extra canvas so fanned rim variants (incl. weaker outward steps) stay inside the viewBox.
-  const S = 420, c = S / 2, R = 118;
+  // Room for the pitch ring + up to 3 radial rim chips per spoke without clipping.
+  const outerPad = COF_VARIANT_INNER_GAP + (COF_MAX_VARIANTS_PER_PC - 1) * COF_VARIANT_RADIAL_STEP + 28;
+  const S = 560, c = S / 2, R = 158;
   const [pressed, setPressed] = useState<number | null>(null);
   const [pressedDot, setPressedDot] = useState<string | null>(null);
   const pos = (p: number, r: number) => {
@@ -495,7 +515,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
   const sameRoot = currentPc !== undefined && !!selected && Number(currentPc) === Number(selected.pc);
   const arrow = useMemo(() => {
     if (currentPc === undefined || !selected || sameRoot) return null;
-    const a = pos(currentPc, R - 18), b = pos(selected.pc, R - 18);
+    const a = pos(currentPc, R - 22), b = pos(selected.pc, R - 22);
     const ctrl = { x: (a.x + b.x) / 2 * 0.55 + c * 0.45, y: (a.y + b.y) / 2 * 0.55 + c * 0.45 };
     return `M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}`;
   }, [currentPc, selected?.pc, sameRoot]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -515,7 +535,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
   const toName = selected ? spellPc(selected.pc) : null;
   const showMoveLine = !!selected && (sameRoot || (toName && (currentPc !== undefined ? !sameRoot : Number(selected.pc) !== Number(tonicPc))));
   return (
-    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — brighter letters and larger rim dots are stronger next picks">
+    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — brighter letters and larger rim chips are stronger next picks">
       <defs>
         <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill={selected?.color ?? '#fff'} />
@@ -527,13 +547,13 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#f0a070" />
         </marker>
       </defs>
-      <circle cx={c} cy={c} r={R + 58} fill="#17161d" stroke="#2c2a36" />
-      <circle cx={c} cy={c} r={R - 30} fill="#121117" stroke="#2c2a36" />
+      <circle cx={c} cy={c} r={R + outerPad} fill="#17161d" stroke="#2c2a36" />
+      <circle cx={c} cy={c} r={R - 36} fill="#121117" stroke="#2c2a36" />
       {/* Direction legend: clockwise = brighter / homeward; counter-clockwise = opener / relax */}
-      <path d={`M ${c + 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 1 ${c + R - 42} ${c - 4}`} fill="none" stroke="#7fd0a8" strokeWidth={1.4} markerEnd="url(#arrowhead-cw)" opacity={0.85} />
-      <path d={`M ${c - 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 0 ${c - R + 42} ${c - 4}`} fill="none" stroke="#f0a070" strokeWidth={1.4} markerEnd="url(#arrowhead-ccw)" opacity={0.85} />
-      <text x={c + 54} y={c - R + 30} className="cdir cw">→ brighter</text>
-      <text x={c - 54} y={c - R + 30} className="cdir ccw">← opens</text>
+      <path d={`M ${c + 22} ${c - R + 50} A ${R - 50} ${R - 50} 0 0 1 ${c + R - 50} ${c - 6}`} fill="none" stroke="#7fd0a8" strokeWidth={1.5} markerEnd="url(#arrowhead-cw)" opacity={0.85} />
+      <path d={`M ${c - 22} ${c - R + 50} A ${R - 50} ${R - 50} 0 0 0 ${c - R + 50} ${c - 6}`} fill="none" stroke="#f0a070" strokeWidth={1.5} markerEnd="url(#arrowhead-ccw)" opacity={0.85} />
+      <text x={c + 62} y={c - R + 36} className="cdir cw">→ brighter</text>
+      <text x={c - 62} y={c - R + 36} className="cdir ccw">← opens</text>
       {Array.from({ length: 12 }, (_, i) => {
         const p = mod(i * 7, 12);
         const { x, y } = pos(p, R);
@@ -576,16 +596,16 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
                 : `${label}: ${fifthsMoveLabel(refPc, p)}`}
             </title>
             {/* Large invisible hit target for fingers */}
-            {onAddPc && <circle cx={x} cy={y} r={22} fill="transparent" />}
+            {onAddPc && <circle cx={x} cy={y} r={26} fill="transparent" />}
             <circle
-              cx={x} cy={y} r={hit ? 19 : 17}
+              cx={x} cy={y} r={hit ? 22 : 20}
               fill={fill}
               stroke={stroke}
-              strokeWidth={hit || isTonic || isSel || vis > 0.85 ? 2.5 : vis > 0.55 ? 1.6 : 1}
+              strokeWidth={hit || isTonic || isSel || vis > 0.85 ? 2.6 : vis > 0.55 ? 1.7 : 1.1}
             />
             <text x={x} y={y + 1} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
-            <text x={x} y={y + 12} className={'cstep ' + tagClass}>{tag}</text>
-            {onAddPc && <text x={x} y={y + 26} className="cadd">＋ add</text>}
+            <text x={x} y={y + 14} className={'cstep ' + tagClass}>{tag}</text>
+            {onAddPc && <text x={x} y={y + 30} className="cadd">＋ add</text>}
           </g>
         );
       })}
@@ -593,11 +613,15 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         const hit = pressedDot === s.id;
         const isBestLocal = s.localRank === 0;
         const rankLabel = s.rank + 1;
+        // Quality tag sits just off the spoke (tangential) so radial neighbors stay clear.
+        const tagOff = s.r + 11;
+        const tx = s.x + Math.cos(s.angle + Math.PI / 2) * tagOff;
+        const ty = s.y + Math.sin(s.angle + Math.PI / 2) * tagOff;
         return (
           <g
             key={s.id}
             className="cdot-hit"
-            opacity={0.45 + 0.55 * s.strength}
+            opacity={0.5 + 0.5 * s.strength}
             onPointerDown={(e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -613,27 +637,30 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
             <title>
               {`#${rankLabel}${s.label ? ` ${s.label}` : ''} — ${isBestLocal ? 'best' : 'weaker'} for this root · tap to hear`}
             </title>
-            {/* Finger-sized hit target (visual dot is smaller so ranks stay readable). */}
-            <circle cx={s.x} cy={s.y} r={14} fill="transparent" />
+            {/* Finger-sized hit target (visual chip is smaller so ranks stay readable). */}
+            <circle cx={s.x} cy={s.y} r={15} fill="transparent" />
             <circle
               cx={s.x} cy={s.y}
               r={hit ? s.r + 1.5 : s.r}
               fill={s.color}
               stroke={isBestLocal ? '#ECEAF4' : '#121117'}
-              strokeWidth={isBestLocal ? 2 : 1}
+              strokeWidth={isBestLocal ? 2.2 : 1}
             />
             {rankLabel <= 9 && (
-              <text x={s.x} y={s.y + 3.2} className={'cdot-rank' + (s.strength > 0.55 ? ' dark' : '')}>
+              <text x={s.x} y={s.y + 3.4} className={'cdot-rank' + (s.strength > 0.55 ? ' dark' : '')}>
                 {rankLabel}
               </text>
             )}
+            {s.tag ? (
+              <text x={tx} y={ty + 3} className={'cdot-tag' + (isBestLocal ? ' best' : '')}>{s.tag}</text>
+            ) : null}
           </g>
         );
       })}
       {arrow && selected && <path d={arrow} stroke={selected.color} strokeWidth={3.5} fill="none" markerEnd="url(#arrowhead)" opacity={0.95} />}
       {selected && (
         <g>
-          <text x={c} y={c - 18} className="ccenter" fill={selected.color}>{selected.label}</text>
+          <text x={c} y={c - 20} className="ccenter" fill={selected.color}>{selected.label}</text>
           {sameRoot ? (
             <text x={c} y={c} className="cmove" fill={selected.color}>{fromName} · same root</text>
           ) : showMoveLine && toName ? (
@@ -645,8 +672,8 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
           )}
           {movePlain && (
             <>
-              <text x={c} y={c + 14} className="ceffect" fill="#e8e4f4">{movePlain.title}</text>
-              <text x={c} y={c + 26} className="ceffect soft" fill="#a9a3bc">
+              <text x={c} y={c + 16} className="ceffect" fill="#e8e4f4">{movePlain.title}</text>
+              <text x={c} y={c + 30} className="ceffect soft" fill="#a9a3bc">
                 {movePlain.hint.length > 44 ? `${movePlain.hint.slice(0, 42)}…` : movePlain.hint}
               </text>
             </>
@@ -655,9 +682,9 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
       )}
       {!selected && (
         <g>
-          <text x={c} y={c - 10} className="ccenter" fill="#bdb8d4">{spellPc(tonicPc)}</text>
+          <text x={c} y={c - 12} className="ccenter" fill="#bdb8d4">{spellPc(tonicPc)}</text>
           <text x={c} y={c + 6} className="ceffect" fill="#cfcbe0">home of this key</text>
-          <text x={c} y={c + 18} className="ceffect soft" fill="#8f8aa3">rim dots = next picks · bigger = better</text>
+          <text x={c} y={c + 20} className="ceffect soft" fill="#8f8aa3">rim chips = next picks · outward = variants</text>
         </g>
       )}
     </svg>

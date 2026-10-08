@@ -11,7 +11,8 @@ import {
   harmPreviewEvents,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, rootMotion,
-  TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, beatsPerBar, clampSlotsToMeter, parseMeter,
+  TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, BPM_PRESETS, DEFAULT_BPM, beatSecFromBpm, clampBpm,
+  beatsPerBar, clampSlotsToMeter, parseMeter,
   timeSigLabel,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
 } from '../core';
@@ -123,6 +124,18 @@ function Composer({ data }: { data: LoadedData }) {
     try { localStorage.setItem('muse.timeSig', timeSigLabel(ts)); } catch { /* private mode */ }
     setSlots((s) => clampSlotsToMeter(s, beatsPerBar(ts)));
   };
+  const [bpm, setBpm] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem('muse.bpm'));
+      return Number.isFinite(v) && v > 0 ? clampBpm(v) : DEFAULT_BPM;
+    } catch { return DEFAULT_BPM; }
+  });
+  const chooseBpm = (n: number) => {
+    const next = clampBpm(n);
+    setBpm(next);
+    try { localStorage.setItem('muse.bpm', String(next)); } catch { /* private mode */ }
+  };
+  const beatSec = beatSecFromBpm(bpm);
   const [meterNote, setMeterNote] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimelineSlot[]>([]);
   const [history, setHistory] = useState<Snapshot[]>([]);
@@ -236,7 +249,20 @@ function Composer({ data }: { data: LoadedData }) {
     if (tensionPick !== null && tensionPick >= chordedSlotIndices.length) setTensionPick(chordedSlotIndices.length ? chordedSlotIndices.length - 1 : null);
   }, [chordedSlotIndices.length, tensionPick]);
   const noteSugs: NoteSuggestion[] = useMemo(
-    () => (tab === 'melody' ? engine.suggestNotes({ key: k, melody, chord: noteChord, profile, adventure, limit: 12, beat: noteBeat, timeSig }) : []),
+    () => (tab === 'melody'
+      ? engine.suggestNotes({
+        key: k,
+        melody,
+        chord: noteChord,
+        // Last few chords so ranking / why text respect the arrival of the sequence.
+        progression: chords.slice(-4),
+        profile,
+        adventure,
+        limit: 12,
+        beat: noteBeat,
+        timeSig,
+      })
+      : []),
     [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, timeSig.num, timeSig.den], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const [pathLen, setPathLen] = useState<2 | 3>(2);
@@ -250,7 +276,7 @@ function Composer({ data }: { data: LoadedData }) {
   const notePaths: NotePath[] = useMemo(() => {
     if (tab !== 'melody') return [];
     return suggestNotePaths(engine, {
-      key: k, melody, chord: noteChord, profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
+      key: k, melody, chord: noteChord, progression: chords.slice(-4), profile, adventure, steps: pathLen, limit: 4, beat: noteBeat,
     });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
   const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
@@ -315,7 +341,7 @@ function Composer({ data }: { data: LoadedData }) {
     synth.unlock();
     synth.stopAll();
     if (pendingHarm?.notes.length) {
-      const prev = harmPreviewEvents(pendingHarm.notes, { timeSig });
+      const prev = harmPreviewEvents(pendingHarm.notes, { timeSig, beatSec });
       synth.playNotes(withBass(s.chord, s.voicing), { dur: prev.chordDur, vel: 0.62 });
       prev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], { at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85 }));
     } else {
@@ -343,7 +369,7 @@ function Composer({ data }: { data: LoadedData }) {
   const playAll = () => {
     synth.unlock();
     synth.stopAll();
-    const ev = timelineEvents(slots, { timeSig });
+    const ev = timelineEvents(slots, { timeSig, beatSec });
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
@@ -376,10 +402,11 @@ function Composer({ data }: { data: LoadedData }) {
     synth.stopAll();
     const voiced = voiceProgression([...chords, ...p.chords]);
     const base = chords.length;
+    const step = beatSec * 2.14;
     p.chords.forEach((c, i) => {
-      const at = i * 0.9;
-      synth.playNotes(withBass(c, voiced[base + i] ?? pianoVoicing(c)), { at, dur: 0.85, vel: 0.68 });
-      if (p.links[i] !== undefined) synth.playNotes([fitMidi(p.links[i])], { at: at + 0.18, dur: 0.5, vel: 0.92 });
+      const at = i * step;
+      synth.playNotes(withBass(c, voiced[base + i] ?? pianoVoicing(c)), { at, dur: step * 0.94, vel: 0.68 });
+      if (p.links[i] !== undefined) synth.playNotes([fitMidi(p.links[i])], { at: at + step * 0.2, dur: step * 0.55, vel: 0.92 });
     });
   };
   const addChordPath = (p: ChordPath) => {
@@ -399,11 +426,12 @@ function Composer({ data }: { data: LoadedData }) {
   const playNotePath = (p: NotePath) => {
     synth.unlock();
     synth.stopAll();
+    const noteStep = Math.max(0.22, beatSec * 1.05);
     if (noteChord) {
       const v = noteChord === cur && prevVoicing ? prevVoicing : pianoVoicing(noteChord);
-      synth.playNotes(withBass(noteChord, v), { dur: 0.5 + p.midis.length * 0.45, vel: 0.35 });
+      synth.playNotes(withBass(noteChord, v), { dur: 0.4 + p.midis.length * noteStep, vel: 0.35 });
     }
-    p.midis.forEach((m, i) => synth.playNotes([fitMidi(m)], { at: 0.05 + i * 0.45, dur: 0.4, vel: 0.92 }));
+    p.midis.forEach((m, i) => synth.playNotes([fitMidi(m)], { at: 0.05 + i * noteStep, dur: noteStep * 0.9, vel: 0.92 }));
   };
   const addNotePath = (p: NotePath) => {
     snapshot();
@@ -461,7 +489,7 @@ function Composer({ data }: { data: LoadedData }) {
     try { await navigator.clipboard.writeText(txt); flash('Copied timeline'); } catch { flash(txt); }
   };
   const downloadMidi = () => {
-    const bytes = toMidiTimeline(slots, 90, timeSig);
+    const bytes = toMidiTimeline(slots, bpm, timeSig);
     const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'audio/midi' }));
     const a = document.createElement('a');
     a.href = url;
@@ -476,13 +504,15 @@ function Composer({ data }: { data: LoadedData }) {
     const j = moodJourney(engine, k, jFrom, jTo, { length: jLen, adventure });
     setJourney(j);
     const v = voiceProgression(j.map((x) => x.chord));
-    synth.playSequence(j.map((x, i) => withBass(x.chord, v[i])), 0.8, 0.75);
+    const step = beatSec * 1.9;
+    synth.playSequence(j.map((x, i) => withBass(x.chord, v[i])), step, step * 0.94);
   };
   const playJourney = () => {
     if (!journey) return;
     synth.unlock();
     const v = voiceProgression(journey.map((x) => x.chord));
-    synth.playSequence(journey.map((x, i) => withBass(x.chord, v[i])), 0.8, 0.75);
+    const step = beatSec * 1.9;
+    synth.playSequence(journey.map((x, i) => withBass(x.chord, v[i])), step, step * 0.94);
   };
   const useJourney = () => {
     if (!journey) return;
@@ -686,7 +716,7 @@ function Composer({ data }: { data: LoadedData }) {
             onAddPc={addMelodyPc}
           />
           <p className="small muted center">
-            Big letters = notes you can add (brighter = stronger next pick) · rim dots = next-note picks (bigger / brighter = better; numbers = rank; tap to hear) ·
+            Big letters = notes you can add (brighter = stronger next pick) · rim chips = next-note picks (stack outward by root — bigger / brighter / lower number = better; quality tag beside each; tap to hear) ·
             +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
           </p>
           <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
@@ -717,7 +747,7 @@ function Composer({ data }: { data: LoadedData }) {
           onAddPc={addCircleChord}
         />
         <p className="small muted center">
-          Big letters = chords you can add (brighter = stronger next pick) · rim dots = next-chord picks (variants of the same root fan out — bigger / brighter / lower number = better; tap to hear) ·
+          Big letters = chords you can add (brighter = stronger next pick) · rim chips = next-chord picks (variants of the same root stack outward — bigger / brighter / lower number = better; quality tag beside each; tap to hear) ·
           +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
           plays on <b>{INSTRUMENTS[instrument].label}</b>
         </p>
@@ -864,6 +894,22 @@ function Composer({ data }: { data: LoadedData }) {
             ))}
           </select>
         </label>
+        <span className="muted"> · </span>
+        <label className="meter-pick">
+          <span className="muted">BPM</span>
+          <select
+            aria-label="Tempo"
+            value={bpm}
+            onChange={(e) => chooseBpm(Number(e.target.value))}
+          >
+            {!(BPM_PRESETS as readonly number[]).includes(bpm) && (
+              <option value={bpm}>{bpm}</option>
+            )}
+            {BPM_PRESETS.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        </label>
         {detected && auto && <span className="muted"> · detected ({Math.round(detected.confidence * 100)}%)</span>}
         {data.kb.meta.isSeed && <span className="warn"> · using seed theory data</span>}
       </div>
@@ -991,8 +1037,23 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
         )}
-        <div className="row gap">
+        <div className="row gap play-row">
           <button onClick={playAll} disabled={!slots.length}>▶ Play</button>
+          <label className="meter-pick bpm-inline">
+            <span className="muted">BPM</span>
+            <select
+              aria-label="Playback tempo"
+              value={bpm}
+              onChange={(e) => chooseBpm(Number(e.target.value))}
+            >
+              {!(BPM_PRESETS as readonly number[]).includes(bpm) && (
+                <option value={bpm}>{bpm}</option>
+              )}
+              {BPM_PRESETS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
           <button onClick={undo} disabled={!history.length}>↶ Undo</button>
           <button onClick={clearAll} disabled={!slots.length}>Clear</button>
           <button onClick={copyText} disabled={!slots.length}>Copy</button>
@@ -1344,7 +1405,7 @@ function Composer({ data }: { data: LoadedData }) {
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('guide')}>Open the Guide</button> for how each feature connects to musicality.
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('moods')}>Moods &amp; chords</button> lists every mood tag and the moves that carry it.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
-          Nylon, steel &amp; metal guitar (distortion samples + live amp), bass guitar, Rhodes, pad, and Electronic (saw lead): FluidR3_GM soundfont by Frank Wen, MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
+          Nylon &amp; steel guitar, bass, Rhodes, pad, and Electronic (saw lead): FluidR3_GM (Frank Wen). Metal guitar: MusyngKite clean electric samples through a live amp/cab. MP3 renders from <a href="https://github.com/gleitz/midi-js-soundfonts" target="_blank" rel="noreferrer">gleitz/midi-js-soundfonts</a> (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>).
           Samples were trimmed, faded and re-encoded (MP3) for size; notes between samples are pitch-shifted.</p>
         <p><b>No sound on iPhone?</b> Flip off Silent mode (the switch on the side), turn the volume up, and tap again — Safari only starts audio after a tap.</p>
         <p><b>Theory &amp; moods.</b> Mood labels come from the bundled research knowledge base and mood lexicon (sources listed inside the data files). Lore mode notes are folklore, not science.</p>

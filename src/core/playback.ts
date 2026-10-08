@@ -31,8 +31,8 @@ export const INSTRUMENTS: Record<InstrumentId, InstrumentDef> = {
   piano: { id: 'piano', label: 'Piano', voicing: 'keys', samples: { from: 33, to: 96, step: 3 }, attack: 0.004, release: 0.28, ring: 0.25, strumMs: 6, reverb: 0.22, gain: 0.9, velocityFilter: true, source: SALAMANDER },
   nylon: { id: 'nylon', label: 'Nylon guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.35, ring: 0.6, strumMs: 24, reverb: 0.2, gain: 0.95, velocityFilter: true, source: FLUID },
   steel: { id: 'steel', label: 'Steel guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.35, ring: 0.6, strumMs: 20, reverb: 0.18, gain: 1.0, velocityFilter: true, source: FLUID },
-  // Distortion-guitar samples + live metal amp stack in audio.ts (thicker, cleaner, less tinny).
-  electric: { id: 'electric', label: 'Metal guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.002, release: 0.28, ring: 0.48, strumMs: 12, reverb: 0.14, gain: 0.72, velocityFilter: true, source: FLUID },
+  // Clean electric-guitar samples + live high-gain amp/cab in audio.ts (real guitar → amp, not synth distortion).
+  electric: { id: 'electric', label: 'Metal guitar', voicing: 'guitar', samples: { from: 40, to: 85, step: 3 }, attack: 0.003, release: 0.32, ring: 0.55, strumMs: 14, reverb: 0.16, gain: 0.65, velocityFilter: true, source: 'MusyngKite electric_guitar_clean — midi-js-soundfonts, CC BY 3.0; amp/cab in audio.ts' },
   rhodes: { id: 'rhodes', label: 'Rhodes', voicing: 'keys', samples: { from: 36, to: 90, step: 3 }, attack: 0.006, release: 0.3, ring: 0.2, strumMs: 5, reverb: 0.28, gain: 0.55, velocityFilter: true, source: FLUID },
   pad: { id: 'pad', label: 'Soft pad', voicing: 'keys', samples: { from: 36, to: 84, step: 3 }, attack: 0.16, release: 0.55, ring: 0.1, strumMs: 0, reverb: 0.4, gain: 0.85, velocityFilter: false, source: FLUID },
   // Saw lead — bright electronic for chords + melody (FluidR3 lead_2_sawtooth).

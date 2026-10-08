@@ -2,7 +2,9 @@
 # Downloads and re-encodes the instrument samples into public/samples/<instrument>/<midi>.mp3.
 # Sources & licences (see README "Credits"):
 #   piano  : Salamander Grand Piano V3 by Alexander Holm — CC BY 3.0 (files via github.com/Tonejs/audio/salamander)
-#   nylon, steel, electric, rhodes, pad, synth, bass : FluidR3_GM soundfont by Frank Wen, rendered by gleitz/midi-js-soundfonts — CC BY 3.0
+#   nylon, steel, rhodes, pad, synth, bass : FluidR3_GM soundfont by Frank Wen, rendered by gleitz/midi-js-soundfonts — CC BY 3.0
+#   electric (Metal guitar): MusyngKite electric_guitar_clean — real electric-guitar samples; high-gain amp/cab
+#     is applied live in src/ui/audio.ts (FluidR3 distortion_guitar was too synth-like / tinny).
 # Each sample is trimmed, faded out and encoded as 44.1 kHz MP3 (decodable by iOS Safari).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -27,9 +29,11 @@ fetch() { # instrument url-prefix style from to step seconds fade bitrate channe
 fetch piano https://tonejs.github.io/audio/salamander sharp 33 57 3 6 1.5 96k 2
 fetch piano https://tonejs.github.io/audio/salamander sharp 60 96 3 4.5 1.2 96k 2
 FL=https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM
+MK=https://gleitz.github.io/midi-js-soundfonts/MusyngKite
 fetch nylon    $FL/acoustic_guitar_nylon-mp3 flat 40 85 3 3 0.8 80k 1
 fetch steel    $FL/acoustic_guitar_steel-mp3 flat 40 85 3 3 0.8 80k 1
-fetch electric $FL/distortion_guitar-mp3     flat 40 85 3 2.8 0.8 80k 1
+# Clean electric guitar → live amp/cab in audio.ts (sounds like a guitar, not a synth lead).
+fetch electric $MK/electric_guitar_clean-mp3 flat 40 85 3 2.8 0.8 96k 1
 fetch rhodes   $FL/electric_piano_1-mp3      flat 36 90 3 3 0.8 80k 1
 fetch pad      $FL/pad_2_warm-mp3            flat 36 84 3 3 1.0 72k 1
 fetch synth    $FL/lead_2_sawtooth-mp3       flat 36 90 3 2.8 0.8 80k 1
