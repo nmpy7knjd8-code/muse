@@ -502,25 +502,11 @@ function Composer({ data }: { data: LoadedData }) {
     }
   };
 
-  // ---- grouped suggestions (mood buckets, best-scoring options nearest the top) ----
-  const groups = useMemo(() => {
-    const items = tab === 'chords' ? chordSugs : noteSugs;
-    const map = new Map<string, Array<ChordSuggestion | NoteSuggestion>>();
-    for (const s of items) {
-      const g = map.get(s.primaryMood) ?? [];
-      g.push(s);
-      map.set(s.primaryMood, g);
-    }
-    return [...map.entries()]
-      .map(([mood, list]) => [mood, [...list].sort((a, b) => b.score - a.score)] as const)
-      .sort((a, b) => (b[1][0]?.score ?? 0) - (a[1][0]?.score ?? 0));
-  }, [tab, chordSugs, noteSugs]);
-  const rankOf = useMemo(() => {
-    const items = tab === 'chords' ? chordSugs : noteSugs;
-    const m = new Map<string, number>();
-    items.forEach((s, i) => m.set(s.id, i + 1));
-    return m;
-  }, [tab, chordSugs, noteSugs]);
+  // Ranked suggestions: engine order is score-desc — show that flat list (mood stays as tags).
+  const ranked = useMemo(
+    () => (tab === 'chords' ? chordSugs : noteSugs),
+    [tab, chordSugs, noteSugs],
+  );
 
   const selColor = lex.color(tab === 'chords' ? selChord?.primaryMood ?? 'floating' : selNote?.primaryMood ?? 'floating');
   const shapes = useMemo(() => (selChord ? guitarVoicings(selChord.chord) : []), [selChord]);
@@ -1111,62 +1097,75 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
           </div>
         )}
-        {groups.map(([mood, items]) => (
-          <div key={mood} className="group">
-            <div className="ghead"><i style={{ background: lex.color(mood) }} />{lex.label(mood)} <span className="muted" style={{ fontWeight: 500 }}>· best first</span></div>
-            {items.map((s) => {
-              const isChord = 'chord' in s;
-              const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
-              const color = lex.color(s.primaryMood);
-              const rar = RARITY_MARK[s.rarity];
-              const cs = isChord ? s as ChordSuggestion : null;
-              const ns = !isChord ? s as NoteSuggestion : null;
-              const root = cs && cur ? rootMotion(cur, cs.chord) : null;
-              const rank = rankOf.get(s.id);
-              const gShape = cs ? guitarVoicings(cs.chord, 1)[0] : null;
-              const fingers = cs ? pianoFingering(cs.voicing, 'R') : [];
-              return (
-                <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
-                  onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
-                  <div className="card-main">
-                    <div className="card-top">
-                      {rank != null && <span className="card-rank" title="Overall preference rank">#{rank}</span>}
-                      {root && <span className={'root-arrow ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} aria-label={root.label} title={root.label}>{root.dir}</span>}
-                      <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
-                      <span className="rn">{isChord ? (s as ChordSuggestion).roman : (s as NoteSuggestion).degree}</span>
-                      {root && <span className={'root-badge ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{root.label}</span>}
-                      <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
-                    </div>
-                    <div className="tags">
-                      {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
-                      {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
-                      {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
-                      {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
-                      {ns?.relation && (
-                        <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>
-                          {ns.relation.label} · {REL_LABEL[ns.relation.kind]}
-                        </span>
-                      )}
-                      {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
-                    </div>
-                    <div className="why">{s.why}</div>
-                    {cs && (
-                      <div className="card-hands" aria-label="Hand placements">
-                        <span><b>Piano</b><span className="mono">{fingers.length ? fingers.join('-') : '—'}</span></span>
-                        <span><b>Guitar</b><span className="mono">{gShape ? gShape.frets.map((f) => (f === null ? 'x' : f)).join(' ') : '—'}</span></span>
-                        <span><b>Bass</b><span className="mono">{noteName(spellInKey(k, pc(cs.chord.bass ?? cs.chord.root)), true)}</span></span>
-                      </div>
+        <div className="group">
+          <div className="ghead">Best fit first <span className="muted" style={{ fontWeight: 500 }}>· mood is a tag, not the sort</span></div>
+          {ranked.map((s, i) => {
+            const isChord = 'chord' in s;
+            const selected = (isChord ? selChord?.id : selNote?.id) === s.id;
+            const color = lex.color(s.primaryMood);
+            const rar = RARITY_MARK[s.rarity];
+            const cs = isChord ? s as ChordSuggestion : null;
+            const ns = !isChord ? s as NoteSuggestion : null;
+            const root = cs && cur ? rootMotion(cur, cs.chord) : null;
+            const gShape = cs ? guitarVoicings(cs.chord, 1)[0] : null;
+            const fingers = cs ? pianoFingering(cs.voicing, 'R') : [];
+            const frets = gShape ? gShape.frets.map((f) => (f === null ? 'x' : f)).join(' ') : '—';
+            const gFingers = gShape?.fingers?.some((f) => f && f > 0)
+              ? gShape.fingers.map((f) => (f === null ? 'x' : f === 0 ? 'o' : f)).join('')
+              : null;
+            const bassNoteLabel = cs ? noteName(spellInKey(k, pc(cs.chord.bass ?? cs.chord.root)), true) : '';
+            const keysLabel = fingers.length ? fingers.join('-') : '—';
+            return (
+              <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
+                onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
+                <div className="card-main">
+                  <div className="card-top">
+                    <span className="card-rank" title="Best-fit rank (1 = strongest suggestion)">#{i + 1}</span>
+                    {root && <span className={'root-arrow ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} aria-label={root.label} title={root.label}>{root.dir}</span>}
+                    <span className="sym">{isChord ? (s as ChordSuggestion).symbol : (s as NoteSuggestion).name.replace('#', '♯')}</span>
+                    <span className="rn">{isChord ? (s as ChordSuggestion).roman : (s as NoteSuggestion).degree}</span>
+                    {root && <span className={'root-badge ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')} title="Root vs current chord">{root.label}</span>}
+                    <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
+                  </div>
+                  <div className="tags">
+                    {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
+                    {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
+                    {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
+                    {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
+                    {ns?.relation && (
+                      <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>
+                        {ns.relation.label} · {REL_LABEL[ns.relation.kind]}
+                      </span>
                     )}
+                    {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
                   </div>
-                  <div className="card-actions">
-                    <button aria-label="Play" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>▶</button>
-                    <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else addNote((s as NoteSuggestion).midi); }}>＋</button>
-                  </div>
+                  <div className="why">{s.why}</div>
+                  {cs && (
+                    <div className="card-hands" aria-label="Hand placements by instrument">
+                      {INSTRUMENT_IDS.map((id) => {
+                        const def = INSTRUMENTS[id];
+                        const short = def.label.replace(' guitar', '').replace('Nylon', 'Nylon').replace('Soft pad', 'Pad');
+                        let place = '—';
+                        if (def.voicing === 'keys') place = keysLabel;
+                        else if (def.voicing === 'guitar') place = gFingers ? `${frets} · ${gFingers}` : frets;
+                        else if (def.voicing === 'bass') place = bassNoteLabel;
+                        return (
+                          <span key={id} className={instrument === id ? 'on' : undefined} title={def.label}>
+                            <b>{short}</b><span className="mono">{place}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
+                <div className="card-actions">
+                  <button aria-label="Play" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>▶</button>
+                  <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else addNote((s as NoteSuggestion).midi); }}>＋</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <div className="center" style={{ marginTop: 14 }}>

@@ -315,10 +315,13 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   background: rgba(127, 211, 255, 0.12); color: #7fd3ff; font-size: 11px; font-weight: 600;
 }
 .tlegend i.melring { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #7fd3ff; background: transparent; display: inline-block; vertical-align: -1px; margin-right: 3px; }
-.card-rank { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 1.4em; }
-.card-hands { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; font-size: 11.5px; color: var(--muted); }
+.card-rank { font-size: 11px; font-weight: 700; color: #7fd0a8; min-width: 1.4em; }
+.card-hands { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 5px; font-size: 11px; color: var(--muted); }
 .card-hands b { color: var(--text); font-weight: 600; margin-right: 4px; }
 .card-hands .mono { letter-spacing: 0.02em; }
+.card-hands span.on { color: #cfc8e8; }
+.card-hands span.on b { color: #9ecbff; }
+.card-hands span.on .mono { color: #eceaf4; }
 .path-row { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 10px; }
 .path-chip {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
