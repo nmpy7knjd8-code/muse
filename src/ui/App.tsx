@@ -686,7 +686,7 @@ function Composer({ data }: { data: LoadedData }) {
             onAddPc={addMelodyPc}
           />
           <p className="small muted center">
-            Big letters = notes you can add (brighter = stronger next pick) · rim chips = next-note picks (stack outward by root — bigger / brighter / lower number = better; quality tag beside each; tap to hear) ·
+            Big letters = notes you can add (brighter = stronger next pick) · rim chips = next-note picks (stack outward by root — rank + quality on each pill; brighter / lower number = better; tap to hear) ·
             +1/−1 = steps from where you are (right = brighter, left = opens) · plays on <b>{INSTRUMENTS[instrument].label}</b>
           </p>
           <div className="cof-instr row gap" role="group" aria-label="Instrument for circle taps">
@@ -717,7 +717,7 @@ function Composer({ data }: { data: LoadedData }) {
           onAddPc={addCircleChord}
         />
         <p className="small muted center">
-          Big letters = chords you can add (brighter = stronger next pick) · rim chips = next-chord picks (variants of the same root stack outward — bigger / brighter / lower number = better; quality tag beside each; tap to hear) ·
+          Big letters = chords you can add (brighter = stronger next pick) · rim chips = next-chord picks (variants of the same root stack outward — rank + quality on each pill; brighter / lower number = better; tap to hear) ·
           +1/−1 = one step around the circle (right = brighter / pulls home, left = opens / relaxes) ·
           plays on <b>{INSTRUMENTS[instrument].label}</b>
         </p>
