@@ -82,6 +82,8 @@ jobs:
                 '',
                 'A Muse cloud agent watches for issues titled `Artist Lens request: …`, then researches the artist and opens a PR adding them to `public/artists.json` (techniques, sources, try-it exercise + tests).',
                 '',
+                'Optional fast path: comment `@cursor` on this issue to kick a cloud agent immediately.',
+                '',
                 '_If this was opened by mistake, close the issue._',
               ].join('\n'),
             });

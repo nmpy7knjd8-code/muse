@@ -1,7 +1,7 @@
 // Artist Lens: how artists use musical polarities, with technique chips linked to Muse's theory KB
 // and "Try it" exercises that load into the progression (pedal / held bass applied).
 import { useState, type FormEvent } from 'react';
-import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, loadTryIt, timeSigLabel, tryItText } from '../core';
+import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, artistLensPromptDeeplink, loadTryIt, timeSigLabel, tryItText } from '../core';
 import type { KbItemInfo } from './data';
 
 interface Props {
@@ -209,7 +209,7 @@ function BandRequestBox() {
   const [name, setName] = useState('');
   const [song, setSong] = useState('');
   const [sent, setSent] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'request' | 'export' | null>(null);
   const [recent, setRecent] = useState<BandRequest[]>(() => loadRequests());
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -225,7 +225,7 @@ function BandRequestBox() {
     const win = window.open(taskUrl, '_blank', 'noopener,noreferrer');
     if (!win) window.location.assign(taskUrl);
     setSent(band);
-    setCopied(false);
+    setCopied(null);
     setName('');
     setSong('');
   };
@@ -236,14 +236,23 @@ function BandRequestBox() {
     const text = `${title}\n\n${body}`;
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
+      setCopied('request');
     } catch { /* ignore */ }
   };
+  const exportPending = async () => {
+    const payload = loadRequests();
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setCopied('export');
+    } catch { /* ignore */ }
+  };
+  const cursorLinkFor = (band: string, songReq?: string) =>
+    artistLensPromptDeeplink({ band, song: songReq?.trim() || null });
   return (
     <form className="band-request-stack" onSubmit={submit} aria-label="Request a band for Artist Lens">
       <div className="band-request">
         <h4>Request a band</h4>
-        <p className="small muted">Missing someone? Submit a name — we’ll research and add them after the GitHub issue is created.</p>
+        <p className="small muted">Missing someone? Open a GitHub issue (tap Create) or Ask Cursor — either path queues a research add to Artist Lens.</p>
         <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div className="band-request band-request-songbox">
@@ -262,8 +271,10 @@ function BandRequestBox() {
         <button type="submit" className="add" disabled={!name.trim()}>Open GitHub add-band issue</button>
         {sent && (
           <p className="small" role="status">
-            Prefill opened for <b>{sent}</b> — tap <b>Create</b> on GitHub to finish (required so Muse can pick it up).
-            {' '}<button type="button" className="linkish" onClick={() => void copyLatest()}>{copied ? 'Copied' : 'Copy request text'}</button>
+            Prefill opened for <b>{sent}</b> — tap <b>Create</b> on GitHub to finish.
+            {' '}<button type="button" className="linkish" onClick={() => void copyLatest()}>{copied === 'request' ? 'Copied' : 'Copy request text'}</button>
+            {' · '}
+            <a className="linkish" href={cursorLinkFor(sent, recent[0]?.song)} target="_blank" rel="noreferrer">Ask Cursor</a>
           </p>
         )}
         {recent.length > 0 && (
@@ -274,9 +285,18 @@ function BandRequestBox() {
                 <li key={`${r.band}-${r.at}`}>
                   {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
                   {r.song ? <span className="muted"> · song requested</span> : null}
+                  {' · '}
+                  <a className="linkish" href={cursorLinkFor(r.band, r.song)} target="_blank" rel="noreferrer">Ask Cursor</a>
                 </li>
               ))}
             </ul>
+            <p className="small muted" style={{ marginTop: 6 }}>
+              Device queue stays local until an issue exists.
+              {' '}<button type="button" className="linkish" onClick={() => void exportPending()}>
+                {copied === 'export' ? 'Copied muse.bandRequests JSON' : 'Copy muse.bandRequests JSON'}
+              </button>
+              {' '}for the agent.
+            </p>
           </div>
         )}
       </div>

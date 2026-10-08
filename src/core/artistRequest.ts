@@ -1,11 +1,23 @@
 // Parse GitHub "Artist Lens request: …" issues into a structured add-band job.
 // Pure helpers so the cloud agent (and tests) share one intake path.
+// Also accepts device dumps of localStorage `muse.bandRequests`.
 
 export interface ArtistLensRequest {
   band: string;
   song: string | null;
   issueNumber?: number;
   issueUrl?: string;
+  /** Epoch ms when saved on-device (muse.bandRequests), if known. */
+  at?: number;
+}
+
+/** Shape stored in localStorage key `muse.bandRequests`. */
+export interface BandRequestEntry {
+  band: string;
+  note?: string;
+  song?: string;
+  at?: number;
+  taskUrl?: string;
 }
 
 const TITLE_RE = /^Artist Lens request:\s*(.+?)\s*$/i;
@@ -20,6 +32,51 @@ export function isSmokeArtistRequest(band: string): boolean {
     || b === 'test'
     || b === 'placeholder'
     || /^x+$/i.test(b);
+}
+
+/**
+ * Parse a JSON dump of `muse.bandRequests` (array or `{ requests: [...] }`).
+ * Skips smoke/placeholder names. Dedupes by band (case-insensitive), keeping newest `at`.
+ */
+export function parseBandRequestEntries(raw: unknown): ArtistLensRequest[] {
+  const list: unknown[] = Array.isArray(raw)
+    ? raw
+    : (raw && typeof raw === 'object' && Array.isArray((raw as { requests?: unknown }).requests)
+      ? (raw as { requests: unknown[] }).requests
+      : []);
+  const byBand = new Map<string, ArtistLensRequest>();
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue;
+    const e = item as BandRequestEntry;
+    const band = typeof e.band === 'string' ? e.band.trim() : '';
+    if (!band || isSmokeArtistRequest(band)) continue;
+    const song = typeof e.song === 'string' && e.song.trim() && !/^\(none\)$/i.test(e.song.trim())
+      ? e.song.trim()
+      : null;
+    const at = typeof e.at === 'number' ? e.at : undefined;
+    const key = band.toLowerCase();
+    const prev = byBand.get(key);
+    if (prev && (prev.at ?? 0) >= (at ?? 0)) continue;
+    byBand.set(key, { band, song, at });
+  }
+  return [...byBand.values()].sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
+}
+
+/** Agent prompt text for a band-add job (Cursor prompt deeplink / paste). */
+export function artistLensAgentPrompt(req: Pick<ArtistLensRequest, 'band' | 'song'>): string {
+  const song = req.song ? ` Include song analysis / try-it material for: ${req.song}.` : '';
+  return (
+    `Add Artist Lens artist "${req.band}" to public/artists.json on nmpy7knjd8-code/muse ` +
+    `with techniques, sources, and at least one try-it exercise; update tests/artists.test.ts.` +
+    song
+  );
+}
+
+/** https://cursor.com/link/prompt deeplink — user must confirm before it runs. */
+export function artistLensPromptDeeplink(req: Pick<ArtistLensRequest, 'band' | 'song'>): string {
+  const url = new URL('https://cursor.com/link/prompt');
+  url.searchParams.set('text', artistLensAgentPrompt(req));
+  return url.toString();
 }
 
 /** Extract band name from an issue title, or null if it is not an Artist Lens request. */
