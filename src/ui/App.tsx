@@ -254,16 +254,16 @@ function Composer({ data }: { data: LoadedData }) {
   }, []);
 
   // ---- audio actions (all called from tap handlers) ----
+  // Hear policy (going forward): preview ONLY the candidate next chord/note — never previous → next.
   const playChord = (c: Chord, prev?: number[]) => { synth.unlock(); synth.stopAll(); const v = pianoVoicing(c, prev); synth.playNotes(withBass(c, v)); };
   const playMove = (s: ChordSuggestion) => {
-    // Hear previews only the potential next chord (not previous → next).
-    // When harmonizing a pending melody bar, overlay that bar's notes on the same grid.
+    // Exception: when harmonizing a pending N.C. bar, overlay that bar's melody under the candidate chord.
     synth.unlock();
     synth.stopAll();
     if (pendingHarm?.notes.length) {
       const prev = harmPreviewEvents(pendingHarm.notes, { timeSig });
       synth.playNotes(withBass(s.chord, s.voicing), { dur: prev.chordDur, vel: 0.62 });
-      prev.notes.forEach((n) => synth.playNotes([n.midi], { at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85 }));
+      prev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], { at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85 }));
     } else {
       synth.playNotes(withBass(s.chord, s.voicing));
     }
@@ -282,15 +282,9 @@ function Composer({ data }: { data: LoadedData }) {
     flash(`Reharmonize bar ${i + 1} — Hear plays chord + melody`);
   };
   const playNoteMove = (n: NoteSuggestion) => {
-    // Hear previews only the potential next note (not previous → next), over the current chord.
     synth.unlock();
     synth.stopAll();
-    const under = noteChord;
-    if (under) {
-      const v = under === cur && prevVoicing ? prevVoicing : pianoVoicing(under);
-      synth.playNotes(withBass(under, v), { dur: 1.4, vel: 0.35 });
-    }
-    synth.playNotes([fitMidi(n.midi)], { at: 0.05, dur: 0.55, vel: 0.92 });
+    synth.playNotes([fitMidi(n.midi)], { dur: 0.65, vel: 0.92 });
   };
   const playAll = () => {
     synth.unlock();
