@@ -118,6 +118,35 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     const g7 = s.find((x) => x.id === 'G7');
     if (g7) expect(s.indexOf(g7)).toBeLessThan(6);
   });
+  it('labels authentic cadence home after V and keeps tonic on top when safe', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C F G'), adventure: 0, limit: 8 });
+    expect(s[0].id).toBe('C');
+    expect(s[0].why.toLowerCase()).toMatch(/cadence/);
+  });
+  it('after a predominant, lifts the dominant toward the top', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C Dm'), adventure: 0.2, limit: 10 });
+    const dom = s.findIndex((x) => x.id === 'G' || x.id === 'G7');
+    expect(dom).toBeGreaterThanOrEqual(0);
+    expect(dom).toBeLessThan(4);
+    expect(s[dom]!.why.toLowerCase()).toMatch(/dominant|fifth|v\b|toward/);
+  });
+  it('recognises the pop I–V–vi → IV continuation', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C G Am'), adventure: 0.25, limit: 10 });
+    expect(s[0].id === 'F' || s[0].id === 'Fmaj7').toBe(true);
+    expect(s[0].why.toLowerCase()).toMatch(/common continuation|iv\b|subdominant|in this key/);
+  });
+  it('from the tonic, ranks V/V among early secondary options', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C'), adventure: 0.35, limit: 20 });
+    const d7 = s.findIndex((x) => x.id === 'D7' || x.id === 'D');
+    expect(d7).toBeGreaterThanOrEqual(0);
+    expect(d7).toBeLessThan(12);
+  });
+  it('in Mixolydian, the ♭VII colour ranks ahead of a random outside chord', () => {
+    const s = eng.suggestChords({ key: key('G', 'mixolydian'), progression: prog('G'), adventure: 0.3, limit: 16 });
+    const bVII = s.findIndex((x) => x.id === 'F' || x.id === 'Fmaj7' || x.id === 'F7');
+    expect(bVII).toBeGreaterThanOrEqual(0);
+    expect(bVII).toBeLessThan(8);
+  });
 });
 
 describe('melody suggestions', () => {
