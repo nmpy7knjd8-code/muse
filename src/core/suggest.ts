@@ -8,7 +8,7 @@ import { RomanNumeral, analyzeRoman, parseRoman } from './roman';
 import { Key, MODE_BY_ID, diatonicChords, inScale, keyName, spellInKey } from './scales';
 import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } from './voicing';
 import { neoRiemannianPath } from './relations';
-import { NoteRelation, beatWeight, melodyFit, noteRelation } from './noteRelation';
+import { NoteRelation, REL_FIT, beatWeight, melodyFit, noteRelation } from './noteRelation';
 import { TimeSig, strongBeats } from './meter';
 import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension } from './harmonyTension';
 import { MoodDimensions, MoodProfile, ProfileMatch, characteristicOffsets, chordFeatures, chordFitsMode, isEmptyProfile, matchProfile, noteFeatures, profileFromMoods } from './profile';
@@ -240,16 +240,23 @@ export function voiceProgression(chords: Chord[]): number[][] {
   return out;
 }
 
-/** How strongly an explicit mood target outranks plain functional likelihood. */
 /** weight of melody fit when harmonizing notes (fit is −1..1). HEURISTIC. */
 export const HARMONIZE_GAIN = 2.2;
+/** Chord suggestions: mood can move ranking a lot (user asked for a feeling). */
 const MOOD_GAIN = 3.6;
+/**
+ * Note suggestions: mood only tints — harmonic/melodic fit must stay primary so the list
+ * isn't clustered by aesthetic tag (e.g. all “mystical” notes first while clashes beat chord tones).
+ */
+const NOTE_MOOD_GAIN = 0.85;
+/** How strongly chord-tone / colour / clash relation moves a note’s rank (−1..1 → score). */
+const NOTE_FIT_GAIN = 1.55;
 /** Absolute fit values cluster (most chords fit a blend a bit), so also reward fit relative to the other candidates. */
-function moodContrast(list: { score: number; moodMatch: number }[]): void {
+function moodContrast(list: { score: number; moodMatch: number }[], gain = MOOD_GAIN): void {
   if (list.length < 2) return;
   const lo = Math.min(...list.map((x) => x.moodMatch)), hi = Math.max(...list.map((x) => x.moodMatch));
   if (hi - lo < 1e-6) return;
-  for (const x of list) x.score += MOOD_GAIN * 0.6 * ((x.moodMatch - lo) / (hi - lo) - 0.5);
+  for (const x of list) x.score += gain * 0.6 * ((x.moodMatch - lo) / (hi - lo) - 0.5);
 }
 
 const CHORD_PAIR_RE = /\b[A-G][#b♭♯]?[a-z0-9#b♭♯°ø+]*\s*(?:→|->)\s*[A-G][#b♭♯]?[a-z0-9#b♭♯°ø+]*/;
@@ -589,26 +596,33 @@ export class SuggestionEngine {
       }
 
       const relation = chord ? noteRelation(midi, chord, this.kb) : null;
+      const isResolution = ev.some((e) => e.category === 'resolution');
       // beat-aware colour: only when the UI says where the note will land. Strong beats favour
       // chord tones; tensions are freer on weak beats / with more adventure. Resolutions (e.g. leading
-      // tone → tonic over V7) keep their existing evidence boost and are not re-penalized here.
-      if (relation && opts.beat !== undefined && !ev.some((e) => e.category === 'resolution')) {
+      // tone → tonic over V7) keep their tendency boost and are not re-penalized as avoids.
+      if (relation && opts.beat !== undefined && !isResolution) {
         const bw = beatWeight(opts.beat, opts.timeSig ? strongBeats(opts.timeSig) : [0, 2]);
-        if (relation.kind === 'chord') quality += 0.1 * bw;
-        else if (relation.kind === 'tension') quality += 0.15 * a - 0.05 * bw;
-        else if (relation.kind === 'avoid') quality -= (0.35 - 0.15 * a) * bw;
-        else quality -= (0.7 - 0.25 * a) * bw;
+        if (relation.kind === 'chord') quality += 0.35 * bw;
+        else if (relation.kind === 'tension') quality += 0.12 * a - 0.08 * bw;
+        else if (relation.kind === 'avoid') quality -= (0.45 - 0.15 * a) * bw;
+        else quality -= (0.85 - 0.25 * a) * bw;
       }
       const absIv = Math.abs(iv);
       const ip = last === undefined ? 0.5 : INTERVAL_PRIOR[absIv] ?? 0.05;
       const commonness = clamp01(0.5 * ip + (scaleTone ? 0.3 : 0) + (isChordTone ? 0.2 : chord ? 0 : 0.1));
-      if (ev.some((e) => e.category === 'resolution')) quality += 0.5;
-      if (isChordTone) quality += 0.25;
+      // Classic tendency tones (leading tone → tonic, etc.) outrank static chord tones of the V chord.
+      if (isResolution) quality += 1.75;
+      if (isChordTone) quality += 0.35;
+      else if (!isResolution && relation?.kind === 'clash') quality -= 0.45;
+      else if (!isResolution && relation?.kind === 'avoid') quality -= 0.2;
       if (before !== undefined && last !== undefined) {
         const prevIv = last - before;
         if (Math.abs(prevIv) >= 5 && Math.sign(iv) === -Math.sign(prevIv) && absIv <= 2 && absIv > 0) quality += 0.4; // gap fill
       }
       if (absIv > 9) quality -= 0.3;
+      // Primary fit signal: how the note sits on the under-chord (or in the key when no chord).
+      // Resolutions are “fit” musically even when the arrival is not a chord tone of V.
+      const fit = isResolution ? 0.95 : relation ? REL_FIT[relation.kind] : (scaleTone ? 0.4 : -0.25);
       const moods = mergeMoods(
         ev.map((e) => {
           const catW = e.category === 'resolution' ? 1 : e.category === 'scale-degree' ? 0.7 : e.category === 'mode-color' ? 0.8 : e.category === 'interval' ? 0.45 : 0.6;
@@ -620,8 +634,9 @@ export class SuggestionEngine {
       const features = noteFeatures(off, iv, isChordTone, scaleTone, commonness, moods, this.lexicon);
       const pm = profile ? matchProfile(profile, moods, features, this.lexicon, (m) => (MODE_BY_ID[m].intervals.map((x) => mod(t + x, 12)).includes(mod(midi, 12)) ? (characteristicOffsets(m).includes(off) ? 1 : 0.5) : 0)) : null;
       const match = pm?.total ?? 0;
-      const moodBonus = pm ? MOOD_GAIN * match - MOOD_GAIN * 0.35 : 0;
-      const score = quality + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus;
+      // Mood is a light tint only — never enough to bury chord tones under clashy “aesthetic” matches.
+      const moodBonus = pm ? NOTE_MOOD_GAIN * match - NOTE_MOOD_GAIN * 0.35 : 0;
+      const score = quality + NOTE_FIT_GAIN * fit + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6 + moodBonus;
       const name = midiName(midi, spellInKey(k, midi));
       const deg = degreeLabel(off).replace('b', '♭').replace('#', '♯');
       const motion = last === undefined ? `Start on ${deg}` : iv === 0 ? 'Repeat' : `${iv > 0 ? 'Up' : 'Down'} a ${intervalName(iv)}`;
@@ -632,6 +647,8 @@ export class SuggestionEngine {
       if (resEv) bits.push(resEv.name);
       else if (tenEv) bits.push(tenEv.name.replace(/ \(.*\)/, ''));
       else if (sdEv) bits.push(firstSentence(sdEv.description));
+      if (isResolution) bits.push('resolves a tendency tone');
+      else if (relation) bits.push(relation.kind === 'chord' ? 'sits in the chord' : relation.kind === 'tension' ? 'colour over the chord' : relation.kind === 'avoid' ? 'rubs if held' : 'clashes the chord');
       out.push({
         id: `n${midi}`,
         midi,
@@ -653,8 +670,10 @@ export class SuggestionEngine {
         relation,
       });
     }
-    if (profile) moodContrast(out);
-    out.sort((x, y) => y.score - x.score);
+    // Light relative mood tint only (chords still use full MOOD_GAIN contrast).
+    if (profile) moodContrast(out, NOTE_MOOD_GAIN);
+    // Best fit first; break ties toward chord tones / higher fit, not mood.
+    out.sort((x, y) => y.score - x.score || Number(y.isChordTone) - Number(x.isChordTone) || (y.relation ? REL_FIT[y.relation.kind] : 0) - (x.relation ? REL_FIT[x.relation.kind] : 0));
     return out.slice(0, opts.limit ?? 10);
   }
 }

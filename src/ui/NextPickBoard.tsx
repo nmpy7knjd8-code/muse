@@ -121,40 +121,50 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
         })}
       </svg>
 
-      {/* Rank strip — top options as tension-like bars */}
-      <div className="nextpick-ranks" role="list">
-        {top.slice(0, 8).map((s, i) => {
-          const color = colorOf(s.primaryMood);
-          const on = s.id === selected?.id;
-          const bar = isChord(s)
-            ? (harmMode && s.harmony
-              ? Math.round(((s.harmony.fit + 1) / 2) * 100)
-              : Math.round(((s.tension?.level ?? s.features.tension) * 100)))
-            : Math.round((1 - s.commonness) * 100);
-          const name = isChord(s) ? s.symbol : s.name.replace('#', '♯');
-          const root = isChord(s) && fromChord && !harmMode ? rootMotion(fromChord, s.chord) : null;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              role="listitem"
-              className={'nprank' + (on ? ' on' : '')}
-              style={{ borderColor: on ? color : undefined }}
-              onClick={() => onSelect(s.id)}
-            >
-              <span className="nprank-i">{i + 1}</span>
-              <span className="nprank-name" style={{ color }}>{name}</span>
-              <span className="nprank-bar"><i style={{ width: `${Math.max(8, bar)}%`, background: color }} /></span>
-              <span className="nprank-meta">
-                <span className="muted">{isChord(s) ? s.roman : s.degree}</span>
-                {harmMode && isChord(s) && s.harmony && (
-                  <span className="fit-badge" title="How well this chord fits the waiting melody">{Math.round(((s.harmony.fit + 1) / 2) * 100)}% fit</span>
-                )}
-                {root && <span className={'root-badge tight ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')}>{root.label}</span>}
-              </span>
-            </button>
-          );
-        })}
+      {/* Rank strip — ordered by engine score (best fit first); bar length mirrors that rank */}
+      <div className="nextpick-ranks" role="list" aria-label="Best-fit ranking">
+        {(() => {
+          const rows = top.slice(0, 8);
+          const scores = rows.map((s) => s.score);
+          const lo = Math.min(...scores), hi = Math.max(...scores);
+          const scorePct = (sc: number) => (hi > lo ? Math.round(((sc - lo) / (hi - lo)) * 100) : 100);
+          return rows.map((s, i) => {
+            const color = colorOf(s.primaryMood);
+            const on = s.id === selected?.id;
+            const bar = isChord(s)
+              ? (harmMode && s.harmony
+                ? Math.round(((s.harmony.fit + 1) / 2) * 100)
+                : scorePct(s.score))
+              : scorePct(s.score);
+            const name = isChord(s) ? s.symbol : s.name.replace('#', '♯');
+            const root = isChord(s) && fromChord && !harmMode ? rootMotion(fromChord, s.chord) : null;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="listitem"
+                className={'nprank' + (on ? ' on' : '')}
+                style={{ borderColor: on ? color : undefined }}
+                title={isChord(s) ? undefined : `Best-fit rank #${i + 1} (mood is a tag, not the sort)`}
+                onClick={() => onSelect(s.id)}
+              >
+                <span className="nprank-i">{i + 1}</span>
+                <span className="nprank-name" style={{ color }}>{name}</span>
+                <span className="nprank-bar"><i style={{ width: `${Math.max(8, bar)}%`, background: color }} /></span>
+                <span className="nprank-meta">
+                  <span className="muted">{isChord(s) ? s.roman : s.degree}</span>
+                  {harmMode && isChord(s) && s.harmony && (
+                    <span className="fit-badge" title="How well this chord fits the waiting melody">{Math.round(((s.harmony.fit + 1) / 2) * 100)}% fit</span>
+                  )}
+                  {!isChord(s) && s.relation && (
+                    <span className="fit-badge" title={REL_LABEL[s.relation.kind]}>{REL_LABEL[s.relation.kind]}</span>
+                  )}
+                  {root && <span className={'root-badge tight ' + (root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same')}>{root.label}</span>}
+                </span>
+              </button>
+            );
+          });
+        })()}
       </div>
 
       {selected && (

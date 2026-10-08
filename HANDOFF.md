@@ -20,6 +20,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - CoF + paths for laypeople: feel-first move labels (right=brighter / left=opens), rim dots explained as next picks, ready-made progression/melody-run copy instead of CW/V jargon.
 - Novice-friendly copy: relation tags (in the chord / colour note), palette roles (home / pulls home), “no chord” + Find a chord, glossed terms on cards and visuals.
 - Guide tab: how-to for each feature with “how to use” + “why it matters” musicality notes and jump buttons.
+- Note suggestions ranked by harmonic/melodic fit first (mood is a light tint); rank strip bars follow score, not colourfulness.
 
 ## Later
 - Test on a real iPhone (audio on first tap, mic, home-screen install, offline).
