@@ -34,14 +34,14 @@ const SECTIONS: Section[] = [
   {
     id: 'timeline',
     title: 'The timeline (two lanes)',
-    use: 'Each bar has a chord underneath and optional melody notes on top. Tap a chord to hear it; tap a melody note’s label to hear that pitch. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
+    use: 'Each bar has a chord underneath (staff of its notes above the name) and optional melody notes on top. Tap a chord to hear it; tap a melody note’s label to hear that pitch. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
     musicality: 'Harmony and melody are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are.',
     tip: '▶ Play hears chords and melody together in time.',
   },
   {
     id: 'chords',
     title: 'Chords tab — palette & suggestions',
-    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with the chord on a staff); the next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
+    use: 'Use In this key / 7ths / Extra colour for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano of the chord notes); timeline bars show the chord on a staff above the name. The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
     musicality: 'In-key chords feel like family. 7ths add colour without leaving home. Extra colour (borrowed / secondary) is how songs get surprise or drama while still aiming somewhere.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
