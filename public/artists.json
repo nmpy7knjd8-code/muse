@@ -2,8 +2,8 @@
  "meta": {
   "title": "Muse Artist Lens",
   "version": "1.0.0",
-  "generated": "2026-10-07",
-  "description": "How artists use musical polarities (tension/release, consonance/dissonance, light/dark, stability, dynamics, complexity) and how to try their techniques in Muse. TOOL first, then 22 artists across genres.",
+  "generated": "2026-10-08",
+  "description": "How artists use musical polarities (tension/release, consonance/dissonance, light/dark, stability, dynamics, complexity) and how to try their techniques in Muse. TOOL first, then 22 artists across genres (classic rock: Led Zeppelin, The Beatles, Rush, Queen, Pink Floyd).",
   "kb": "theory_kb.json (chordMoves, melodicMoves, modes, progressions, moodVocabulary)",
   "romanConvention": "Roman numerals follow web/src/core/roman.ts parseRoman: roots relative to the MAJOR scale of the tonic regardless of mode (bIII, bVI, bVII for minor-mode chords). Suffixes: 5, sus2, sus4, add9, maj7, (maj7), 7, m7, 7b9, 7#9, maj7#11, 7sus4, m9, 6, +, °, °7, ø. Pedal tones are given separately in bassPedal (scale degree).",
   "tryItPolicy": "All tryIt progressions are ORIGINAL exercises illustrating a technique. They are not transcriptions of the artists' songs.",
@@ -7838,7 +7838,11 @@
    ],
    "relatedArtists": [
     "tool",
-    "opeth"
+    "opeth",
+    "the-beatles",
+    "rush",
+    "queen",
+    "pink-floyd"
    ],
    "notes": [
     "Try-it progressions are original exercises, not transcriptions."
@@ -8076,7 +8080,11 @@
    ],
    "relatedArtists": [
     "steely-dan",
-    "radiohead"
+    "radiohead",
+    "led-zeppelin",
+    "rush",
+    "queen",
+    "pink-floyd"
    ],
    "notes": [
     "Try-it progressions are original exercises, not transcriptions."
@@ -8310,7 +8318,10 @@
    "relatedArtists": [
     "dream-theater",
     "king-crimson",
-    "tool"
+    "tool",
+    "led-zeppelin",
+    "the-beatles",
+    "queen"
    ],
    "notes": [
     "Try-it progressions are original exercises, not transcriptions."
@@ -8320,6 +8331,492 @@
      "id": "rush-wp",
      "title": "Wikipedia: Rush (band)",
      "url": "https://en.wikipedia.org/wiki/Rush_(band)",
+     "type": "encyclopedia"
+    }
+   ]
+  },
+  {
+   "id": "queen",
+   "name": "Queen",
+   "era": "1970–present",
+   "origin": "London, UK",
+   "genres": [
+    "classic rock",
+    "glam rock",
+    "hard rock"
+   ],
+   "documentation": "high",
+   "hook": "Classic rock theatre: stacked vocal harmony, sudden key colour, and riff-to-ballad dynamics.",
+   "aestheticSummary": "Queen treats rock forms like stage scenes — power-chord stomps flip into piano ballads, then into choir-like stacked vocals. Harmony often stays diatonic and singable, then flashes a borrowed ♭VII or a secondary dominant for lift. Arrangement and dynamics carry as much drama as the chords.",
+   "polarities": [
+    {
+     "id": "loud_quiet",
+     "how": "Soft piano or a cappella verses explode into stadium choruses."
+    },
+    {
+     "id": "simple_complex",
+     "how": "Three-chord stomps sit next to multi-section suite forms."
+    },
+    {
+     "id": "light_dark",
+     "how": "Bright major choruses against darker bluesy or minor bridges."
+    },
+    {
+     "id": "expectation_surprise",
+     "how": "Sudden tempo or key-colour shifts keep verses from settling."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "queen-bVII",
+     "category": "harmony",
+     "name": "Stadium ♭VII lift",
+     "description": "A major ♭VII under a major tonic gives the classic rock “open sky” chorus without leaving the song’s home.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "min_i_bVII"
+      },
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      }
+     ],
+     "moods": [
+      "triumphant",
+      "energetic",
+      "bright"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "queen-wp"
+     ],
+     "tryInMuse": "In A major / Mixolydian, vamp I–♭VII–IV–I and lean into the ♭VII.",
+     "polarities": [
+      "light_dark"
+     ]
+    },
+    {
+     "id": "queen-sec",
+     "category": "harmony",
+     "name": "Secondary-dominant sparkle",
+     "description": "Brief V/V or V/vi moments make the next chord feel earned — useful before a big chorus landing.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "sec_I_II"
+      },
+      {
+       "kind": "chordMove",
+       "id": "sec_II_V"
+      }
+     ],
+     "moods": [
+      "bright",
+      "triumphant",
+      "surprising"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "queen-wp"
+     ],
+     "tryInMuse": "Before V, slip in II (V/V) and hear the extra pull into the cadence.",
+     "polarities": [
+      "expectation_surprise"
+     ]
+    },
+    {
+     "id": "queen-power",
+     "category": "voicing-tuning",
+     "name": "Stacked power-chorus hits",
+     "description": "Choruses often land on ringing root–fifth power shapes so vocals can stack above a solid guitar bed.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "col_power"
+      },
+      {
+       "kind": "chordMove",
+       "id": "ped_tonic"
+      }
+     ],
+     "moods": [
+      "epic",
+      "energetic",
+      "triumphant"
+     ],
+     "evidence": "critic-description",
+     "sourceIds": [
+      "queen-wp"
+     ],
+     "tryInMuse": "Hold I5 under a moving upper chord; keep the bass rooted.",
+     "polarities": [
+      "loud_quiet"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "A Night at the Opera era",
+     "year": 1975,
+     "release": "A Night at the Opera",
+     "whatHappens": "Multi-section rock suite writing with huge dynamic swings and choir-like vocals.",
+     "whyItFeels": "Contrasts make every return of a simple riff feel theatrical.",
+     "techniqueIds": [
+      "queen-bVII",
+      "queen-power"
+     ],
+     "moods": [
+      "epic",
+      "triumphant"
+     ],
+     "listenFor": [
+      "♭VII chorus lift",
+      "soft-to-loud section jumps"
+     ],
+     "sourceIds": [
+      "queen-wp"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "triumphant",
+     "weight": 0.9
+    },
+    {
+     "mood": "epic",
+     "weight": 0.85
+    },
+    {
+     "mood": "energetic",
+     "weight": 0.8
+    },
+    {
+     "mood": "bright",
+     "weight": 0.7
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Stadium Mixolydian lift",
+     "key": {
+      "tonic": "A",
+      "mode": "mixolydian"
+     },
+     "roman": [
+      "I",
+      "bVII",
+      "IV",
+      "I",
+      "II",
+      "V",
+      "I"
+     ],
+     "meter": "4/4",
+     "howToPlay": "Big straight pulse. Treat ♭VII as the open chorus colour; use II→V as a sparkle into the final I.",
+     "moods": [
+      "triumphant",
+      "energetic",
+      "bright"
+     ],
+     "kbRefs": [
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      },
+      {
+       "kind": "chordMove",
+       "id": "sec_II_V"
+      }
+     ],
+     "techniqueIds": [
+      "queen-bVII",
+      "queen-sec"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Spot the ♭VII chorus",
+     "what": "When a major song suddenly feels wider, check for ♭VII under the hook."
+    },
+    {
+     "step": 2,
+     "title": "Hear soft → loud architecture",
+     "what": "Piano or quiet verse space makes the power-chord return land harder."
+    },
+    {
+     "step": 3,
+     "title": "Listen for a sparkle dominant",
+     "what": "A quick II or V/vi before the cadence is the secondary-dominant wink."
+    }
+   ],
+   "relatedArtists": [
+    "led-zeppelin",
+    "the-beatles",
+    "rush",
+    "pink-floyd"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "queen-wp",
+     "title": "Wikipedia: Queen (band)",
+     "url": "https://en.wikipedia.org/wiki/Queen_(band)",
+     "type": "encyclopedia"
+    }
+   ]
+  },
+  {
+   "id": "pink-floyd",
+   "name": "Pink Floyd",
+   "era": "1965–1995",
+   "origin": "London, UK",
+   "genres": [
+    "classic rock",
+    "progressive rock",
+    "art rock"
+   ],
+   "documentation": "high",
+   "hook": "Classic rock atmosphere: pedal drones, slow modal vamps, and patient tension builds.",
+   "aestheticSummary": "Pink Floyd builds feeling with space and colour more than dense chord changes. Pedal tones and long Mixolydian or Dorian vamps let guitar and synth lines float; dynamics and timbre (delay, organ, clean vs dirty) mark section changes. Harmony is often simple so atmosphere can stay huge.",
+   "polarities": [
+    {
+     "id": "loud_quiet",
+     "how": "Whispered verses and long intros bloom into stadium climaxes."
+    },
+    {
+     "id": "stable_unstable",
+     "how": "Pedal drones keep home present while upper chords drift."
+    },
+    {
+     "id": "light_dark",
+     "how": "Open Mixolydian major colour against darker minor / blues turns."
+    },
+    {
+     "id": "organic_synthetic",
+     "how": "Analog synths and tape effects sit inside a rock band frame."
+    }
+   ],
+   "techniques": [
+    {
+     "id": "pf-pedal",
+     "category": "harmony",
+     "name": "Pedal-drone home",
+     "description": "A held tonic (or dominant) bass under changing upper chords creates floating tension without leaving home.",
+     "kbRefs": [
+      {
+       "kind": "chordMove",
+       "id": "ped_tonic"
+      },
+      {
+       "kind": "chordMove",
+       "id": "ped_dominant"
+      }
+     ],
+     "moods": [
+      "dreamy",
+      "solemn",
+      "epic"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "pf-wp"
+     ],
+     "tryInMuse": "Hold a tonic pedal under I–♭VII–IV and listen to how stable it stays.",
+     "polarities": [
+      "stable_unstable"
+     ]
+    },
+    {
+     "id": "pf-mixo",
+     "category": "mode",
+     "name": "Slow Mixolydian vamp",
+     "description": "Long I–♭VII (or I–IV) Mixolydian cells leave room for guitar motifs and delay trails.",
+     "kbRefs": [
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      },
+      {
+       "kind": "chordMove",
+       "id": "min_i_bVII"
+      }
+     ],
+     "moods": [
+      "dreamy",
+      "floating",
+      "epic"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "pf-wp"
+     ],
+     "tryInMuse": "In D Mixolydian, slow-vamp I–♭VII and leave space between hits.",
+     "polarities": [
+      "light_dark"
+     ]
+    },
+    {
+     "id": "pf-dorian",
+     "category": "mode",
+     "name": "Dorian minor lift",
+     "description": "Minor-key writing with a raised 6th (Dorian) keeps darkness without closing the door on hopeful colour.",
+     "kbRefs": [
+      {
+       "kind": "mode",
+       "id": "dorian"
+      },
+      {
+       "kind": "chordMove",
+       "id": "maj_I_IV"
+      }
+     ],
+     "moods": [
+      "yearning",
+      "melancholy",
+      "hopeful"
+     ],
+     "evidence": "convention-mapping",
+     "sourceIds": [
+      "pf-wp"
+     ],
+     "tryInMuse": "In E Dorian, compare i–IV with i–iv; the major IV is the lift.",
+     "polarities": [
+      "light_dark"
+     ]
+    }
+   ],
+   "works": [
+    {
+     "title": "The Dark Side of the Moon era",
+     "year": 1973,
+     "release": "The Dark Side of the Moon",
+     "whatHappens": "Long vamps, pedal drones, and careful dynamics across a continuous album arc.",
+     "whyItFeels": "Space and timbre do the storytelling while harmony stays grounded.",
+     "techniqueIds": [
+      "pf-pedal",
+      "pf-mixo"
+     ],
+     "moods": [
+      "dreamy",
+      "epic",
+      "solemn"
+     ],
+     "listenFor": [
+      "bass pedals under shifting colour",
+      "slow Mixolydian cells"
+     ],
+     "sourceIds": [
+      "pf-wp"
+     ],
+     "evidence": "secondary-summary"
+    }
+   ],
+   "moodProfile": [
+    {
+     "mood": "dreamy",
+     "weight": 0.9
+    },
+    {
+     "mood": "epic",
+     "weight": 0.8
+    },
+    {
+     "mood": "solemn",
+     "weight": 0.75
+    },
+    {
+     "mood": "yearning",
+     "weight": 0.65
+    }
+   ],
+   "tryIt": [
+    {
+     "label": "Pedal Mixolydian float",
+     "key": {
+      "tonic": "D",
+      "mode": "mixolydian"
+     },
+     "roman": [
+      "I",
+      "bVII",
+      "I",
+      "IV",
+      "I"
+     ],
+     "meter": "4/4",
+     "bassPedal": "1",
+     "pedal": {
+      "degree": "1",
+      "chordIndices": [
+       0,
+       1,
+       2,
+       3
+      ]
+     },
+     "howToPlay": "Slow pulse. Keep D in the bass while chords move I–♭VII–I–IV; leave space.",
+     "moods": [
+      "dreamy",
+      "floating",
+      "epic"
+     ],
+     "kbRefs": [
+      {
+       "kind": "mode",
+       "id": "mixolydian"
+      },
+      {
+       "kind": "chordMove",
+       "id": "ped_tonic"
+      }
+     ],
+     "techniqueIds": [
+      "pf-pedal",
+      "pf-mixo"
+     ],
+     "original": true
+    }
+   ],
+   "listeningGuide": [
+    {
+     "step": 1,
+     "title": "Find the drone",
+     "what": "If the bass barely moves, upper chords are painting over a pedal."
+    },
+    {
+     "step": 2,
+     "title": "Check for Mixolydian ♭7",
+     "what": "Major songs that feel open rather than classical often rest on ♭VII."
+    },
+    {
+     "step": 3,
+     "title": "Notice the wait",
+     "what": "Tension often comes from delayed climaxes, not faster chord changes."
+    }
+   ],
+   "relatedArtists": [
+    "led-zeppelin",
+    "king-crimson",
+    "rush",
+    "the-beatles",
+    "queen"
+   ],
+   "notes": [
+    "Try-it progressions are original exercises, not transcriptions."
+   ],
+   "sources": [
+    {
+     "id": "pf-wp",
+     "title": "Wikipedia: Pink Floyd",
+     "url": "https://en.wikipedia.org/wiki/Pink_Floyd",
      "type": "encyclopedia"
     }
    ]
@@ -8426,6 +8923,16 @@
     "artistId": "rush",
     "techniqueId": "rush-basslead",
     "name": "Bass as lead voice"
+   },
+   {
+    "artistId": "queen",
+    "techniqueId": "queen-power",
+    "name": "Stacked power-chorus hits"
+   },
+   {
+    "artistId": "pink-floyd",
+    "techniqueId": "pf-pedal",
+    "name": "Pedal-drone home"
    }
   ],
   "chordMove:col_power": [
@@ -8488,6 +8995,11 @@
     "artistId": "led-zeppelin",
     "techniqueId": "lz-power",
     "name": "Open-string power riffs"
+   },
+   {
+    "artistId": "queen",
+    "techniqueId": "queen-power",
+    "name": "Stacked power-chorus hits"
    }
   ],
   "melodicMove:ct_root": [
@@ -8495,6 +9007,11 @@
     "artistId": "tool",
     "techniqueId": "tool-dropd-drone",
     "name": "Drop-D open-string drone and one-finger power chords"
+   },
+   {
+    "artistId": "rush",
+    "techniqueId": "rush-basslead",
+    "name": "Bass as lead voice"
    }
   ],
   "mode:phrygian_dominant": [
@@ -8789,6 +9306,11 @@
     "artistId": "coltrane",
     "techniqueId": "col-pedal",
     "name": "Chords over pedal tones"
+   },
+   {
+    "artistId": "pink-floyd",
+    "techniqueId": "pf-pedal",
+    "name": "Pedal-drone home"
    }
   ],
   "melodicMove:ct_5": [
@@ -8885,6 +9407,21 @@
     "artistId": "coltrane",
     "techniqueId": "col-vamp",
     "name": "Modal vamps"
+   },
+   {
+    "artistId": "dream-theater",
+    "techniqueId": "dt-dorian",
+    "name": "Dorian IV lifts over a minor tonic"
+   },
+   {
+    "artistId": "snarky-puppy",
+    "techniqueId": "sp-dorian-vamp",
+    "name": "Dorian vamps with a bright IV"
+   },
+   {
+    "artistId": "pink-floyd",
+    "techniqueId": "pf-dorian",
+    "name": "Dorian minor lift"
    }
   ],
   "mode:aeolian": [
@@ -9539,6 +10076,18 @@
     "artistId": "the-beatles",
     "techniqueId": "beat-sec",
     "name": "Secondary dominant sparkle"
+   },
+   {
+    "artistId": "queen",
+    "techniqueId": "queen-sec",
+    "name": "Secondary-dominant sparkle"
+   }
+  ],
+  "mode:lydian": [
+   {
+    "artistId": "snarky-puppy",
+    "techniqueId": "sp-maj7colour",
+    "name": "Lush maj7 / ♯11 colour chords"
    }
   ],
   "chordMove:mod_phrygian_bII_i": [
@@ -9546,6 +10095,40 @@
     "artistId": "animals-as-leaders",
     "techniqueId": "aal-phrygian",
     "name": "Phrygian low-string menace"
+   }
+  ],
+  "mode:phrygian": [
+   {
+    "artistId": "animals-as-leaders",
+    "techniqueId": "aal-phrygian",
+    "name": "Phrygian low-string menace"
+   }
+  ],
+  "mode:mixolydian": [
+   {
+    "artistId": "led-zeppelin",
+    "techniqueId": "lz-mixo",
+    "name": "Mixolydian riff major (♭7 swagger)"
+   },
+   {
+    "artistId": "the-beatles",
+    "techniqueId": "beat-bVII",
+    "name": "Borrowed ♭VII in major"
+   },
+   {
+    "artistId": "rush",
+    "techniqueId": "rush-mixo",
+    "name": "Mixolydian hard-rock colour"
+   },
+   {
+    "artistId": "queen",
+    "techniqueId": "queen-bVII",
+    "name": "Stadium ♭VII lift"
+   },
+   {
+    "artistId": "pink-floyd",
+    "techniqueId": "pf-mixo",
+    "name": "Slow Mixolydian vamp"
    }
   ],
   "chordMove:maj_I_V": [
@@ -9575,6 +10158,16 @@
     "artistId": "the-beatles",
     "techniqueId": "beat-bVII",
     "name": "Borrowed ♭VII in major"
+   },
+   {
+    "artistId": "queen",
+    "techniqueId": "queen-bVII",
+    "name": "Stadium ♭VII lift"
+   },
+   {
+    "artistId": "pink-floyd",
+    "techniqueId": "pf-mixo",
+    "name": "Slow Mixolydian vamp"
    }
   ],
   "chordMove:maj_I_IV": [
@@ -9592,6 +10185,11 @@
     "artistId": "rush",
     "techniqueId": "rush-mixo",
     "name": "Mixolydian hard-rock colour"
+   },
+   {
+    "artistId": "pink-floyd",
+    "techniqueId": "pf-dorian",
+    "name": "Dorian minor lift"
    }
   ],
   "chordMove:maj_I_vi": [
@@ -9606,6 +10204,11 @@
     "artistId": "the-beatles",
     "techniqueId": "beat-sec",
     "name": "Secondary dominant sparkle"
+   },
+   {
+    "artistId": "queen",
+    "techniqueId": "queen-sec",
+    "name": "Secondary-dominant sparkle"
    }
   ]
  }
