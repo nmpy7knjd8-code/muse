@@ -1,7 +1,7 @@
 // SVG visualisations: piano, guitar diagram, voice leading, circle of fifths, Tonnetz.
 import { useMemo, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
 import {
-  Chord, GuitarShape, VoiceLine, asTriad, fifthsDistance, fifthsIndex, fifthsMoveLabel, midiOctave, mod, pc as pcOf, tonnetzPc, layoutMoodMap,
+  Chord, GuitarShape, VoiceLine, asTriad, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsStepTag, midiOctave, mod, pc as pcOf, tonnetzPc, layoutMoodMap,
 } from '../core';
 
 const isBlack = (m: number) => [1, 3, 6, 8, 10].includes(mod(m, 12));
@@ -229,9 +229,15 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
     const ctrl = { x: (a.x + b.x) / 2 * 0.55 + c * 0.45, y: (a.y + b.y) / 2 * 0.55 + c * 0.45 };
     return `M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}`;
   }, [currentPc, selected?.pc]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Step tags are vs current root when present, else vs tonic — so each note shows its directional role.
+  const refPc = currentPc !== undefined ? currentPc : tonicPc;
   const move = currentPc !== undefined && selected ? fifthsDistance(currentPc, selected.pc) : null;
-  const moveLabel = currentPc !== undefined && selected ? fifthsMoveLabel(currentPc, selected.pc) : null;
-  const fromName = currentPc !== undefined ? spellPc(currentPc) : null;
+  const moveLabel = currentPc !== undefined && selected
+    ? fifthsMoveLabel(currentPc, selected.pc)
+    : selected
+      ? fifthsMoveLabel(tonicPc, selected.pc)
+      : null;
+  const fromName = currentPc !== undefined ? spellPc(currentPc) : spellPc(tonicPc);
   const toName = selected ? spellPc(selected.pc) : null;
   return (
     <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths">
@@ -239,16 +245,20 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill={selected?.color ?? '#fff'} />
         </marker>
-        <marker id="arrowhead-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8f8aa3" />
+        <marker id="arrowhead-cw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#7fd0a8" />
+        </marker>
+        <marker id="arrowhead-ccw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f0a070" />
         </marker>
       </defs>
       <circle cx={c} cy={c} r={R + 22} fill="#17161d" stroke="#2c2a36" />
       <circle cx={c} cy={c} r={R - 30} fill="#121117" stroke="#2c2a36" />
-      {/* Direction legend: clockwise = sharpward / dominant side */}
-      <path d={`M ${c + 22} ${c - R + 38} A ${R - 38} ${R - 38} 0 0 1 ${c + R - 38} ${c - 8}`} fill="none" stroke="#8f8aa3" strokeWidth={1.2} markerEnd="url(#arrowhead-dim)" opacity={0.7} />
-      <text x={c + 38} y={c - R + 28} className="cdir">CW · ♯ / V</text>
-      <text x={c - 78} y={c - R + 28} className="cdir">CCW · ♭ / IV</text>
+      {/* Direction legend: CW = sharpward / dominant; CCW = flatward / subdominant */}
+      <path d={`M ${c + 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 1 ${c + R - 42} ${c - 4}`} fill="none" stroke="#7fd0a8" strokeWidth={1.4} markerEnd="url(#arrowhead-cw)" opacity={0.85} />
+      <path d={`M ${c - 18} ${c - R + 42} A ${R - 42} ${R - 42} 0 0 0 ${c - R + 42} ${c - 4}`} fill="none" stroke="#f0a070" strokeWidth={1.4} markerEnd="url(#arrowhead-ccw)" opacity={0.85} />
+      <text x={c + 52} y={c - R + 30} className="cdir cw">CW · ♯ · V side</text>
+      <text x={c - 52} y={c - R + 30} className="cdir ccw">CCW · ♭ · IV side</text>
       {Array.from({ length: 12 }, (_, i) => {
         const p = mod(i * 7, 12);
         const { x, y } = pos(p, R);
@@ -256,17 +266,22 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
         const isTonic = p === tonicPc;
         const isCur = p === currentPc;
         const label = spellPc(p);
+        const steps = fifthsDistance(refPc, p);
+        const tag = fifthsStepTag(refPc, p);
+        const tagClass = steps > 0 ? 'cw' : steps < 0 ? 'ccw' : 'home';
         return (
           <g
             key={p}
             onClick={() => onAddPc?.(p)}
             style={{ cursor: onAddPc ? 'pointer' : undefined }}
             role={onAddPc ? 'button' : undefined}
-            aria-label={onAddPc ? `Add ${label}` : undefined}
+            aria-label={onAddPc ? `Add ${label}, ${fifthsMoveLabel(refPc, p)}` : `${label}, ${fifthsMoveLabel(refPc, p)}`}
           >
+            <title>{`${label}: ${fifthsMoveLabel(refPc, p)}`}</title>
             <circle cx={x} cy={y} r={17} fill={isCur ? CURRENT_COLOR : inKey ? '#2E2A40' : '#1d1c24'} stroke={isTonic ? '#fff' : inKey ? '#5d5680' : '#33313d'} strokeWidth={isTonic ? 2.5 : 1} />
-            <text x={x} y={y + 4} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
-            {onAddPc && <text x={x} y={y + 22} className="cadd">＋</text>}
+            <text x={x} y={y + 1} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
+            <text x={x} y={y + 12} className={'cstep ' + tagClass}>{tag}</text>
+            {onAddPc && <text x={x} y={y + 26} className="cadd">＋</text>}
           </g>
         );
       })}
@@ -280,13 +295,29 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
       {arrow && selected && <path d={arrow} stroke={selected.color} strokeWidth={3.5} fill="none" markerEnd="url(#arrowhead)" opacity={0.95} />}
       {selected && (
         <g>
-          <text x={c} y={c - 10} className="ccenter" fill={selected.color}>{selected.label}</text>
-          {fromName && toName && move !== null && (
-            <text x={c} y={c + 12} className="cmove" fill={selected.color}>
+          <text x={c} y={c - 14} className="ccenter" fill={selected.color}>{selected.label}</text>
+          {toName && move !== null && (
+            <text x={c} y={c + 6} className="cmove" fill={selected.color}>
               {fromName}{move > 0 ? ' → ' : move < 0 ? ' ← ' : ' = '}{toName}
+              {move !== 0 ? `  (${move > 0 ? '+' : ''}${move})` : ''}
             </text>
           )}
-          {moveLabel && <text x={c} y={c + 28} className="cdir" fill="#bdb8d4">{moveLabel}</text>}
+          {toName && move === null && (
+            <text x={c} y={c + 6} className="cmove" fill={selected.color}>
+              {fromName} → {toName}
+            </text>
+          )}
+          {moveLabel && (
+            <text x={c} y={c + 22} className="ceffect" fill="#cfcbe0">
+              {moveLabel.length > 42 ? `${moveLabel.slice(0, 40)}…` : moveLabel}
+            </text>
+          )}
+        </g>
+      )}
+      {!selected && (
+        <g>
+          <text x={c} y={c - 4} className="ccenter" fill="#bdb8d4">{spellPc(tonicPc)}</text>
+          <text x={c} y={c + 14} className="ceffect" fill="#8f8aa3">tonic · +CW = V · −CCW = IV</text>
         </g>
       )}
     </svg>

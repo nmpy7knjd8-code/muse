@@ -133,6 +133,13 @@ svg .cname.dark { fill: #111; }
 svg .ccenter { font-size: 18px; font-weight: 800; text-anchor: middle; }
 svg .cmove { font-size: 11px; font-weight: 700; text-anchor: middle; }
 svg .cdir { font-size: 9px; fill: #8f8aa3; text-anchor: middle; }
+svg .cdir.cw { fill: #7fd0a8; }
+svg .cdir.ccw { fill: #f0a070; }
+svg .cstep { font-size: 8px; font-weight: 700; text-anchor: middle; fill: #8f8aa3; }
+svg .cstep.cw { fill: #7fd0a8; }
+svg .cstep.ccw { fill: #f0a070; }
+svg .cstep.home { fill: #bdb8d4; }
+svg .ceffect { font-size: 8.5px; text-anchor: middle; }
 svg .cadd { font-size: 9px; fill: #8f8aa3; text-anchor: middle; pointer-events: none; }
 svg .tgrid line { stroke: #34313f; stroke-width: 1; }
 svg .tnode { fill: #1d1c24; stroke: #4a4658; }

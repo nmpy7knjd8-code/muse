@@ -502,7 +502,7 @@ function Composer({ data }: { data: LoadedData }) {
             if (built) addChord(built);
           }}
         />
-        <p className="small muted center">Tap a note to add its chord · outer dots preview suggestions · CW = ♯/V · CCW = ♭/IV</p>
+        <p className="small muted center">+N = clockwise (dominant / sharp) · −N = counter-clockwise (subdominant / flat) · tap a note to add · outer dots preview</p>
       </div>
     );
     const tonnetz = (
