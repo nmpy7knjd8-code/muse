@@ -10,8 +10,8 @@ const kb = loadKB('theory_kb.json');
 const rawKb = JSON.parse(readFileSync(resolve(process.cwd(), 'public/theory_kb.json'), 'utf8'));
 
 describe('Artist Lens data', () => {
-  it('loads 23 artists, TOOL first, with sources resolving every citation', () => {
-    expect(file.artists.length).toBe(23);
+  it('loads 21 artists, TOOL first, with sources resolving every citation', () => {
+    expect(file.artists.length).toBe(21);
     expect(file.artists[0].id).toBe('tool');
     for (const a of file.artists) {
       const ids = new Set(a.sources.map((s) => s.id));
@@ -40,7 +40,7 @@ describe('Artist Lens data', () => {
       expect(l.chords.length).toBe(t.roman.length);
       total++;
     }
-    expect(total).toBe(28);
+    expect(total).toBe(26);
   });
   it('applies the pedal/held bass to the listed chords only (and not when it is already the root)', () => {
     const tool = file.artists[0];

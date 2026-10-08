@@ -8,6 +8,8 @@ interface Ghost { level: number; debtAfter: number; label: string; color: string
 interface Props {
   state: TensionState;
   labels: string[];
+  /** Melody note names under each chord bar (same length as labels when present). */
+  melodyLabels?: string[][];
   ghost?: Ghost | null;
   style: TensionStyleId;
   onStyle: (s: TensionStyleId) => void;
@@ -15,7 +17,15 @@ interface Props {
 
 const H = 112, PAD_T = 8, PAD_B = 20, PAD_L = 4;
 
-export function TensionCurve({ state, labels, ghost, style, onStyle }: Props) {
+const STATUS_TIP: Record<string, string> = {
+  'too-static': 'Feeling stuck — try a colour change or a stronger move.',
+  building: 'Tension is rising — keep going or start aiming home.',
+  'sweet-spot': 'In the pocket for this style — good place to land a phrase.',
+  'resolve-soon': 'Unresolved tension is stacking — a release (↓) would help.',
+  'over-budget': 'Past the budget — resolve toward home or a resting chord.',
+};
+
+export function TensionCurve({ state, labels, melodyLabels, ghost, style, onStyle }: Props) {
   const { points, limits: L, budget } = state;
   const [pick, setPick] = useState<number | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -34,6 +44,7 @@ export function TensionCurve({ state, labels, ghost, style, onStyle }: Props) {
   const last = points[points.length - 1];
   const pct = (v: number) => Math.round(v * 100);
   const color = BUDGET_COLORS[budget.status];
+  const melUnder = melodyLabels?.[selIdx] ?? [];
   return (
     <div className="tension">
       <div className="tension-head">
@@ -42,7 +53,8 @@ export function TensionCurve({ state, labels, ghost, style, onStyle }: Props) {
           {TENSION_STYLES.map((s) => <option key={s} value={s}>{tensionStyleLabel(s)}</option>)}
         </select>
       </div>
-      <p className="small tmsg">{budget.message}</p>
+      <p className="small tmsg">{STATUS_TIP[budget.status] ?? budget.message}</p>
+      <p className="small muted tguide">Higher on the graph = tenser. Green band = comfortable for this style. Orange fill = unresolved tension. Blue ring = melody rubs the chord.</p>
       <div className="tension-scroll" ref={scroller}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tension curve">
           <rect x={0} y={y(L.bandHigh)} width={W} height={y(L.bandLow) - y(L.bandHigh)} fill="#4fd1a5" opacity={0.12} />
@@ -78,11 +90,34 @@ export function TensionCurve({ state, labels, ghost, style, onStyle }: Props) {
       {sel && (
         <div className="small tbreak">
           <b>{labels[selIdx]}</b> tension {pct(sel.level)}
-          <span className="muted"> · home distance {pct(sel.event.parts.tonal)} · chord dissonance {pct(sel.event.parts.vertical)} · pull {pct(sel.event.parts.attraction)}{sel.event.parts.motion !== null ? ` · motion ${pct(sel.event.parts.motion)}` : ''}{sel.melody !== null ? ` · melody clash ${pct(sel.melody)}` : ''} · unresolved {pct(sel.debt)}{sel.idiom ? ` · eased: ${sel.idiom}` : ''}</span>
+          <span className="muted">
+            {' · '}how far from home {pct(sel.event.parts.tonal)}
+            {' · '}chord grit {pct(sel.event.parts.vertical)}
+            {' · '}pull {pct(sel.event.parts.attraction)}
+            {sel.event.parts.motion !== null ? ` · voice motion ${pct(sel.event.parts.motion)}` : ''}
+            {sel.melody !== null ? ` · melody vs chord ${pct(sel.melody)}` : ''}
+            {' · '}unresolved {pct(sel.debt)}
+            {sel.idiom ? ` · eased: ${sel.idiom}` : ''}
+          </span>
+          {melUnder.length > 0 && (
+            <div className="tmel-link">
+              <span className="muted">Melody over this chord:</span>{' '}
+              {melUnder.map((n, i) => (
+                <span key={i} className="tmel-chip">{n}</span>
+              ))}
+              {sel.melody !== null && (
+                <span className="muted"> — {sel.melody < 0.25 ? 'sits well' : sel.melody < 0.5 ? 'mild rub' : 'strong clash'}</span>
+              )}
+            </div>
+          )}
         </div>
       )}
       <div className="tlegend small muted">
-        <span><i className="band" />sweet spot</span><span><i className="debt" />unresolved</span><span><i className="ceil" />budget</span><span>↓ release</span>
+        <span><i className="band" />sweet spot</span>
+        <span><i className="debt" />unresolved</span>
+        <span><i className="ceil" />budget</span>
+        <span><i className="melring" />melody link</span>
+        <span>↓ release</span>
       </div>
     </div>
   );

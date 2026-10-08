@@ -171,7 +171,7 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
 
 const REQUEST_ISSUE = 'https://github.com/nmpy7knjd8-code/muse/issues/new';
 const REQUEST_STORAGE = 'muse.bandRequests';
-type BandRequest = { band: string; note: string; at: number; taskUrl?: string };
+type BandRequest = { band: string; note: string; song?: string; at: number; taskUrl?: string };
 
 function loadRequests(): BandRequest[] {
   try {
@@ -183,6 +183,7 @@ function loadRequests(): BandRequest[] {
 function BandRequestBox() {
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
+  const [song, setSong] = useState('');
   const [sent, setSent] = useState<string | null>(null);
   const [recent, setRecent] = useState<BandRequest[]>(() => loadRequests());
   const submit = (e: FormEvent) => {
@@ -190,6 +191,7 @@ function BandRequestBox() {
     const band = name.trim();
     if (!band) return;
     const why = note.trim();
+    const analysis = song.trim();
     const title = `Artist Lens request: ${band}`;
     const body = [
       '## Band / artist request',
@@ -199,15 +201,19 @@ function BandRequestBox() {
       '**Why / notes:**',
       why || '(none)',
       '',
+      '## Song analysis (optional)',
+      analysis || '(none)',
+      '',
       '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`._',
       '',
       '### Checklist',
       '- [ ] Research techniques + sources',
       '- [ ] Add artist entry with try-it exercise',
       '- [ ] Update `tests/artists.test.ts` counts',
-    ].join('\n');
+      analysis ? '- [ ] Consider song analysis notes above' : '',
+    ].filter(Boolean).join('\n');
     const taskUrl = `${REQUEST_ISSUE}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent('artist-lens-request')}`;
-    const entry: BandRequest = { band, note: why, at: Date.now(), taskUrl };
+    const entry: BandRequest = { band, note: why, song: analysis || undefined, at: Date.now(), taskUrl };
     const next = [entry, ...loadRequests().filter((r) => r.band.toLowerCase() !== band.toLowerCase())].slice(0, 20);
     try { localStorage.setItem(REQUEST_STORAGE, JSON.stringify(next)); } catch { /* private mode */ }
     setRecent(next);
@@ -217,13 +223,22 @@ function BandRequestBox() {
     setSent(band);
     setName('');
     setNote('');
+    setSong('');
   };
   return (
     <form className="band-request" onSubmit={submit} aria-label="Request a band for Artist Lens">
       <h4>Request a band</h4>
-      <p className="small muted">Missing someone? Submit a name — Muse opens a GitHub task to add them to Artist Lens.</p>
+      <p className="small muted">Missing someone? Submit a name — we’ll add it in minutes.</p>
       <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
       <input aria-label="Why they fit" placeholder="Why they’re interesting (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+      <textarea
+        aria-label="Optional song analysis"
+        className="band-request-song"
+        placeholder="Optional song analysis — a track, key/mood moves, or what to capture in Artist Lens"
+        value={song}
+        onChange={(e) => setSong(e.target.value)}
+        rows={3}
+      />
       <button type="submit" className="add" disabled={!name.trim()}>Create add-band task</button>
       {sent && <p className="small" role="status">Task created for <b>{sent}</b> — GitHub issue opened.</p>}
       {recent.length > 0 && (
@@ -233,6 +248,7 @@ function BandRequestBox() {
             {recent.slice(0, 5).map((r) => (
               <li key={`${r.band}-${r.at}`}>
                 {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
+                {r.song ? <span className="muted"> · has song notes</span> : null}
               </li>
             ))}
           </ul>
