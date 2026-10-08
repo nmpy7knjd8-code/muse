@@ -188,24 +188,28 @@ export interface TimelineEvents {
   bass: Array<{ midi: number; at: number; dur: number; index: number; beat: number }>;
   total: number;
 }
-/** Timing for playback/export. With no melody/bass anywhere, chords keep a quicker one-per-step feel. */
+/** Timing for playback/export. With no melody/bass anywhere, chords keep a quicker one-per-step feel.
+ *  `startIndex` shifts the schedule so playback can begin mid-timeline (times relative to that bar). */
 export function timelineEvents(
   slots: TimelineSlot[],
-  o: { beatSec?: number; bpm?: number; chordOnlyStep?: number; timeSig?: TimeSig } = {},
+  o: { beatSec?: number; bpm?: number; chordOnlyStep?: number; timeSig?: TimeSig; startIndex?: number } = {},
 ): TimelineEvents {
   const beats = bpb(o.timeSig ?? DEFAULT_TIME_SIG);
   const hasLine = slots.some((s) => s.notes.length || slotBass(s).length);
   const beat = o.beatSec ?? beatSecFromBpm(o.bpm ?? DEFAULT_BPM);
   // Chord-only browsing stays snappier than a full bar (~2.14 beats at the active tempo).
   const step = hasLine ? beat * beats : o.chordOnlyStep ?? beat * 2.14;
-  const ev: TimelineEvents = { chords: [], notes: [], bass: [], total: slots.length * step };
+  const start = Math.max(0, Math.min(o.startIndex ?? 0, slots.length));
+  const t0 = start * step;
+  const ev: TimelineEvents = { chords: [], notes: [], bass: [], total: Math.max(0, slots.length - start) * step };
   slots.forEach((s, i) => {
-    if (s.chord) ev.chords.push({ index: i, chord: s.chord, at: i * step, dur: step * 0.95 });
+    if (i < start) return;
+    if (s.chord) ev.chords.push({ index: i, chord: s.chord, at: i * step - t0, dur: step * 0.95 });
     const dMel = noteDurations(s.notes, beats);
-    s.notes.forEach((n, j) => ev.notes.push({ midi: n.midi, at: i * step + n.beat * beat, dur: dMel[j] * beat * 0.95, index: i, beat: n.beat }));
+    s.notes.forEach((n, j) => ev.notes.push({ midi: n.midi, at: i * step + n.beat * beat - t0, dur: dMel[j] * beat * 0.95, index: i, beat: n.beat }));
     const bass = slotBass(s);
     const dBass = noteDurations(bass, beats);
-    bass.forEach((n, j) => ev.bass.push({ midi: n.midi, at: i * step + n.beat * beat, dur: dBass[j] * beat * 0.95, index: i, beat: n.beat }));
+    bass.forEach((n, j) => ev.bass.push({ midi: n.midi, at: i * step + n.beat * beat - t0, dur: dBass[j] * beat * 0.95, index: i, beat: n.beat }));
   });
   return ev;
 }
