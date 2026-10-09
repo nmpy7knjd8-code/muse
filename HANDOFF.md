@@ -1,6 +1,6 @@
 # Muse handoff
 
-Live: https://nmpy7knjd8-code.github.io/muse/ (GitHub Pages; every push to `main` runs tests, builds, and deploys via `.github/workflows/pages.yml`).
+Live: https://museio.io (custom domain; `public/CNAME`). Fallback: https://nmpy7knjd8-code.github.io/muse/. Every push to `main` deploys via `.github/workflows/pages.yml` with `BASE_PATH=/`.
 
 ## What it is
 Mobile-first PWA (Vite + React + TypeScript) that suggests the next chord or melody note and labels each option by mood. All music logic lives in `src/core/` (no DOM imports) so it can be ported to Swift later. Data files in `public/`: `theory_kb.json`, `mood_lexicon.json`, `lore.json`, `artists.json` (tension model still used for ranking, not shown as a graph).
