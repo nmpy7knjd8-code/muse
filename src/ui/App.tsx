@@ -976,9 +976,46 @@ function Composer({ data }: { data: LoadedData }) {
     ? Object.entries(profile.moods).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => lex.label(id).toLowerCase()).join(' · ')
     : '';
 
+  /** Last few timeline chords — context for Best fit (just above the ranked list). */
+  const recentChordsBlock = () => {
+    const recent = chords.slice(-3);
+    if (!recent.length) return null;
+    const start = chords.length - recent.length;
+    return (
+      <div className="recent-chords" aria-label="Recent chords">
+        <span className="recent-chords-label">Recent</span>
+        <div className="recent-chords-row" role="list">
+          {recent.map((c, i) => {
+            const abs = start + i;
+            const isNow = i === recent.length - 1;
+            const prev = abs > 0 ? chords[abs - 1] : undefined;
+            const moodId = engine.chordMoods(c, k, prev)[0]?.id ?? 'floating';
+            const color = lex.color(moodId);
+            return (
+              <button
+                key={`${abs}:${chordSymbol(c)}`}
+                type="button"
+                role="listitem"
+                className={'recent-chord' + (isNow ? ' now' : '')}
+                style={{ borderColor: color }}
+                title={isNow ? `Now · ${chordSymbol(c, true)} (${romanOf(c, k)})` : `Tap to hear ${chordSymbol(c, true)}`}
+                onClick={() => playChord(c, abs > 0 ? timelineVoicings[abs - 1] : undefined)}
+              >
+                <b>{chordSymbol(c, true)}</b>
+                <small>{romanOf(c, k)}</small>
+                {isNow && <span className="recent-now">now</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
+      {recentChordsBlock()}
       <div className="ghead">
         Best fit first
         {moodFilterLabel ? <span className="ghead-mood" title="Active mood filter"> · {moodFilterLabel}</span> : null}
