@@ -76,6 +76,35 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     expect(top(myst)).toBeGreaterThan(top(base));
     expect(top(myst)).toBeGreaterThanOrEqual(2);
   });
+  it('under a tense mood, surfaces grounding breathe options without burying mood hits', () => {
+    const omin = eng.suggestChords({
+      key: key('C'),
+      progression: prog('C Am F'),
+      targetMoods: ['ominous'],
+      adventure: 0.4,
+      limit: 20,
+    });
+    const calm = eng.suggestChords({
+      key: key('C'),
+      progression: prog('C Am F'),
+      targetMoods: ['peaceful', 'warm'],
+      adventure: 0.35,
+      limit: 20,
+    });
+    const breaths = omin.filter((x) => x.breathe);
+    expect(breaths.length).toBeGreaterThanOrEqual(1);
+    expect(breaths.length).toBeLessThanOrEqual(3);
+    expect(breaths.some((x) => /breathe/i.test(x.why))).toBe(true);
+    expect(omin.slice(0, 10).some((x) => x.breathe)).toBe(true);
+    // Calm moods should not invent breathe chips.
+    expect(calm.some((x) => x.breathe)).toBe(false);
+    // When the KB carries ominous tags, mood hits stay ahead of breathe injects.
+    const hasMoodSignal = omin.some((x) => x.moodMatch > 0.35);
+    if (hasMoodSignal) {
+      expect(omin.slice(0, 3).every((x) => x.breathe)).toBe(false);
+      expect(omin.slice(0, 10).some((x) => !x.breathe && x.moodMatch > 0.35)).toBe(true);
+    }
+  });
   it('the adventure slider promotes unusual moves', () => {
     const safe = eng.suggestChords({ key: key('C'), progression: prog('C F'), adventure: 0 });
     const wild = eng.suggestChords({ key: key('C'), progression: prog('C F'), adventure: 1 });
