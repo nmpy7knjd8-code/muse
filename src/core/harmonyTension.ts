@@ -129,6 +129,25 @@ export function progressionTension(steps: Array<Chord | StepIn>, k: Key, setting
 
 export interface CandidateTension { level: number; debtAfter: number; release: number; adjust: number; reasons: string[]; idiom: string | null }
 
+/**
+ * True when the recent stretch is still climbing and debt hasn’t earned a cadence yet.
+ * Used so Best fit doesn’t jump home (V→I) before the phrase feels ready.
+ */
+export function tooEarlyToResolve(state: TensionState): boolean {
+  const st = state.budget.status;
+  if (st === 'over-budget' || st === 'resolve-soon' || st === 'too-static') return false;
+  const L = state.limits;
+  const now = state.points[state.points.length - 1];
+  if (!now || !state.points.length) return false;
+  // Debt already near the resolve threshold → cadences are fair game.
+  if (now.debt >= 0.55 * L.ceiling) return false;
+  // Above the style band and heading somewhere: withhold home.
+  if (st === 'building') return true;
+  // Very short sweet-spot departures (e.g. I→V) with no unpaid debt yet — still early.
+  if (st === 'sweet-spot' && state.points.length <= 2 && now.debt < 0.25 * L.ceiling) return true;
+  return false;
+}
+
 /** Ranking adjustment for a candidate next chord against the current state (mirrors T.evaluateCandidate). */
 export function candidateTension(state: TensionState, prev: Chord | null, cand: Chord, k: Key, melody?: number[]): CandidateTension {
   const L = state.limits;
@@ -148,6 +167,19 @@ export function candidateTension(state: TensionState, prev: Chord | null, cand: 
     if (gain > 0.2 || e.release > 0.5) reasons.push('resolves built-up tension');
   }
   if (st === 'too-static' && now && e.level > now.rolling) { adj += 0.5 * (e.level - now.rolling); reasons.push('adds colour after a settled stretch'); }
+  // Recent stretch still building: tax home/release so Best fit keeps the phrase going.
+  if (tooEarlyToResolve(state)) {
+    const drop = Math.max(0, debtNow - debtAfter);
+    const tonicHome = mod(pc(cand.root) - pc(k.tonic), 12) === 0
+      && (cand.quality === 'maj' || cand.quality === 'min' || cand.quality === 'maj7'
+        || cand.quality === 'm7' || cand.quality === '6' || cand.quality === 'add9');
+    const earlyRelease = e.release > 0.4 || drop > 0.05 || tonicHome;
+    if (earlyRelease) {
+      adj -= 0.4 * Math.max(e.release, tonicHome ? 0.55 : 0) + 0.65 * drop;
+      if (tonicHome) adj -= 0.28;
+      reasons.push('too early to resolve — keep the build going');
+    }
+  }
   return { level: e.level, debtAfter, release: e.release, adjust: Math.max(-1.5, Math.min(1.5, adj)), reasons, idiom: e.idiom };
 }
 

@@ -10,7 +10,7 @@ import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } 
 import { neoRiemannianPath } from './relations';
 import { NoteRelation, REL_FIT, beatWeight, melodyFit, noteRelation } from './noteRelation';
 import { TimeSig, strongBeats } from './meter';
-import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension } from './harmonyTension';
+import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension, tooEarlyToResolve } from './harmonyTension';
 import { MoodDimensions, MoodProfile, ProfileMatch, characteristicOffsets, chordFeatures, chordFitsMode, isEmptyProfile, matchProfile, noteFeatures, profileFromMoods } from './profile';
 
 export type Rarity = 'common' | 'colorful' | 'adventurous';
@@ -87,6 +87,11 @@ export interface ChordSuggestOptions {
   limit?: number;
   /** tension budget style (default pop); null disables the tension advisor */
   tensionStyle?: TensionStyleId | null;
+  /**
+   * Per-chord melody MIDIs aligned with `progression` (same stretch the Tension curve uses).
+   * Folded into debt/build so Best fit doesn’t resolve before recent notes have earned it.
+   */
+  tensionMelody?: Array<number[] | undefined>;
   /** melody notes the chord must harmonize (reharmonization): ranked by fit + mood + context */
   harmonize?: Array<{ midi: number; beat: number; dur?: number }>;
 }
@@ -679,7 +684,13 @@ export class SuggestionEngine {
     const curMoods = cur ? this.chordMoods(cur, k, prev) : [];
     const priorTable = fam === 'major' ? PRIOR_MAJOR : PRIOR_MINOR;
     const tSettings: TensionSettings | null = opts.tensionStyle === null ? null : { style: opts.tensionStyle ?? 'pop', adventure: a, target: moodTarget(profile) };
-    const tState = tSettings ? progressionTension(prog, k, tSettings) : null;
+    // Share the Tension curve’s recent stretch (chords + optional melody notes per bar).
+    const tSteps = prog.map((chord, i) => {
+      const mel = opts.tensionMelody?.[i];
+      return mel?.length ? { chord, melody: mel } : { chord };
+    });
+    const tState = tSettings ? progressionTension(tSteps, k, tSettings) : null;
+    const withholdHome = tState ? tooEarlyToResolve(tState) : false;
 
     // Cap scoring work: keep evidenced / diatonic / functional candidates first, then colour.
     let poolList = [...pool.values()];
@@ -739,10 +750,15 @@ export class SuggestionEngine {
       const prepareSec = secondaryPrepareBonus(cur, chord, k, a);
       const nrtBonus = nrtSmoothBonus(nrt);
       const fifths = fallingFifthBonus(cur, chord);
-      const cadence = cadenceBonus(cur, chord, k, a);
+      // Soft-gate authentic/deceptive cadences while the recent stretch is still building.
+      const cadenceRaw = cadenceBonus(cur, chord, k, a);
+      const cadence = withholdHome ? cadenceRaw * 0.28 : cadenceRaw;
       const predDom = predominantToDominantBonus(cur, chord, k);
       const bass = bassMotionBonus(cur, chord);
-      const stock = stockProgressionBonus(prog, chord, k);
+      const stockRaw = stockProgressionBonus(prog, chord, k);
+      // ii–V→I / vi–IV–I stock landings on tonic also wait until debt earns them.
+      const stockHome = withholdHome && mod(pc(chord.root) - t, 12) === 0;
+      const stock = stockHome ? stockRaw * 0.3 : stockRaw;
       const modal = modalColourBonus(chord, k);
       const guides = guideToneBonus(cur, chord, opts.tensionStyle);
       const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6
@@ -755,7 +771,9 @@ export class SuggestionEngine {
       let why = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
         : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
-      if (cadence >= 0.26) why = `Cadence home — ${why}`;
+      if (tension?.reasons.includes('too early to resolve — keep the build going') && mod(pc(chord.root) - t, 12) === 0) {
+        why = `Keep the build going — ${why}`;
+      } else if (cadence >= 0.26) why = `Cadence home — ${why}`;
       else if (cadence >= 0.1) why = `Deceptive turn — ${why}`;
       else if (stock >= 0.18) why = `Common continuation — ${why}`;
       else if (prepareSec >= 0.18) why = `Secondary setup — ${why}`;

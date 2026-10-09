@@ -310,11 +310,16 @@ function Composer({ data }: { data: LoadedData }) {
   const chordSugs: ChordSuggestion[] = useMemo(() => {
     if (tab !== 'chords') return [];
     const progression = pendingHarm ? chordsOf(slots.slice(0, chordTarget)) : chords;
+    // Same per-bar melody stretch the Tension curve sees — so Best fit won’t resolve before recent notes earn it.
+    const chorded = (pendingHarm ? slots.slice(0, chordTarget) : slots).filter((s) => s.chord);
+    const tensionMelody = chorded.map((s) => s.notes.filter(isSounding).map((n) => n.midi));
     const durs = pendingHarm ? noteDurations(pendingHarm.notes, melBeats) : [];
     const harmonize = pendingHarm
       ? pendingHarm.notes.flatMap((n, i) => (isSounding(n) ? [{ midi: n.midi, beat: n.beat, dur: durs[i] }] : []))
       : undefined;
-    return engine.suggestChords({ key: k, progression, profile, adventure, limit: 28, tensionStyle: tStyle, harmonize });
+    return engine.suggestChords({
+      key: k, progression, profile, adventure, limit: 28, tensionStyle: tStyle, tensionMelody, harmonize,
+    });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, beats]); // eslint-disable-line react-hooks/exhaustive-deps
   const chordedSlotIndices = useMemo(
     () => slots.map((s, i) => (s.chord ? i : -1)).filter((i) => i >= 0),

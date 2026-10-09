@@ -63,7 +63,7 @@ const SECTIONS: Section[] = [
     toc: 'Chords',
     title: 'Chords tab — palette & suggestions',
     use: 'Use In this key / 7ths / Open colour / Extra colour / Secondaries for quick adds, or type a symbol (F#m7, Bb/D…). Ranked “Best fit first” cards sit under the Circle of Fifths (each with a piano showing now→next). The next-pick board and ready-made progressions are further down. ▶ hears; ＋ adds.',
-    musicality: 'Muse ranks next chords by key fit, voice leading, cadence grammar (V→I, deceptive vi), secondary setup/resolve, bass motion, common pop/jazz skeletons, mood, and tension style. In-key family first; 7ths and Open colour enrich home; Extra colour and Secondaries open the door when you ask for adventure.',
+    musicality: 'Muse ranks next chords by key fit, voice leading, cadence grammar (V→I, deceptive vi), secondary setup/resolve, bass motion, common pop/jazz skeletons, mood, and tension style. While a recent stretch of chords (and melody notes) is still building, Best fit softens early cadences home so the phrase doesn’t resolve before it feels earned. In-key family first; 7ths and Open colour enrich home; Extra colour and Secondaries open the door when you ask for adventure.',
     jump: 'chords',
     jumpLabel: 'Open Chords',
   },
@@ -187,7 +187,7 @@ const SECTIONS: Section[] = [
     toc: 'Tension',
     title: 'Tension curve',
     use: 'Below the suggestion board, the Tension panel tracks how tense your progression feels for a style (pop/jazz/…). Tap a column to highlight that timeline bar; melody chips use the same colours as the timeline. Blue ring = melody rubs that chord.',
-    musicality: 'Songs breathe between tension and release. Watching debt stack tells you when a cadence home will feel earned — and when a colour note is creating the rub you hear. On Drums, the Rhythm tension strip tells the same leave-and-return story for the groove (pocket = home, fill/syncopation = build).',
+    musicality: 'Songs breathe between tension and release. Watching debt stack tells you when a cadence home will feel earned — and when a colour note is creating the rub you hear. Best fit reads the same curve: if the recent stretch is still building, it prefers continuing colour over jumping home early. On Drums, the Rhythm tension strip tells the same leave-and-return story for the groove (pocket = home, fill/syncopation = build).',
   },
   {
     id: 'visuals',

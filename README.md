@@ -73,8 +73,11 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
     Lerdahl's model over-rates their tension
   - melody-vs-chord dissonance folded into each chord's tension
 - **Effect on suggestions:** each one gets a ranking adjustment (`TENSION_GAIN × adjust`) and reason
-  chips such as "resolves built-up tension" or "adds colour after a settled stretch". The model's level
-  also refines the mood-map tension axis.
+  chips such as "resolves built-up tension", "adds colour after a settled stretch", or
+  "too early to resolve — keep the build going". Best fit shares the Tension curve’s recent stretch
+  (chords + per-bar melody): while status is still building, authentic cadences and tonic landings
+  are soft-gated so the phrase doesn’t resolve before debt earns it. The model's level also refines
+  the mood-map tension axis.
 - **UI:** a tension curve under the progression shows:
   - status, coloured too-static / sweet / building / resolve-soon / over-budget
   - the green sweet-spot band and the orange unresolved-tension area
