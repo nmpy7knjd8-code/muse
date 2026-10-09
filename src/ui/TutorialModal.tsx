@@ -7,7 +7,8 @@ interface Props {
   onClose: () => void;
 }
 
-/** Resolves against Vite `base` (e.g. `/` on museio.io). */export const TUTORIAL_SRC = `${import.meta.env.BASE_URL}tutorial.mp4`;
+/** Resolves against Vite `base` (e.g. `/muse/` on GitHub Pages). */
+export const TUTORIAL_SRC = `${import.meta.env.BASE_URL}tutorial.mp4`;
 
 export function TutorialModal({ open, onClose }: Props): ReactNode {
   const videoRef = useRef<HTMLVideoElement | null>(null);
