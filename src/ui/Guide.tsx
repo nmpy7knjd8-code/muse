@@ -187,7 +187,7 @@ const SECTIONS: Section[] = [
     toc: 'Tension',
     title: 'Tension curve',
     use: 'Below the suggestion board, the Tension panel tracks how tense your progression feels for a style (pop/jazz/…). Tap a column to highlight that timeline bar; melody chips use the same colours as the timeline. Blue ring = melody rubs that chord.',
-    musicality: 'Songs breathe between tension and release. Watching debt stack tells you when a cadence home will feel earned — and when a colour note is creating the rub you hear. Best fit reads the same curve: if the recent stretch is still building, it prefers continuing colour over jumping home early. On Drums, the Rhythm tension strip tells the same leave-and-return story for the groove (pocket = home, fill/syncopation = build).',
+    musicality: 'Songs breathe between tension and release. Watching debt stack tells you when a cadence home will feel earned — and when a colour note is creating the rub you hear. Best fit reads the same curve: if the recent stretch is still building, it prefers continuing colour over jumping home early.',
   },
   {
     id: 'visuals',
@@ -333,20 +333,8 @@ const THEORY: TheoryGroup[] = [
       { name: 'Linear vs layered', detail: 'Linear = one voice per subdivision (no stacks). Layered = limbs together. Linear demands cleaner timing; layered demands independence.' },
       { name: 'Additive & poly', detail: 'Odd meters feel memorable when grouped (2+3, 3+2). Hat groups of three over 4/4 create a 4-over-3 lean — listen for when layers converge again.' },
       { name: 'Dynamics are the groove', detail: 'Accent vs ghost vs open hat is the difference between stiff and funky. Cycle articulations on a cell instead of adding more hits.' },
+      { name: 'Build & release', detail: 'Load Build fill then Release crash on 1 (or Backbeat rock) to feel leave-and-return — same story as a harmonic cadence, on the kit. Loop the contrast.' },
       { name: 'Artist Lens bridge', detail: 'TOOL’s Danny Carey material (odd cells, hat-in-threes, polymeter) lives in Artist Lens — load a try-it, then open Drums to hear a related practice cell under the harmony.' },
-    ],
-  },
-  {
-    id: 'drum-tension',
-    title: 'Drum tension: build & release',
-    intro: 'Harmony has a tonic; drums have a tonic beat pattern (often the backbeat pocket). Muse’s Rhythm tension strip on the Drums tab tracks the same leave-and-return story the chord Tension curve tells — without mixing the two models.',
-    tips: [
-      { name: 'Tonic beat pattern', detail: 'The groove that feels like home. Load Backbeat rock or Four on the floor — that is rhythmic “I”. Leaving it is how fills and bridges create narrative (Fink / Smith tonic-rhythm idea).' },
-      { name: 'Build levers', detail: 'Raise density (busier grid), syncopation (kick/snare off expected seats), fill energy (toms/crash), or accents. Medium syncopation grooves; extreme syncopation without a clear hat pulse feels chaotic.' },
-      { name: 'Release landings', detail: 'Crash on beat 1, half-time (snare on 3), thinned hats, or a clean return to 2-and-4 spends the debt busy bars stacked — same role as a V→I cadence, on the kit.' },
-      { name: 'Debt across bars', detail: 'Write a Build fill bar, then Release crash on 1 (or Backbeat rock). The strip’s debt / ↓ release marks mirror the harmony curve’s unresolved-tension story.' },
-      { name: 'Two curves, one form', detail: 'Stack harmonic debt and drum debt into a pre-chorus, then spend both on the chorus landing. Watch the chord Tension panel and the Drums Rhythm tension strip together.' },
-      { name: 'Loop the contrast', detail: 'If every bar is max fill, nothing releases; if every bar is pure pocket, nothing builds. Alternate — then Loop to feel the breath.' },
     ],
   },
   {
