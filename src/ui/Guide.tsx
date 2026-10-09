@@ -171,8 +171,8 @@ const SECTIONS: Section[] = [
     id: 'mood',
     toc: 'Mood',
     title: 'Mood bar & Safe ↔ Adventurous',
-    use: 'Type a mood or tap presets (mystical, bluesy, playful…). The slider favors common/safe moves vs rarer/colourful ones. Mood fit % on cards shows alignment with your request.',
-    musicality: 'Mood language maps onto brightness, tension, stability, and surprise. Sliding toward Adventurous is how you leave the diatonic neighborhood without losing the thread of “what you’re going for.”',
+    use: 'Type a mood or tap presets (mystical, bluesy, playful…). The slider favors common/safe moves vs rarer/colourful ones. Mood fit % on cards shows alignment with your request. Under tense moods (ominous, dramatic…), some Best fit cards get a light “breathe” chip — grounding chords that sound good without chasing the mood.',
+    musicality: 'Mood language maps onto brightness, tension, stability, and surprise. A wall of tense colour needs somewhere to land; breathe options are the musical inhale so phrases don’t stay clenched. Sliding toward Adventurous is how you leave the diatonic neighborhood without losing the thread of “what you’re going for.”',
   },
   {
     id: 'circle',

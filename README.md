@@ -46,6 +46,9 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
   - circle of fifths with a mood-coloured arrow
   - Tonnetz with the P/L/R path
 - Mood journey: pick a start and end mood and get a generated 4–8 chord progression.
+- Under high-tension moods (ominous, dramatic…), Best fit soft-lifts a few grounding
+  “breathe” chords — options that sound good without chasing the mood — marked with a
+  light chip so phrases have somewhere to land.
 - Lore mode, clearly labelled "LORE, NOT SCIENCE": Schubart key characters, the Scriabin mystic chord, etc.
 - 👂 Listen (live mic): the mic stays open while it's on.
   - Melody mode: a stable sung or played note (held ≥250 ms, passes an RMS gate) is added and the
