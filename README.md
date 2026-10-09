@@ -28,6 +28,8 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
 - Unified timeline: melody lane above, chords below, optional bass and drums. Melody notes are
   labelled chord tone / tension / avoid / clash. Play, copy, and MIDI export lanes together
   (drums render as ASCII tab in Copy). Pending N.C. melody can be harmonized by the next-chord suggestions.
+- **Loop:** next cycle is queued on the audio clock before the seam (shared schedule
+  origin for every voice) so Play/Drums repeat with no gap.
 - **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop) with several hats,
   kicks, toms, crash/splash, ride/bell, and rim. Pitched voices lock to the session key/mode
   (kick=1, mid tom=3, high tom/ride bell=5, etc.) with FluidR3 steel-drum / taiko sample colour.

@@ -16,7 +16,7 @@ import {
   beatsPerBar, parseMeter, defaultPartMeters, timeSigEqual,
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
-  type ChordBridge, activeAt, type TimelineEvents,
+  type ChordBridge, activeAt, nextLoopOrigin, shouldPrimeLoop, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById, progressionDrumTension,
   drumTuningForKey, defaultMidiForVoice,
 } from '../core';
@@ -208,7 +208,9 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const loopPlayRef = useRef(loopPlay);
   loopPlayRef.current = loopPlay;
-  const playAllRef = useRef<() => void>(() => {});
+  /** Absolute AudioContext time through which loop cycles are already queued (zero-gap seams). */
+  const primedThroughRef = useRef(0);
+  const schedulePassRef = useRef<(origin: number) => void>(() => {});
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const barRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
@@ -497,13 +499,16 @@ function Composer({ data }: { data: LoadedData }) {
   const omitBass = bassInst !== 'off';
   /** Chord tones on the chord instrument (no low bass when a bass part is active). */
   const chordTones = (c: Chord, v: number[]) => chordMidis(c, v, INSTRUMENTS[chordInst], { omitBass });
-  const playChordParts = (c: Chord, v: number[], opts: { at?: number; dur?: number; vel?: number; autoBass?: boolean } = {}) => {
+  const playChordParts = (c: Chord, v: number[], opts: {
+    at?: number; dur?: number; vel?: number; autoBass?: boolean; origin?: number;
+  } = {}) => {
     const { autoBass = true, ...playOpts } = opts;
     synth.playNotes(chordTones(c, v), { ...playOpts, instrument: chordInst });
     // Auto root only when no composed bass lane is driving Play (previews still get a root).
     if (autoBass && bassInst !== 'off') {
       synth.playNotes([bassLineMidi(c, INSTRUMENTS[bassInst])], {
-        at: playOpts.at, dur: playOpts.dur ?? 1.1, vel: (playOpts.vel ?? 0.75) * 0.92, instrument: bassInst,
+        at: playOpts.at, dur: playOpts.dur ?? 1.1, vel: (playOpts.vel ?? 0.75) * 0.92,
+        instrument: bassInst, origin: playOpts.origin,
       });
     }
   };
@@ -602,81 +607,118 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const stopPlayback = () => {
     synth.stopAll();
+    primedThroughRef.current = 0;
     setTransport(null);
     setPlaySec(0);
   };
-  const playAll = (opts: { soft?: boolean } = {}) => {
+  const playAll = () => {
     synth.unlock();
-    // Soft restart (loop): previous pass already finished — skip stopAll to avoid a click.
-    if (!opts.soft) synth.stopAll();
+    synth.stopAll();
     for (const id of activeParts) void synth.ensureLoaded(id);
     // ▶ Play from the selected bar (if any); otherwise from the start.
     const startIndex = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? 0) : 0;
     const ev = timelineEvents(slots, { timeSig, beatSec, startIndex, partMeters });
-    const origin = synth.scheduleOrigin();
-    setTransport({ origin, events: ev });
-    setPlaySec(0);
     // Full progression for voice-leading; only schedule events from startIndex onward.
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
     const voicings = voiceProgression(withC.map((x) => x.s.chord as Chord));
     const vBy = new Map(withC.map((x, j) => [x.i, voicings[j]]));
     const bassInstId = bassInst === 'off' ? null : bassInst;
     const composedBassBars = new Set(ev.bass.map((b) => b.index));
-    // playNotes({ at }) is relative to scheduleOrigin(); playhead = audioTime − origin.
-    ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
-      at: c.at, dur: c.dur, vel: 0.7,
-      // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
-      autoBass: !composedBassBars.has(c.index),
-    }));
-    ev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], {
-      at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85, instrument: melodyInst,
-    }));
-    if (bassInstId) {
-      ev.bass.forEach((n) => synth.playNotes([fitMidi(n.midi, bassInstId)], {
-        at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.88, instrument: bassInstId,
-      }));
-    }
-    // Drum kit: same `at` across voices = simultaneous; pitched voices use key MIDI.
     const drumTune = drumTuningForKey(k);
-    ev.drums.forEach((d) => synth.playDrum(d.voice, {
-      at: d.at,
-      vel: d.vel,
-      artic: d.artic,
-      midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune),
-      melodic: true,
-    }));
+    /** Queue one full pass at a fixed audio-clock origin (shared by playhead + every voice). */
+    const schedulePass = (origin: number) => {
+      ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
+        at: c.at, dur: c.dur, vel: 0.7, origin,
+        // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
+        autoBass: !composedBassBars.has(c.index),
+      }));
+      ev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], {
+        at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85, instrument: melodyInst, origin,
+      }));
+      if (bassInstId) {
+        ev.bass.forEach((n) => synth.playNotes([fitMidi(n.midi, bassInstId)], {
+          at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.88, instrument: bassInstId, origin,
+        }));
+      }
+      // Drum kit: same `at` across voices = simultaneous; pitched voices use key MIDI.
+      ev.drums.forEach((d) => synth.playDrum(d.voice, {
+        at: d.at,
+        vel: d.vel,
+        artic: d.artic,
+        midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune),
+        melodic: true,
+        origin,
+      }));
+    };
+    schedulePassRef.current = schedulePass;
+    const origin = synth.scheduleOrigin();
+    schedulePass(origin);
+    // With Loop on, prime the next cycle immediately so the seam has zero lag.
+    if (loopPlayRef.current && ev.total > 0) {
+      schedulePass(nextLoopOrigin(origin, ev.total));
+      primedThroughRef.current = origin + 2 * ev.total;
+    } else {
+      primedThroughRef.current = origin + ev.total;
+    }
+    setTransport({ origin, events: ev });
+    setPlaySec(0);
   };
-  playAllRef.current = () => playAll({ soft: true });
   const togglePlay = () => {
     if (transport) stopPlayback();
     else playAll();
   };
 
+  // If Loop is turned on mid-play, prime the next cycle so the upcoming seam stays gapless.
+  useEffect(() => {
+    if (!transport || !loopPlay) return;
+    const period = transport.events.total;
+    if (period <= 0) return;
+    if (primedThroughRef.current < transport.origin + 2 * period - 1e-9) {
+      schedulePassRef.current(nextLoopOrigin(transport.origin, period));
+      primedThroughRef.current = transport.origin + 2 * period;
+    }
+  }, [loopPlay, transport]);
+
   // Drive playhead from the audio clock; scroll the timeline to the sounding bar.
+  // Loop advances the origin at the exact seam; the next cycle’s notes were primed earlier.
   useEffect(() => {
     if (!transport) return;
     let raf = 0;
-    let restarted = false;
     const tick = () => {
       const now = synth.audioTime();
       if (now === null) {
         raf = requestAnimationFrame(tick);
         return;
       }
-      const t = now - transport.origin;
-      if (t >= transport.events.total) {
-        if (loopPlayRef.current) {
-          if (!restarted) {
-            restarted = true;
-            playAllRef.current();
+      const elapsed = now - transport.origin;
+      const period = transport.events.total;
+      if (loopPlayRef.current && period > 0) {
+        if (elapsed >= period) {
+          const next = nextLoopOrigin(transport.origin, period);
+          // Queue the cycle after the one that’s about to start (already primed through next+period).
+          if (primedThroughRef.current < next + period - 1e-9) {
+            schedulePassRef.current(nextLoopOrigin(next, period));
+            primedThroughRef.current = next + 2 * period;
           }
+          setTransport({ origin: next, events: transport.events });
+          setPlaySec(Math.max(0, now - next));
           return;
         }
+        // Safety prime if somehow behind (e.g. Loop toggled on mid-play).
+        if (shouldPrimeLoop(elapsed, period) && primedThroughRef.current < transport.origin + 2 * period - 1e-9) {
+          schedulePassRef.current(nextLoopOrigin(transport.origin, period));
+          primedThroughRef.current = transport.origin + 2 * period;
+        }
+        setPlaySec(elapsed);
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      if (elapsed >= period) {
         setTransport(null);
         setPlaySec(0);
         return;
       }
-      setPlaySec(t);
+      setPlaySec(elapsed);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

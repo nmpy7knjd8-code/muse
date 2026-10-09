@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  activeAt, timelineEvents, setSlotChord, insertNote, parseChord,
+  activeAt, loopPlayhead, nextLoopOrigin, shouldPrimeLoop, timelineEvents,
+  setSlotChord, insertNote, parseChord, LOOP_PRE_SCHEDULE_SEC,
 } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
@@ -22,5 +23,24 @@ describe('activeAt playhead', () => {
     const bar2 = activeAt(ev, 2.2);
     expect(bar2.chordIndex).toBe(1);
     expect(activeAt(ev, 4).done).toBe(true);
+  });
+});
+
+describe('seamless loop timing', () => {
+  it('advances the origin by exactly one period (zero-gap seam)', () => {
+    expect(nextLoopOrigin(12.5, 4)).toBe(16.5);
+    expect(nextLoopOrigin(0, 2.25)).toBe(2.25);
+  });
+  it('primes the next cycle before the seam (ahead of rAF jitter)', () => {
+    const period = 2;
+    expect(shouldPrimeLoop(period - LOOP_PRE_SCHEDULE_SEC, period)).toBe(true);
+    expect(shouldPrimeLoop(period - LOOP_PRE_SCHEDULE_SEC - 0.01, period)).toBe(false);
+    expect(shouldPrimeLoop(period, period)).toBe(true);
+    expect(shouldPrimeLoop(0, period)).toBe(false);
+  });
+  it('wraps the playhead inside the loop period', () => {
+    expect(loopPlayhead(0.25, 2)).toBeCloseTo(0.25);
+    expect(loopPlayhead(2.25, 2)).toBeCloseTo(0.25);
+    expect(loopPlayhead(-0.1, 2)).toBeCloseTo(1.9);
   });
 });

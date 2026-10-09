@@ -54,8 +54,8 @@ const SECTIONS: Section[] = [
     id: 'play',
     toc: 'Play & Loop',
     title: 'Play, Loop, and play-from-selection',
-    use: '▶ Play runs the timeline; ■ Stop ends early. Loop (on by default) repeats until you stop. Tap a chord card to select it — Play starts from that bar through the rest. A scrolling note ribbon lights each sounding chord/note under the strip.',
-    musicality: 'Hearing the phrase from the middle is how arrangers check a landing: does the cadence still earn its home when you skip the setup? Looping a short cell trains your ear on the groove before you expand it.',
+    use: '▶ Play runs the timeline; ■ Stop ends early. Loop (on by default) repeats until you stop — the next cycle is queued on the audio clock before the seam, so there is no gap. Tap a chord card to select it — Play starts from that bar through the rest. A scrolling note ribbon lights each sounding chord/note under the strip.',
+    musicality: 'Hearing the phrase from the middle is how arrangers check a landing: does the cadence still earn its home when you skip the setup? Looping a short cell trains your ear on the groove before you expand it — timing has to be exact or the pocket lies.',
     tip: 'Turn Loop off when you want a single pass for export or a final listen.',
   },
   {
