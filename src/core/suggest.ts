@@ -551,6 +551,107 @@ function stockProgressionBonus(prog: Chord[], chord: Chord, k: Key): number {
   return 0;
 }
 
+/** Last few chord symbols joined with en-dashes for “After C–Am–F …” blurbs. */
+function stretchLabel(prog: Chord[], max = 3): string {
+  return prog.slice(-max).map((c) => chordSymbol(c, true)).join('–');
+}
+
+/**
+ * Very brief how-this-continues-the-sequence line (not mood-of-chord labels).
+ * Mirrors note-suggestion stretch awareness: name the recent path, then the move.
+ */
+export function describeSequenceRelation(
+  prog: Chord[],
+  chord: Chord,
+  k: Key,
+  opts: {
+    roman: string;
+    cadence: number;
+    stock: number;
+    predDom: number;
+    prepareSec: number;
+    resolveSec: number;
+    fifths: number;
+    nrt: string | null;
+    commonTones: number;
+    withholdHome?: boolean;
+  },
+): string | null {
+  if (!prog.length) return null;
+  const cur = prog[prog.length - 1]!;
+  const fromRn = analyzeRoman(cur, k);
+  const from = fromRn.secondary ?? fromRn.text;
+  const to = opts.roman;
+  const after = prog.length >= 2 ? `After ${stretchLabel(prog)}` : `From ${chordSymbol(cur, true)}`;
+  const move = `${from}→${to}`;
+
+  if (opts.resolveSec >= 0.2) {
+    return `${after}, ${from} resolves into ${to}`;
+  }
+  if (opts.withholdHome && mod(pc(chord.root) - pc(k.tonic), 12) === 0 && opts.cadence < 0.26) {
+    return `${after}, keep building — ${move} is home too soon`;
+  }
+  if (opts.cadence >= 0.26) return `${after}, ${move} cadence home`;
+  if (opts.cadence >= 0.1) return `${after}, ${move} deceptive turn`;
+
+  if (opts.stock >= 0.12 && prog.length >= 2) {
+    const t = pc(k.tonic);
+    const a = mod(pc(prog[prog.length - 2]!.root) - t, 12);
+    const b = mod(pc(prog[prog.length - 1]!.root) - t, 12);
+    const c = mod(pc(chord.root) - t, 12);
+    const fam = MODE_BY_ID[k.mode].family;
+    if (a === 0 && b === 7 && c === 5) return `${after}, axis lands on ${to}`;
+    if (a === 0 && b === 9 && c === 7) return `${after}, ${move} opens the cadence`;
+    if (a === 9 && b === 5 && c === 7) return `${after}, ${move} — pop turn to the dominant`;
+    if (a === 9 && b === 5 && c === 0) return `${after}, ${move} returns through the axis`;
+    if (a === 2 && b === 7 && c === 0) return `${after}, ii–V lands on ${to}`;
+    if (fam === 'minor' && a === 0 && b === 10 && c === 8) return `${after}, Andalusian step to ${to}`;
+    if (fam === 'minor' && a === 10 && b === 8 && c === 7) return `${after}, cascade aims at ${to}`;
+    return `${after}, ${move} common continuation`;
+  }
+
+  if (opts.predDom >= 0.12) return `${after}, ${move} toward the dominant`;
+  if (opts.prepareSec >= 0.18) return `${after}, launches ${to} from ${from}`;
+  if (opts.fifths >= 0.16) return `${after}, falling fifth into ${to}`;
+
+  if (opts.nrt === 'R') return `${after}, ${move} relative slide`;
+  if (opts.nrt === 'P') return `${after}, ${move} parallel flip`;
+  if (opts.nrt === 'L') return `${after}, ${move} leading-tone slide`;
+  if (opts.nrt && opts.nrt.length === 2) return `${after}, ${move} via ${opts.nrt}`;
+
+  if (opts.commonTones >= 2) return `${after}, ${move} keeps ${opts.commonTones} common tones`;
+
+  const fromRole = degreeRoleSafe(fromRn.offset);
+  const toRole = degreeRoleSafe(analyzeRoman(chord, k).offset);
+  if (fromRole && toRole && fromRole !== toRole) {
+    return `${after}, ${move} (${fromRole} → ${toRole})`;
+  }
+  return `${after}, ${move}`;
+}
+
+function degreeRoleSafe(offset: number): string {
+  // offset is 0..11 pitch-class from tonic; map diatonic degrees roughly.
+  if (offset === 0) return 'tonic';
+  if (offset === 2) return 'predominant';
+  if (offset === 3 || offset === 4) return 'mediant';
+  if (offset === 5) return 'predominant';
+  if (offset === 7) return 'dominant';
+  if (offset === 8 || offset === 9) return 'relative';
+  if (offset === 10 || offset === 11) return 'dominant';
+  return '';
+}
+
+/** Mood-only KB blurbs we skip as support under a sequence headline. */
+function kbLooksLikeMoodTag(s: string): boolean {
+  return /^(feels|sounds|mood|colour|color|bright|dark|warm|cool|tense|calm|dreamy|mystical)\b/i.test(s.trim());
+}
+
+/** Keep supporting KB text short so the sequence line stays the readable lead. */
+function trimWhySupport(s: string): string {
+  const t = firstSentence(s);
+  return t.length > 90 ? `${t.slice(0, 87).trim()}…` : t;
+}
+
 /**
  * Mode-characteristic chords (Mixolydian ♭VII, Dorian IV, Phrygian ♭II, Lydian II)
  * get a light lift when the key is that mode — priors are maj/min-family only. HEURISTIC.
@@ -837,20 +938,33 @@ export class SuggestionEngine {
         + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
-      let why = top
+      // Lead with how this continues the written sequence (not mood-of-chord tags).
+      const seqWhy = describeSequenceRelation(prog, chord, k, {
+        roman,
+        cadence,
+        stock,
+        predDom,
+        prepareSec,
+        resolveSec,
+        fifths,
+        nrt,
+        commonTones: ct,
+        withholdHome: withholdHome
+          && !!tension?.reasons.includes('too early to resolve — keep the build going'),
+      });
+      const kbBit = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
         : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
-      if (tension?.reasons.includes('too early to resolve — keep the build going') && mod(pc(chord.root) - t, 12) === 0) {
-        why = `Keep the build going — ${why}`;
-      } else if (cadence >= 0.26) why = `Cadence home — ${why}`;
-      else if (cadence >= 0.1) why = `Deceptive turn — ${why}`;
-      else if (stock >= 0.18) why = `Common continuation — ${why}`;
-      else if (prepareSec >= 0.18) why = `Secondary setup — ${why}`;
-      else if (predDom >= 0.12) why = `Toward the dominant — ${why}`;
+      // Sequence relation is the headline; keep a short KB clause only when it adds a different angle.
+      let why = seqWhy
+        ? (kbBit && !kbLooksLikeMoodTag(kbBit) && !seqWhy.includes(firstSentence(kbBit).slice(0, 18))
+          ? `${seqWhy}. ${trimWhySupport(kbBit)}`
+          : seqWhy)
+        : kbBit;
       if (harmony) {
-        const n = harmony.relations.length, ct = harmony.relations.filter((r) => r.kind === 'chord').length;
+        const n = harmony.relations.length, hct = harmony.relations.filter((r) => r.kind === 'chord').length;
         const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
-        why = `Melody fit — ${harmony.relations.map((r) => r.label).join(' · ')}: ${ct}/${n} notes sit in the chord${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
+        why = `Melody fit — ${harmony.relations.map((r) => r.label).join(' · ')}: ${hct}/${n} notes sit in the chord${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
       }
       out.push({
         id: chordSymbol(chord),
