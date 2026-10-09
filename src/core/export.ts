@@ -8,7 +8,8 @@ import { bassNote } from './voicing';
 import {
   DEFAULT_TIME_SIG, PartMeters, TimeSig, beatsPerBar, defaultPartMeters, midiTimeSigBytes, timeSigLabel,
 } from './meter';
-import { TimelineSlot, isSounding, labelSlot, noteDurations, slotBass } from './timeline';
+import { drumTabAscii } from './drums';
+import { TimelineSlot, isSounding, labelSlot, noteDurations, slotBass, slotDrums } from './timeline';
 
 export function progressionText(k: Key, chords: Chord[], melody: number[] = []): string {
   const lines = [`Key: ${keyName(k)}`];
@@ -145,8 +146,12 @@ export function timelineText(k: Key, slots: TimelineSlot[], timeSig: TimeSig = D
     const bass = slotBass(s).map((n) => (
       isSounding(n) ? `${midiName(n.midi, spellInKey(k, n.midi))}@${n.beat + 1}` : `rest@${n.beat + 1}`
     )).join(' ');
+    const drums = slotDrums(s);
     const bits = [notes ? `mel ${notes}` : '', bass ? `bass ${bass}` : ''].filter(Boolean).join(' · ');
     lines.push(`Bar ${i + 1}: ${sym}${bits ? ` — ${bits}` : ''}`);
+    if (drums.length) {
+      lines.push(drumTabAscii(drums, beats, 4));
+    }
   });
   return lines.join('\n');
 }

@@ -1,10 +1,11 @@
-// Unified timeline: each chord slot (one master bar) can hold melody and/or bass notes.
-// Master bar length comes from the session time signature. Each part (chords / melody / bass)
+// Unified timeline: each chord slot (one master bar) can hold melody, bass, and/or drum hits.
+// Master bar length comes from the session time signature. Each part (chords / melody / bass / drums)
 // can use its own PartMeter so pulses fill the same wall-clock bar (polyrhythm) with optional
 // subdivisions and rests for precise timing.
 import { Chord } from './chords';
 import { NoteRelation, noteRelation } from './noteRelation';
 import type { TheoryKB } from './kb';
+import type { DrumHit } from './drums';
 import {
   DEFAULT_BPM, DEFAULT_PART_METER, DEFAULT_TIME_SIG, PartMeter, PartMeters, TimeSig,
   beatSecFromBpm, beatsPerBar as bpb, defaultPartMeters, partPulseSec, pulseStep, slotsPerPartBar,
@@ -24,6 +25,8 @@ export interface TimelineSlot {
   notes: TimelineNote[];
   /** Optional composed bass line for this bar (beat-aligned like melody). */
   bass?: TimelineNote[];
+  /** Optional drum / percussion hits for this bar (column-aligned = simultaneous). */
+  drums?: DrumHit[];
   locked?: boolean;
 }
 /** @deprecated use beatsPerBar(timeSig) — kept so older call sites default to 4/4. */
@@ -46,11 +49,16 @@ export function noteDurations(notes: TimelineNote[], beats = BEATS_PER_SLOT): nu
   });
 }
 
+export function slotDrums(slot: TimelineSlot): DrumHit[] {
+  return slot.drums ?? [];
+}
+
 function cloneSlots(slots: TimelineSlot[]): TimelineSlot[] {
   return slots.map((s) => ({
     ...s,
     notes: s.notes.map((n) => ({ ...n })),
     bass: slotBass(s).map((n) => ({ ...n })),
+    drums: slotDrums(s).map((n) => ({ ...n })),
   }));
 }
 
@@ -88,7 +96,7 @@ function insertLaneEvent(
   const out = cloneSlots(slots);
   let i = Math.max(0, index ?? laneActiveIndex(slots, lane, capacity));
   while (out[i] && (lane === 'notes' ? out[i].notes : slotBass(out[i])).length >= capacity) i++;
-  while (out.length <= i) out.push({ chord: null, notes: [], bass: [] });
+  while (out.length <= i) out.push({ chord: null, notes: [], bass: [], drums: [] });
   const notes = lane === 'notes' ? out[i].notes : (out[i].bass ?? (out[i].bass = []));
   const beat = notes.length
     ? Math.min(beats - step, Math.round((notes[notes.length - 1]!.beat + step) / step) * step)
@@ -134,15 +142,31 @@ export function insertRest(
 /** Set the chord of slot `index` (appends a slot when index === length). */
 export function setSlotChord(slots: TimelineSlot[], index: number, chord: Chord): TimelineSlot[] {
   const out = cloneSlots(slots);
-  if (index >= out.length) out.push({ chord, notes: [], bass: [] });
+  if (index >= out.length) out.push({ chord, notes: [], bass: [], drums: [] });
   else out[index] = { ...out[index], chord };
   return out;
 }
 
-/** Clear the chord of a slot, leaving its melody/bass as N.C. (no-op when locked). */
+/** Clear the chord of a slot, leaving its melody/bass/drums as N.C. (no-op when locked). */
 export function clearSlotChord(slots: TimelineSlot[], index: number): TimelineSlot[] {
   if (!slots[index] || slots[index].locked) return slots;
-  return pruneEmpty(slots.map((s, i) => (i === index ? { ...s, chord: null, notes: [...s.notes], bass: [...slotBass(s)] } : s)));
+  return pruneEmpty(slots.map((s, i) => (i === index
+    ? { ...s, chord: null, notes: [...s.notes], bass: [...slotBass(s)], drums: [...slotDrums(s)] }
+    : s)));
+}
+
+/** Replace drum hits for a bar (creates the bar as N.C. when needed). */
+export function setSlotDrums(slots: TimelineSlot[], index: number, drums: DrumHit[]): TimelineSlot[] {
+  const out = cloneSlots(slots);
+  while (out.length <= index) out.push({ chord: null, notes: [], bass: [], drums: [] });
+  out[index] = { ...out[index], drums: drums.map((h) => ({ ...h })) };
+  return pruneEmpty(out);
+}
+
+/** Clear drums on a bar. */
+export function clearSlotDrums(slots: TimelineSlot[], index: number): TimelineSlot[] {
+  if (!slots[index]) return slots;
+  return pruneEmpty(slots.map((s, i) => (i === index ? { ...s, drums: [] } : s)));
 }
 
 /** Remove one melody note; drops empty chordless unlocked slots. */
@@ -169,7 +193,7 @@ export function removeSlot(slots: TimelineSlot[], index: number): TimelineSlot[]
 
 /** Drop trailing/interior empty chordless unlocked slots. */
 export function pruneEmpty(slots: TimelineSlot[]): TimelineSlot[] {
-  return slots.filter((s) => s.chord || s.notes.length > 0 || slotBass(s).length > 0 || s.locked);
+  return slots.filter((s) => s.chord || s.notes.length > 0 || slotBass(s).length > 0 || slotDrums(s).length > 0 || s.locked);
 }
 
 /** Where a new chord goes: the first chordless slot that already has melody (harmonize it), else a new slot. */
@@ -217,24 +241,33 @@ export function clampSlotsToMeter(
       .sort((a, b) => a.beat - b.beat)
       .slice(0, capacity)
       .map((n, i) => ({ ...n, beat: i * step }));
-    return { ...s, notes: pack(s.notes), bass: pack(slotBass(s)) };
+    const packDrums = (drums: DrumHit[]) => [...drums]
+      .filter((h) => h.beat < beats)
+      .map((h) => ({ ...h, beat: Math.round(h.beat / step) * step }))
+      .filter((h) => h.beat <= beats - step + 1e-9);
+    return { ...s, notes: pack(s.notes), bass: pack(slotBass(s)), drums: packDrums(slotDrums(s)) };
   }));
 }
 
-/** Clamp melody/bass lanes to their part meters (chords stay on the master bar grid). */
+/** Clamp melody/bass/drums lanes to their part meters (chords stay on the master bar grid). */
 export function clampSlotsToPartMeters(slots: TimelineSlot[], parts: PartMeters): TimelineSlot[] {
   const melCap = slotsPerPartBar(parts.melody);
   const bassCap = slotsPerPartBar(parts.bass);
   const melStep = pulseStep(parts.melody.subdiv);
   const bassStep = pulseStep(parts.bass.subdiv);
+  const drumStep = pulseStep(parts.drums.subdiv);
   const melBeats = bpb(parts.melody.timeSig);
   const bassBeats = bpb(parts.bass.timeSig);
+  const drumBeats = bpb(parts.drums.timeSig);
   return pruneEmpty(slots.map((s) => {
     const packMel = [...s.notes].sort((a, b) => a.beat - b.beat).slice(0, melCap)
       .map((n, i) => ({ ...n, beat: Math.min(melBeats - melStep, i * melStep) }));
     const packBass = [...slotBass(s)].sort((a, b) => a.beat - b.beat).slice(0, bassCap)
       .map((n, i) => ({ ...n, beat: Math.min(bassBeats - bassStep, i * bassStep) }));
-    return { ...s, notes: packMel, bass: packBass };
+    const packDrums = [...slotDrums(s)]
+      .filter((h) => h.beat < drumBeats)
+      .map((h) => ({ ...h, beat: Math.min(drumBeats - drumStep, Math.round(h.beat / drumStep) * drumStep) }));
+    return { ...s, notes: packMel, bass: packBass, drums: packDrums };
   }));
 }
 
@@ -270,11 +303,12 @@ export interface TimelineEvents {
   chords: Array<{ index: number; chord: Chord; at: number; dur: number }>;
   notes: Array<{ midi: number; at: number; dur: number; index: number; beat: number }>;
   bass: Array<{ midi: number; at: number; dur: number; index: number; beat: number }>;
+  drums: Array<{ voice: DrumHit['voice']; at: number; dur: number; vel: number; artic: DrumHit['artic']; index: number; beat: number }>;
   total: number;
 }
 
 /** Timing for playback/export. Part meters map each lane’s pulses onto the master bar (polyrhythm).
- *  Rests occupy time but are omitted from note/bass event lists. */
+ *  Rests occupy time but are omitted from note/bass event lists. Same-beat drum hits share `at` (simultaneous). */
 export function timelineEvents(
   slots: TimelineSlot[],
   o: {
@@ -289,7 +323,7 @@ export function timelineEvents(
   const master = o.timeSig ?? DEFAULT_TIME_SIG;
   const masterBeats = bpb(master);
   const parts = o.partMeters ?? defaultPartMeters(master);
-  const hasLine = slots.some((s) => s.notes.length || slotBass(s).length);
+  const hasLine = slots.some((s) => s.notes.length || slotBass(s).length || slotDrums(s).length);
   const beat = o.beatSec ?? beatSecFromBpm(o.bpm ?? DEFAULT_BPM);
   // Chord-only browsing stays snappier than a full bar (~2.14 beats at the active tempo).
   const step = hasLine ? beat * masterBeats : o.chordOnlyStep ?? beat * 2.14;
@@ -297,9 +331,10 @@ export function timelineEvents(
   const t0 = start * step;
   const melPulse = partPulseSec(step, parts.melody);
   const bassPulse = partPulseSec(step, parts.bass);
+  const drumPulse = partPulseSec(step, parts.drums);
   const melBeats = bpb(parts.melody.timeSig);
   const bassBeats = bpb(parts.bass.timeSig);
-  const ev: TimelineEvents = { chords: [], notes: [], bass: [], total: Math.max(0, slots.length - start) * step };
+  const ev: TimelineEvents = { chords: [], notes: [], bass: [], drums: [], total: Math.max(0, slots.length - start) * step };
   slots.forEach((s, i) => {
     if (i < start) return;
     if (s.chord) ev.chords.push({ index: i, chord: s.chord, at: i * step - t0, dur: step * 0.95 });
@@ -326,6 +361,19 @@ export function timelineEvents(
         beat: n.beat,
       });
     });
+    // Drum one-shots: short dur; stacked voices at the same beat share the same `at`.
+    for (const h of slotDrums(s)) {
+      const vel = h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78);
+      ev.drums.push({
+        voice: h.voice,
+        at: i * step + h.beat * drumPulse - t0,
+        dur: Math.min(0.18, drumPulse * 0.85),
+        vel,
+        artic: h.artic,
+        index: i,
+        beat: h.beat,
+      });
+    }
   });
   return ev;
 }

@@ -1,7 +1,7 @@
 // How-to guide: each Muse feature with a plain “how to use it” and why it matters musically.
 import type { ReactNode } from 'react';
 
-export type GuideJump = 'chords' | 'melody' | 'bass' | 'artists' | 'moods';
+export type GuideJump = 'chords' | 'melody' | 'bass' | 'drums' | 'artists' | 'moods';
 
 interface Props {
   onJump: (tab: GuideJump) => void;
@@ -45,10 +45,10 @@ const SECTIONS: Section[] = [
   {
     id: 'timeline',
     toc: 'Timeline',
-    title: 'The timeline (three lanes)',
-    use: 'Each bar can hold melody on top, a chord in the middle (piano keys by default, or staff — toggle Keys / Staff above the strip), and optional bass notes underneath. From the second bar on, previous-chord tones show in blue-grey next to this bar’s notes. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
-    musicality: 'Harmony, melody, and bass are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are. Composed bass replaces the automatic root for that bar when you write one.',
-    tip: 'Chord-only timelines hide empty melody/bass lanes so the strip stays clean.',
+    title: 'The timeline (four lanes)',
+    use: 'Each bar can hold melody on top, a chord in the middle (piano keys by default, or staff — toggle Keys / Staff above the strip), optional bass underneath, and a drum chip when a percussion grid is written. From the second bar on, previous-chord tones show in blue-grey next to this bar’s notes. Tap a chord or note label to hear it. Use the lock on a bar to keep it through Clear. Clear / Undo / Play / MIDI / Copy act on the whole timeline.',
+    musicality: 'Harmony, melody, bass, and drums are partners. A bar with “no chord” is melody waiting for harmony — a common sketching move before you decide what the chords are. Composed bass replaces the automatic root for that bar when you write one. Drum columns that stack play together — that simultaneous layering is the groove.',
+    tip: 'Chord-only timelines hide empty melody/bass/drum lanes so the strip stays clean.',
   },
   {
     id: 'play',
@@ -95,11 +95,21 @@ const SECTIONS: Section[] = [
     tip: '▶ Play prefers your composed bass notes for bars that have them, and keeps the auto root elsewhere.',
   },
   {
+    id: 'drums',
+    toc: 'Drums',
+    title: 'Drums tab — percussion grid, play together, loop',
+    use: 'Open Drums next to Bass. Load a starter groove (backbeat, four-on-the-floor, funk ghosts, linear 16ths, odd cell, hat-in-threes…) or tap the kit×subdivision grid. Stacked cells in one column sound at the same instant — kick+hat+snare on beat 1 is one coordinated event. Tap again to cycle normal → ghost → accent → clear. ▶ Play layers drums with chords/melody/bass; Loop (default on) repeats the cell like a practice pad. Meter sets the drum part’s pulse and 16th-grid precision.',
+    musicality: 'Drum tab is a coordination map: timekeeper ostinato (hat/ride), backbeat (snare 2 & 4), foundation (kick), and colour (toms/crash/open hat). Ghost notes are soft chatter between accents — dynamics, not density. Linear grooves fire one limb at a time; layered grooves stack limbs. Isolate the hat, then add snare, then kick when a pattern falls apart.',
+    tip: 'If the one-bar cell does not feel good looping for half a minute, change one limb before you expand the form.',
+    jump: 'drums',
+    jumpLabel: 'Open Drums',
+  },
+  {
     id: 'part-meter',
     toc: 'Part Meter',
-    title: 'Meter under Chords / Melody / Bass',
-    use: 'Under each of Chords, Melody, and Bass, switch Write ↔ Meter. Meter picks that part’s time signature and precision (Beat / ½ / ¼). Parts share the session bar’s wall-clock length, so melody in 3/4 over chords in 4/4 is a 3:4 polyrhythm. Match session resets a part to the top meter. Melody and Bass can insert rests from Meter or Write.',
-    musicality: 'Overlapping meters let grooves stack: a waltz melody over a 4/4 harmony, or a 5-pulse bass under common time. Subdivision is how you place pickups and rests without leaving the bar grid. Silence that occupies a pulse is as intentional as a note.',
+    title: 'Meter under Chords / Melody / Bass / Drums',
+    use: 'Under each of Chords, Melody, Bass, and Drums, switch Write ↔ Meter. Meter picks that part’s time signature and precision (Beat / ½ / ¼). Parts share the session bar’s wall-clock length, so melody in 3/4 over chords in 4/4 is a 3:4 polyrhythm. Match session resets a part to the top meter (drums keep a 16th grid). Melody and Bass can insert rests from Meter or Write.',
+    musicality: 'Overlapping meters let grooves stack: a waltz melody over a 4/4 harmony, a 5-pulse bass under common time, or hat groups of three over a 4/4 backbeat. Subdivision is how you place pickups, ghosts, and kick syncopations without leaving the bar grid. Silence that occupies a pulse is as intentional as a hit.',
     tip: 'Start with Match session, then change only the lane that needs a different count. Use ½ or ¼ precision before you need busy runs.',
     jump: 'melody',
     jumpLabel: 'Open Melody Meter',
@@ -170,7 +180,7 @@ const SECTIONS: Section[] = [
     title: 'Circle of fifths',
     use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking. Rim chips are Muse’s next picks — variants of the same root stack outward; each pill shows rank + a short quality. Tap a chip to hear. Same-root colour shows “same root” instead of a looping arrow. Ranked Best fit cards sit under the circle.',
     musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
-    tip: 'Under the timeline, set Chords / Melody / Bass instruments separately — ▶ Play layers them.',
+    tip: 'Under the timeline, set Chords / Melody / Bass instruments separately — ▶ Play layers them with Drums.',
   },
   {
     id: 'tension',
@@ -226,6 +236,7 @@ const WORKFLOW: Array<{ step: string; detail: string }> = [
   { step: 'Loop the cell', detail: 'Select the first bar if you want; ▶ Play with Loop on and live with the groove.' },
   { step: 'Sing a line', detail: 'Switch to Melody; place a short phrase. Watch in-the-chord vs colour tags.' },
   { step: 'Add bass', detail: 'Switch to Bass; plant roots (or a short walk) under a few bars.' },
+  { step: 'Lock a drum cell', detail: 'Open Drums; load Backbeat rock (or build a grid); ▶ Loop until the pocket sits.' },
   { step: 'Harmonize gaps', detail: 'On “no chord” bars, Find a chord and pick by melody fit.' },
   { step: 'Colour on purpose', detail: 'Nudge Adventurous, Open colour, Extra colour, or Secondaries when you want a lift — then resolve home.' },
   { step: 'Check the joins', detail: 'Open How notes connect — fix leaps that feel bolted on.' },
@@ -301,11 +312,26 @@ const THEORY: TheoryGroup[] = [
     intro: 'Harmony is only half the feel — when notes land matters as much as which notes.',
     tips: [
       { name: 'Honor the meter', detail: 'Set the session meter (and each part’s Meter tab) so Muse’s pulse grid matches your song.' },
-      { name: 'Part meters for poly', detail: 'Give melody or bass a different N/D than the session to stack 3:2, 3:4, 5:4, etc. inside the same bar length.' },
+      { name: 'Part meters for poly', detail: 'Give melody, bass, or drums a different N/D than the session to stack 3:2, 3:4, 5:4, etc. inside the same bar length.' },
       { name: 'Pickup notes', detail: 'With ½/¼ precision, start a phrase on the “and” — it leans into the downbeat and feels alive.' },
       { name: 'Don’t change everything at once', detail: 'If harmony leaps, keep rhythm simple. If rhythm is busy, keep chords closer.' },
       { name: 'Silence is a note', detail: 'Insert a rest before a landing — the arrival feels louder without raising velocity.' },
       { name: 'Loop to test groove', detail: 'If it doesn’t feel good looping for 30 seconds, the cell isn’t ready to expand.' },
+    ],
+  },
+  {
+    id: 'percussion',
+    title: 'Percussion theory on the Drums tab',
+    intro: 'A groove is four-limb coordination on a subdivision grid. Muse’s drum tab follows the same methodology as modern pattern makers (grid + ASCII + loop): write by ear, read the stack, loop the cell.',
+    tips: [
+      { name: 'Simultaneous columns', detail: 'Hits in the same subdivision play together. Kick + closed hat on beat 1 is one event — not two notes in a row.' },
+      { name: 'Ostinato → snare → kick', detail: 'Lock the timekeeper first (8th or 16th hats). Add the backbeat. Then place kicks. Isolate any limb that wobbles.' },
+      { name: 'Backbeat pocket', detail: 'In 4/4 rock/pop, snare accents on 2 & 4 are the backbeat; kick on 1 (& often 3) is the foundation. Move either for style (half-time = snare on 3).' },
+      { name: 'Ghost notes', detail: 'Very soft snare between accents (mark “g”). They create double-time chatter without stealing the backbeat — practice stick height, not force.' },
+      { name: 'Linear vs layered', detail: 'Linear = one voice per subdivision (no stacks). Layered = limbs together. Linear demands cleaner timing; layered demands independence.' },
+      { name: 'Additive & poly', detail: 'Odd meters feel memorable when grouped (2+3, 3+2). Hat groups of three over 4/4 create a 4-over-3 lean — listen for when layers converge again.' },
+      { name: 'Dynamics are the groove', detail: 'Accent vs ghost vs open hat is the difference between stiff and funky. Cycle articulations on a cell instead of adding more hits.' },
+      { name: 'Artist Lens bridge', detail: 'TOOL’s Danny Carey material (odd cells, hat-in-threes, polymeter) lives in Artist Lens — load a try-it, then open Drums to hear a related practice cell under the harmony.' },
     ],
   },
   {

@@ -44,7 +44,7 @@ describe('Artist Lens data', () => {
       expect(l.chords.length).toBe(t.roman.length);
       total++;
     }
-    expect(total).toBe(28);
+    expect(total).toBe(30);
   });
   it('applies the pedal/held bass to the listed chords only (and not when it is already the root)', () => {
     const tool = file.artists[0];

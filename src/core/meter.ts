@@ -82,7 +82,7 @@ export function midiTimeSigBytes(ts: TimeSig): number[] {
 }
 
 /** Which writing lane a part-meter applies to. */
-export type PartId = 'chords' | 'melody' | 'bass';
+export type PartId = 'chords' | 'melody' | 'bass' | 'drums';
 
 /**
  * Per-part meter for polyrhythm: pulses fill the same master-bar wall-clock,
@@ -100,7 +100,13 @@ export type PartMeters = Record<PartId, PartMeter>;
 
 export function defaultPartMeters(ts: TimeSig = DEFAULT_TIME_SIG): PartMeters {
   const m: PartMeter = { timeSig: { ...ts }, subdiv: 1 };
-  return { chords: { ...m, timeSig: { ...ts } }, melody: { ...m, timeSig: { ...ts } }, bass: { ...m, timeSig: { ...ts } } };
+  // Drums default to 16th-grid precision (subdiv 4) — standard drum-tab resolution.
+  return {
+    chords: { ...m, timeSig: { ...ts } },
+    melody: { ...m, timeSig: { ...ts } },
+    bass: { ...m, timeSig: { ...ts } },
+    drums: { timeSig: { ...ts }, subdiv: 4 },
+  };
 }
 
 /** Step size in part-pulses for the next note/rest. */

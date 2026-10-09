@@ -10,6 +10,8 @@ export interface ActivePlayback {
   melodies: Array<{ index: number; beat: number; midi: number }>;
   /** Bass notes whose window contains t. */
   basses: Array<{ index: number; beat: number; midi: number }>;
+  /** Drum hits whose window contains t (often several at once = simultaneous). */
+  drums: Array<{ index: number; beat: number; voice: string }>;
   /** True when t is past the scheduled end. */
   done: boolean;
 }
@@ -44,7 +46,10 @@ export function activeAt(ev: TimelineEvents, tRaw: number): ActivePlayback {
   const basses = ev.bass
     .filter((n) => inWindow(n.at, n.dur, t))
     .map((n) => ({ index: n.index, beat: n.beat, midi: n.midi }));
-  return { t: Math.min(t, ev.total), chordIndex, melodies, basses, done };
+  const drums = (ev.drums ?? [])
+    .filter((n) => inWindow(n.at, n.dur, t))
+    .map((n) => ({ index: n.index, beat: n.beat, voice: n.voice }));
+  return { t: Math.min(t, ev.total), chordIndex, melodies, basses, drums, done };
 }
 
 /** Pixel x for an event start given pixels-per-second. */

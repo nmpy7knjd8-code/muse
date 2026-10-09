@@ -25,9 +25,13 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
 
 ## Features
 - Key/mode picker with auto key detection (from both chords and melody).
-- Unified timeline: melody lane above, chords below (up to 4 notes per bar). Each note is
-  labelled chord tone / tension / avoid / clash. Play, copy, and MIDI export both lanes together.
-  Pending N.C. melody can be harmonized by the next-chord suggestions.
+- Unified timeline: melody lane above, chords below, optional bass and drums. Melody notes are
+  labelled chord tone / tension / avoid / clash. Play, copy, and MIDI export lanes together
+  (drums render as ASCII tab in Copy). Pending N.C. melody can be harmonized by the next-chord suggestions.
+- **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop). Starter grooves
+  teach pocket, ghosts, linear 16ths, additive meter, and 4-over-3 hat groups. Procedural kit
+  playback layers under chords/melody/bass. Guide + Artist Lens (TOOL / Danny Carey) go deep on
+  how to play.
 - Chord palette, typed chords (`F#m7`, `Bb/D`, …), and a tap piano for melody.
 - Suggestions grouped and coloured by mood. Each card shows the roman numeral, 1–3 mood tags, a
   mood-shift arrow, a "why" line from the theory KB, and a common/colourful/unusual marker.

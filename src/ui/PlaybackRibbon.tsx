@@ -18,7 +18,7 @@ export interface RibbonNote {
   at: number;
   dur: number;
   label: string;
-  lane: 'melody' | 'bass' | 'chord';
+  lane: 'melody' | 'bass' | 'chord' | 'drums';
   kind?: RelKind | null;
   slotIndex: number;
 }
@@ -72,12 +72,15 @@ export function PlaybackRibbon({ events, playSec, notes, chords }: Props): React
           ))}
           {notes.map((n) => {
             const on = sounding(n.at, n.dur);
-            const color = n.kind ? REL_COLORS[n.kind] : n.lane === 'bass' ? '#6fb0a8' : '#c4b0ff';
-            const top = n.lane === 'bass' ? 52 : 28;
+            const color = n.kind ? REL_COLORS[n.kind]
+              : n.lane === 'bass' ? '#6fb0a8'
+              : n.lane === 'drums' ? '#e8a87c'
+              : '#c4b0ff';
+            const top = n.lane === 'drums' ? 68 : n.lane === 'bass' ? 52 : 28;
             return (
               <div
                 key={n.key}
-                className={'play-ribbon-note' + (on ? ' on' : '') + (n.lane === 'bass' ? ' bass' : '')}
+                className={'play-ribbon-note' + (on ? ' on' : '') + (n.lane === 'bass' ? ' bass' : '') + (n.lane === 'drums' ? ' drums' : '')}
                 style={{
                   left: timeToX(n.at, PX_PER_SEC),
                   width: Math.max(28, timeToX(n.dur, PX_PER_SEC)),
@@ -121,6 +124,15 @@ export function ribbonNotesFromEvents(
       dur: n.dur,
       label: spell(n.midi),
       lane: 'bass' as const,
+      slotIndex: n.index,
+    })),
+    ...(ev.drums ?? []).map((n, i) => ({
+      key: `d-${n.index}-${n.beat}-${n.voice}-${i}`,
+      midi: 0,
+      at: n.at,
+      dur: n.dur,
+      label: n.voice,
+      lane: 'drums' as const,
       slotIndex: n.index,
     })),
   ];

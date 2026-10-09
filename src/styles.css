@@ -1260,3 +1260,110 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   font-weight: 500;
 }
 .mref-note { margin: 0 0 8px; line-height: 1.35; }
+
+/* ---- Drum percussion tab ---- */
+.tdrums {
+  display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; align-items: center;
+  margin-top: 4px;
+}
+.tdrum-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px; border-radius: 8px;
+  border: 1px solid rgba(232, 168, 124, 0.45);
+  background: linear-gradient(180deg, #3a2e28 0%, #2a221c 100%);
+  color: #f0d2b8; font-size: 11px; cursor: pointer;
+}
+.tdrum-chip small { opacity: 0.7; font-variant-numeric: tabular-nums; }
+.tdrum-chip.playing {
+  box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.5), 0 0 14px rgba(232, 168, 124, 0.35);
+}
+.play-ribbon-note.drums { background: rgba(58, 46, 40, 0.95); }
+
+.drum-pad { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.drum-theory-strip {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(232, 168, 124, 0.12), transparent 55%),
+    linear-gradient(165deg, #2a2420 0%, #1a1714 100%);
+  border: 1px solid rgba(232, 168, 124, 0.28);
+}
+.drum-theory-lead { margin: 0 0 8px; font-size: 13px; line-height: 1.4; color: #f3e6d8; }
+.drum-pillars {
+  margin: 0; padding-left: 1.1em; display: grid; gap: 4px;
+  font-size: 12px; color: #cbb8a8; line-height: 1.35;
+}
+.drum-patterns {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.drum-pattern-chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 7px 10px; border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #252018; color: #f0e6dc; cursor: pointer;
+  text-align: left; max-width: 100%;
+}
+.drum-pattern-chip:hover { border-color: rgba(232, 168, 124, 0.55); }
+.drum-pattern-name { font-size: 12px; font-weight: 650; }
+.drum-pattern-tags { font-size: 10px; color: #a89484; }
+
+.drum-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.drum-grid {
+  border-collapse: separate; border-spacing: 2px;
+  width: max-content; min-width: 100%;
+  font-size: 11px;
+}
+.drum-voice-h, .drum-col-h {
+  color: #9a8b7c; font-weight: 500; text-align: center; padding: 2px;
+}
+.drum-col-h.beat { color: #e8d5c4; font-weight: 700; }
+.drum-col-h.play, .drum-cell.play { background: rgba(255, 213, 79, 0.12); border-radius: 4px; }
+.drum-voice-label { text-align: left; padding-right: 4px; vertical-align: middle; }
+.drum-voice-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0;
+  background: transparent; border: 0; color: inherit; cursor: pointer; padding: 2px 4px;
+  min-width: 64px;
+}
+.drum-voice-id { font-weight: 700; color: #f0d2b8; font-size: 11px; }
+.drum-voice-name { font-size: 9px; color: #a89484; }
+.drum-voice-role { font-size: 8px; color: #7a6a5c; text-transform: uppercase; letter-spacing: 0.04em; }
+.drum-hit {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #1c1916; color: transparent; cursor: pointer;
+  font-size: 12px; font-weight: 700; line-height: 1;
+}
+.drum-hit.on {
+  color: #1a120c;
+  background: linear-gradient(180deg, #e8a87c 0%, #c47850 100%);
+  border-color: rgba(232, 168, 124, 0.8);
+}
+.drum-hit.on.ghost {
+  color: #cbb8a8;
+  background: #3a322c;
+  border-color: rgba(232, 168, 124, 0.35);
+  font-weight: 500;
+}
+.drum-hit.on.accent {
+  background: linear-gradient(180deg, #ffd54f 0%, #e8a87c 100%);
+  box-shadow: 0 0 8px rgba(255, 213, 79, 0.35);
+}
+.drum-footer { display: flex; flex-direction: column; gap: 6px; }
+.drum-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.drum-ascii {
+  margin: 0; padding: 8px 10px; border-radius: 8px;
+  background: #14110f; color: #cbb8a8; font-size: 11px; line-height: 1.35;
+  overflow-x: auto; border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.drum-hit-count { margin: 0; }
+
+.tryit-howto {
+  margin: 6px 0 8px; padding: 8px 10px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(232, 168, 124, 0.08), rgba(196, 176, 255, 0.06));
+  border: 1px solid rgba(232, 168, 124, 0.22);
+}
+.tryit-howto-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #e8a87c; margin-bottom: 4px;
+}
+.tryit-howto p { margin: 0; line-height: 1.4; }

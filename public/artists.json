@@ -124,7 +124,7 @@
    ],
    "documentation": "high",
    "hook": "Ritual heaviness: drop-D drones, Phrygian-dominant riffs and meters that loop like mantras until the dam breaks.",
-   "aestheticSummary": "TOOL builds trance out of tension. Riffs sit on a low open-string drone in drop-D (or lower), lean on the semitone above the root, and are cut into uneven meters (5+7, 9-8-7, 12-11-10) so the downbeat keeps arriving a little early or late. The four players rarely double each other; they stack complementary parts in different groupings and let them collide and re-align. Songs are long, patient builds, often ending on a new climactic section instead of a last chorus. Tabla, chant-like drones, Alex Grey's visionary art and Hermetic and Jungian lyric themes complete the ritual, mystical frame.",
+   "aestheticSummary": "TOOL builds trance out of tension. Riffs sit on a low open-string drone in drop-D (or lower), lean on the semitone above the root, and are cut into uneven meters (5+7, 9-8-7, 12-11-10) so the downbeat keeps arriving a little early or late. The four players rarely double each other; they stack complementary parts in different groupings and let them collide and re-align. Songs are long, patient builds, often ending on a new climactic section instead of a last chorus. Tabla, chant-like drones, Alex Grey's visionary art and Hermetic and Jungian lyric themes complete the ritual, mystical frame. Danny Carey’s drum language is the other half of that ritual: ostinatos that refuse common backbeat placement, polymeters that converge on a shared downbeat, Swiss Army triplets around toms and pads, snare wires often off for tom-melody grooves, and tabla-informed finger technique folded into kit independence. Hearing TOOL is hearing guitar/bass mantras lock against a drummer who treats meter as counterpoint.",
    "polarities": [
     {
      "id": "tension_release",
@@ -556,6 +556,30 @@
      "polarities": [
       "simple_complex"
      ]
+    },
+    {
+     "id": "tool-carey-pocket",
+     "category": "rhythm-meter",
+     "name": "Carey pocket: ostinato first, then odd kick/snare",
+     "description": "Carey’s readable grooves still start like pedagogy textbooks: lock a repeating timekeeper (ride, hat, or tom ostinato), then displace kick and snare so the backbeat is no longer the only story. On 'Sober' and 'Forty Six & 2' the open-hat verse pockets stay tight because hat closings land cleanly on the beat; on 'Eulogy' the bridge hat runs in three-16th groups over 4/4 (4-over-3). 'Schism' alternates 5/8 and 7/8 (or feel 12/8) with wires off; 'Pneuma' cycles 12/8–11/8–10/8 while hat openings track the vocal. Practice method: loop one bar at slow tempo, isolate hat, add snare, add kick — the same layered approach Muse’s Drums tab encourages.",
+     "kbRefs": [],
+     "moods": [
+      "ritual",
+      "tense",
+      "hypnotic",
+      "heavy"
+     ],
+     "evidence": "documented",
+     "sourceIds": [
+      "tool-drumeo",
+      "tool-carey-wiki"
+     ],
+     "tryInMuse": "Open Drums → load “Hat groups of three” or “Additive 5-pulse cell”, Loop with a drop-D try-it progression.",
+     "polarities": [
+      "complexity",
+      "stability",
+      "tension"
+     ]
     }
    ],
    "works": [
@@ -915,6 +939,73 @@
       "tool-swells"
      ],
      "original": true
+    },
+    {
+     "label": "Carey cell under drop-D mantra (drums + riff)",
+     "key": {
+      "tonic": "D",
+      "mode": "phrygian"
+     },
+     "roman": [
+      "i5",
+      "bII5",
+      "i5",
+      "bVII5"
+     ],
+     "meter": "4/4 — practice hat groups of three (4-over-3) under the riff; original exercise, not a transcription",
+     "bassPedal": "1",
+     "pedal": {
+      "degree": "1",
+      "chordIndices": [
+       0,
+       1,
+       2,
+       3
+      ]
+     },
+     "howToPlay": "Drop-D. Palm-mute the open D as a drone while the power-chord shapes move. On drums: keep snare backbeats on 2 & 4, kick on 1 and 3, and play the hi-hat in repeating three-16th groups (1-e-&, a-2-e, &-a-3, e-&-a, 4-e-&, …) so the hat cycle leans across the bar — a practice cell in the spirit of Carey’s Eulogy-bridge 4-over-3 idea, not a transcription. Close the hat cleanly when you need a breath. Loop the bar until hat, snare, and kick feel like one coordinated event; then sing a long note over the drone.",
+     "drumPatternId": "poly-hat-threes",
+     "moods": [
+      "ritual",
+      "tense",
+      "hypnotic",
+      "heavy"
+     ],
+     "kbRefs": [],
+     "techniqueIds": [
+      "tool-carey-pocket",
+      "tool-polymeter",
+      "tool-dropd-drone"
+     ],
+     "original": true
+    },
+    {
+     "label": "Additive 5-pulse drum cell under Phrygian power",
+     "key": {
+      "tonic": "D",
+      "mode": "phrygian"
+     },
+     "roman": [
+      "i5",
+      "bII5",
+      "i5",
+      "bII5",
+      "i5"
+     ],
+     "meter": "5/4 grouped 3+2 — original drum+riff cell",
+     "howToPlay": "Feel 3+2 inside five pulses. Guitar: two-chord Phrygian seesaw (i5–bII5) in drop-D, short and heavy. Drums: load the Additive 5-pulse cell — hat on every pulse, snare on the group boundary (pulse 3), kick on 1 and the second group. Count aloud 1-2-3 | 1-2. This is pedagogy for Carey-style additive grouping, not a Schism transcription. Loop until the five-pulse cell is as automatic as 4/4; then try flipping to 2+3.",
+     "drumPatternId": "odd-5-cell",
+     "moods": [
+      "ritual",
+      "tense",
+      "odd"
+     ],
+     "kbRefs": [],
+     "techniqueIds": [
+      "tool-carey-pocket",
+      "tool-additive-meter"
+     ],
+     "original": true
     }
    ],
    "listeningGuide": [
@@ -942,6 +1033,11 @@
      "step": 5,
      "title": "Spot the terminal climax",
      "what": "In 'Ænema', notice that the ending isn't a final chorus but brand-new material."
+    },
+    {
+     "step": 6,
+     "title": "How to play the Carey lens (practice order)",
+     "what": "1) Count out loud — never only tap. For 5/8 use 2+3 or 3+2; for Schism-feel alternate 5 then 7. 2) Hat/ride ostinato alone until the click disappears into the body. 3) Add snare backbeats or tom melody (wires off if you want the Lateralus tom colour). 4) Place kicks on the grid partials that push without rushing. 5) Only then layer guitar/bass mantras — listen for the bar where all meters land together; that convergence is the release. In Muse: load a TOOL try-it for harmony, open Drums, load “Hat groups of three” or “Additive 5-pulse cell”, turn Loop on, and practice the cell under the riff."
     }
    ],
    "relatedArtists": [
@@ -951,7 +1047,8 @@
     "messiaen"
    ],
    "notes": [
-    "Jones says Robert Fripp, Pat Mastelotto and Trey Gunn of King Crimson 'showed me some stuff', and that he learned volume swells from Fripp. He also cites Meshuggah, who try groupings 'in three, then in five, then in four' over a drummer in four 'and see where the rhythms meet up', as an influence on 10,000 Days (Guitar World, June 2006 interview, republished 2024)."
+    "Jones says Robert Fripp, Pat Mastelotto and Trey Gunn of King Crimson 'showed me some stuff', and that he learned volume swells from Fripp. He also cites Meshuggah, who try groupings 'in three, then in five, then in four' over a drummer in four 'and see where the rhythms meet up', as an influence on 10,000 Days (Guitar World, June 2006 interview, republished 2024).",
+    "Drums tab integration: TOOL try-its may set drumPatternId so Try it loads a practice groove onto Muse’s percussion grid (simultaneous columns + Loop) alongside the harmony exercise."
    ],
    "sources": [
     {
@@ -1079,6 +1176,13 @@
      "title": "Wikipedia: Danny Carey",
      "url": "https://en.wikipedia.org/wiki/Danny_Carey",
      "type": "encyclopedia"
+    },
+    {
+     "id": "tool-carey-wiki",
+     "title": "Wikipedia: Danny Carey",
+     "url": "https://en.wikipedia.org/wiki/Danny_Carey",
+     "type": "encyclopedia",
+     "note": "Biography / tabla study / kit approach overview."
     }
    ]
   },

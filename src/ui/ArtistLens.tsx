@@ -124,7 +124,17 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
             {t.meter && <div className="small muted">Meter: {t.meter}{l?.timeSig ? ` → loads as ${timeSigLabel(l.timeSig)}` : ''}</div>}
             {t.bassPedal && <div className="small muted">Bass note held under changing chords: {t.bassPedal}</div>}
             {t.melodyDegrees && <div className="small muted">Melody scale degrees (from home): {t.melodyDegrees.join(' ')}</div>}
-            {t.howToPlay && <p className="small">{t.howToPlay}</p>}
+            {t.drumPatternId && (
+              <div className="small muted">
+                Drums: loads practice pattern <code>{t.drumPatternId}</code> onto the percussion tab (simultaneous columns + Loop).
+              </div>
+            )}
+            {t.howToPlay && (
+              <div className="tryit-howto">
+                <div className="tryit-howto-label">How to play</div>
+                <p className="small">{t.howToPlay}</p>
+              </div>
+            )}
             <MoodChips moods={t.moods.map((m) => ({ mood: m }))} lex={lex} />
           </div>
         );
