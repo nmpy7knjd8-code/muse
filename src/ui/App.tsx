@@ -1206,6 +1206,11 @@ function Composer({ data }: { data: LoadedData }) {
       <div className="ghead">
         Best fit first
         {moodFilterLabel ? <span className="ghead-mood" title="Active mood filter"> · {moodFilterLabel}</span> : null}
+        {tab === 'chords' && (chordSugs as ChordSuggestion[]).some((s) => s.breathe) ? (
+          <span className="ghead-breathe" title="Some cards are grounding options — less of the requested mood, better place to land">
+            {' '}· breathe chips ground tense moods
+          </span>
+        ) : null}
       </div>
       {ranked.map((s, i) => {
         const isChord = 'chord' in s;
@@ -1234,6 +1239,9 @@ function Composer({ data }: { data: LoadedData }) {
                 {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
                 {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
                 {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
+                {cs?.breathe && (
+                  <span className="breathe" title="Grounding option — sounds good, less of the requested mood. A place to breathe.">breathe</span>
+                )}
                 {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
                 {ns?.relation && (
                   <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>

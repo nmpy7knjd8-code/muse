@@ -52,6 +52,13 @@ export interface ChordSuggestion {
   tension: CandidateTension | null;
   /** when harmonizing melody notes: fit (−1..1) and each note's relation to this chord */
   harmony: { fit: number; relations: NoteRelation[] } | null;
+  /**
+   * Under a tense mood (ominous, etc.): grounding/release option that sounds good
+   * but is not strongly mood-aligned. Soft-lifted into Best fit with a light UI chip.
+   */
+  breathe?: boolean;
+  /** Internal 0..~1.5 quality used to pick breathe options. */
+  breatheScore?: number;
 }
 
 export interface NoteSuggestion {
@@ -281,6 +288,63 @@ function moodContrast(list: { score: number; moodMatch: number }[], gain = MOOD_
   const lo = Math.min(...list.map((x) => x.moodMatch)), hi = Math.max(...list.map((x) => x.moodMatch));
   if (hi - lo < 1e-6) return;
   for (const x of list) x.score += gain * 0.6 * ((x.moodMatch - lo) / (hi - lo) - 0.5);
+}
+
+/** Mood-target tension at/above this → surface grounding “breathe” options. HEURISTIC. */
+const BREATHE_TENSION_GATE = 0.65;
+/**
+ * How well a candidate grounds / releases under a tense mood request.
+ * Favours stability, cadence, debt paydown — not mood match. HEURISTIC.
+ */
+function breatheQuality(opts: {
+  features: MoodDimensions;
+  tension: CandidateTension | null;
+  cadence: number;
+  resolveSec: number;
+  tonicHome: boolean;
+  relativeCalm: boolean;
+  diatonic: boolean;
+}): number {
+  let q = 0.3 * (opts.features.stability ?? 0) + 0.22 * (1 - (opts.features.tension ?? 0.5));
+  if (opts.tension) {
+    q += 0.35 * Math.max(0, opts.tension.adjust) + 0.22 * opts.tension.release;
+  }
+  q += Math.max(0, opts.cadence) * 0.55 + Math.max(0, opts.resolveSec) * 0.35;
+  if (opts.tonicHome) q += 0.28;
+  if (opts.relativeCalm) q += 0.14;
+  if (opts.diatonic) q += 0.1;
+  return q;
+}
+
+/**
+ * Under a high-tension mood, keep the mood-ranked top intact, then inject up to 3
+ * grounding “breathe” chords (marked for a light UI chip) so the list has somewhere to land.
+ */
+function injectBreatheOptions(out: ChordSuggestion[], moodTension: number | null, limit: number): ChordSuggestion[] {
+  out.sort((a, b) => b.score - a.score);
+  if (moodTension == null || moodTension < BREATHE_TENSION_GATE || out.length < 4) {
+    return out.slice(0, limit);
+  }
+  const moodSorted = out.map((s) => s.moodMatch).sort((a, b) => a - b);
+  const moodMedian = moodSorted[Math.floor(moodSorted.length / 2)] ?? 0.5;
+  const topKeep = Math.min(3, out.length);
+  const top = out.slice(0, topKeep);
+  const topIds = new Set(top.map((s) => s.id));
+  const key = (s: ChordSuggestion) =>
+    (s.breatheScore ?? 0) - 0.45 * s.moodMatch + (s.diatonic ? 0.12 : 0);
+  const picks = out
+    .filter((s) => !topIds.has(s.id) && (s.breatheScore ?? 0) >= 0.28 && s.moodMatch <= moodMedian + 0.08)
+    .sort((a, b) => key(b) - key(a))
+    .slice(0, 3);
+  for (const s of picks) {
+    s.breathe = true;
+    if (!/^Breathe —/.test(s.why)) {
+      s.why = `Breathe — grounds the phrase without chasing the mood. ${s.why}`;
+    }
+  }
+  const pickIds = new Set(picks.map((s) => s.id));
+  const rest = out.filter((s) => !topIds.has(s.id) && !pickIds.has(s.id));
+  return [...top, ...picks, ...rest].slice(0, limit);
 }
 
 /** Soft identity for variety: same root + triad class (C ≈ Cmaj7 ≈ C6). */
@@ -761,6 +825,11 @@ export class SuggestionEngine {
       const stock = stockHome ? stockRaw * 0.3 : stockRaw;
       const modal = modalColourBonus(chord, k);
       const guides = guideToneBonus(cur, chord, opts.tensionStyle);
+      const tonicHome = off === 0 && (plainTriad || chord.quality === 'maj7' || chord.quality === 'm7' || chord.quality === '6' || chord.quality === 'add9');
+      const relativeCalm = fam === 'major' && off === 9 && (chord.quality === 'min' || chord.quality === 'm7');
+      const breatheScore = breatheQuality({
+        features, tension, cadence, resolveSec, tonicHome, relativeCalm, diatonic: rn.diatonic,
+      });
       const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6
         + moodBonus + simplicity + startBias + variety + resolveSec + prepareSec + nrtBonus + fifths
         + cadence + predDom + bass + stock + modal + guides
@@ -807,11 +876,13 @@ export class SuggestionEngine {
         match: pm,
         tension,
         harmony,
+        breatheScore,
       });
     }
-    if (profile) moodContrast(out);
-    out.sort((x, y) => y.score - x.score);
-    return out.slice(0, opts.limit ?? 16);
+    const mt = profile ? moodTarget(profile) : null;
+    // Soften mood restacking slightly under high-tension requests (still mood-led).
+    if (profile) moodContrast(out, mt != null && mt >= BREATHE_TENSION_GATE ? MOOD_GAIN * 0.85 : MOOD_GAIN);
+    return injectBreatheOptions(out, mt, opts.limit ?? 16);
   }
 
   suggestNotes(opts: NoteSuggestOptions): NoteSuggestion[] {
