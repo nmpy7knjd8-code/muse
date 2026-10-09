@@ -1,6 +1,29 @@
 // Playback cursor helpers: which timeline events are sounding at time t (seconds from start).
 import type { TimelineEvents } from './timeline';
 
+/**
+ * How far before the loop seam we must have the next cycle already in the AudioContext
+ * queue. Larger than one animation frame so rAF jitter can’t create a silent gap.
+ */
+export const LOOP_PRE_SCHEDULE_SEC = 0.08;
+
+/** Exact audio-clock origin of the next loop cycle (zero-gap seam). */
+export function nextLoopOrigin(origin: number, period: number): number {
+  return origin + period;
+}
+
+/** True when elapsed time is close enough to the seam that the next cycle should already be scheduled. */
+export function shouldPrimeLoop(elapsed: number, period: number, lead = LOOP_PRE_SCHEDULE_SEC): boolean {
+  return period > 1e-6 && elapsed >= period - lead;
+}
+
+/** Playhead seconds within a looping period (never negative). */
+export function loopPlayhead(elapsed: number, period: number): number {
+  if (period <= 1e-6) return Math.max(0, elapsed);
+  const t = elapsed % period;
+  return t < 0 ? t + period : t;
+}
+
 export interface ActivePlayback {
   /** Seconds into the piece (clamped to [0, total]). */
   t: number;

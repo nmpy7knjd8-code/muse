@@ -311,11 +311,17 @@ export class AudioEngine {
   }
 
   /**
-   * Same scheduling origin `playNotes({ at: 0 })` uses — slight lookahead so the first
-   * attack isn’t late. Call immediately before scheduling a Play sequence.
+   * Scheduling origin for a Play sequence — slight lookahead so the first attack isn’t late.
+   * Pass the returned value as `origin` to every `playNotes` / `playDrum` in the pass so
+   * the playhead and audio share one clock (critical for seamless Loop).
    */
   scheduleOrigin(): number {
     return this.now();
+  }
+
+  /** Absolute AudioContext time for `at` seconds after `origin` (or after `now()` when omitted). */
+  private absTime(at: number, origin?: number): number {
+    return (origin ?? this.now()) + at;
   }
   private markBusy(endCtxTime: number) {
     if (!this.ctx) return;
@@ -507,7 +513,11 @@ export class AudioEngine {
   }
 
   /** Play notes together (a chord is strummed/rolled per instrument, with slight humanization). */
-  playNotes(midis: number[], opts: { at?: number; dur?: number; vel?: number; instrument?: InstrumentId } = {}): void {
+  playNotes(midis: number[], opts: {
+    at?: number; dur?: number; vel?: number; instrument?: InstrumentId;
+    /** Fixed schedule origin from `scheduleOrigin()` / loop seam — omit for one-shots. */
+    origin?: number;
+  } = {}): void {
     if (!this.ctx) return;
     const id = opts.instrument && opts.instrument in INSTRUMENTS ? opts.instrument : this.instrument;
     const def = INSTRUMENTS[id];
@@ -515,7 +525,7 @@ export class AudioEngine {
     if (this.loadState(id).state === 'idle') void this.ensureLoaded(id);
     // Fold every note into the active instrument range (critical for bass melody / CoF taps).
     const fitted = midis.map((m) => fitMidiToInstrument(m, def));
-    const t = (opts.at ?? 0) + this.now();
+    const t = this.absTime(opts.at ?? 0, opts.origin);
     for (const e of chordEvents(fitted, t, opts.dur ?? 1.1, opts.vel ?? 0.75, def, this.rand)) {
       this.voice(e.midi, e.time, e.dur, e.vel, def);
     }
@@ -539,12 +549,14 @@ export class AudioEngine {
     voice: DrumVoiceId,
     opts: {
       at?: number; vel?: number; artic?: string; midi?: number; melodic?: boolean; kit?: DrumKitId;
+      /** Fixed schedule origin from `scheduleOrigin()` / loop seam — omit for pad taps. */
+      origin?: number;
     } = {},
   ): void {
     const ctx = this.ctx, input = this.input;
     if (!ctx || !input) return;
     void drumBanks.ensure(ctx);
-    const start = (opts.at ?? 0) + this.now();
+    const start = this.absTime(opts.at ?? 0, opts.origin);
     const { end, stop } = scheduleDrumHit(ctx, input, voice, {
       at: start,
       vel: opts.vel ?? 0.78,
