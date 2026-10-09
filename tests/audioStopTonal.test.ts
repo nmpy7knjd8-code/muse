@@ -49,4 +49,32 @@ describe('AudioEngine.stopTonal', () => {
     eng.stopAll();
     expect(kinds(eng)).toEqual([]);
   });
+
+  it('stopAll clears a long queue of future loop hits (Clear while Looping)', () => {
+    const Offline = (globalThis as unknown as {
+      OfflineAudioContext?: new (c: number, l: number, sr: number) => OfflineAudioContext;
+      webkitOfflineAudioContext?: new (c: number, l: number, sr: number) => OfflineAudioContext;
+    }).OfflineAudioContext
+      ?? (globalThis as unknown as { webkitOfflineAudioContext: new (c: number, l: number, sr: number) => OfflineAudioContext })
+        .webkitOfflineAudioContext;
+    if (!Offline) return;
+
+    eng = new AudioEngine({ remember: false, seed: 2 });
+    eng.attach(new Offline(1, 44100 * 8, 44100));
+
+    // Simulate several primed loop cycles of dense drums + chords.
+    for (let cycle = 0; cycle < 4; cycle++) {
+      const o = cycle * 2;
+      eng.playNotes([60, 64, 67], { at: o, dur: 1.5, origin: 0 });
+      for (let i = 0; i < 8; i++) {
+        eng.playDrum('HH', { at: o + i * 0.25, vel: 0.5, origin: 0 });
+      }
+      eng.playDrum('BD', { at: o, vel: 0.9, origin: 0 });
+      eng.playDrum('SD', { at: o + 1, vel: 0.85, origin: 0 });
+    }
+    expect(kinds(eng).length).toBeGreaterThan(20);
+
+    eng.stopAll();
+    expect(kinds(eng)).toEqual([]);
+  });
 });

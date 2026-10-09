@@ -225,6 +225,9 @@ function Composer({ data }: { data: LoadedData }) {
   const schedulePassRef = useRef<(origin: number) => void>(() => {});
   /** Fixed audio-clock origin for the current ▶ Play / Loop groove (does not advance each cycle). */
   const playOriginRef = useRef(0);
+  /** Bumped on Stop/Clear so an in-flight rAF cannot re-prime audio after stopAll. */
+  const playbackEpochRef = useRef(0);
+  const playRafRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const barRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
@@ -631,23 +634,38 @@ function Composer({ data }: { data: LoadedData }) {
     flash(`${b.fromSymbol} → ${b.toSymbol} · ${b.commonToneCount} held · ${b.totalMotion} st`);
   };
   const stopPlayback = () => {
-    synth.stopAll();
+    // Invalidate first so any in-flight rAF/prime cannot schedule after stopAll.
+    playbackEpochRef.current += 1;
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    schedulePassRef.current = () => {};
     nextPrimeOriginRef.current = 0;
     playOriginRef.current = 0;
+    synth.stopAll();
     setTransport(null);
     setPlaySec(0);
     setPlayMode(null);
   };
   /** Queue every cycle still needed so the audio thread stays ahead of the playhead. */
-  const primeLoopAhead = (now: number, period: number) => {
-    if (period <= 0) return;
+  const primeLoopAhead = (now: number, period: number, epoch: number) => {
+    if (period <= 0 || playbackEpochRef.current !== epoch) return;
     for (const o of loopOriginsToPrime(nextPrimeOriginRef.current, period, now)) {
+      if (playbackEpochRef.current !== epoch) return;
       schedulePassRef.current(o);
       nextPrimeOriginRef.current = nextLoopOrigin(o, period);
     }
   };
   const playAll = () => {
     synth.unlock();
+    // New epoch for this run (also disarms any prior rAF via stopPlayback semantics).
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    const epoch = playbackEpochRef.current + 1;
+    playbackEpochRef.current = epoch;
     synth.stopAll();
     for (const id of activeParts) void synth.ensureLoaded(id);
     // ▶ Play from the selected bar (if any); otherwise from the start.
@@ -662,11 +680,13 @@ function Composer({ data }: { data: LoadedData }) {
     const drumTune = drumTuningForKey(k);
     /** Queue one full pass at a fixed audio-clock origin (shared by playhead + every voice). */
     const schedulePass = (origin: number) => {
+      if (playbackEpochRef.current !== epoch) return;
       ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
         at: c.at, dur: c.dur, vel: 0.7, origin,
         // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
         autoBass: !composedBassBars.has(c.index),
       }));
+      if (playbackEpochRef.current !== epoch) return;
       ev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], {
         at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85, instrument: melodyInst, origin,
       }));
@@ -692,7 +712,7 @@ function Composer({ data }: { data: LoadedData }) {
     nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
     // With Loop on, keep ≥1 extra cycle in the AudioContext queue before the first seam.
     if (loopPlayRef.current && ev.total > 0) {
-      primeLoopAhead(synth.audioTime() ?? origin, ev.total);
+      primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
     }
     setPlayMode('timeline');
     setTransport({ origin, events: ev });
@@ -702,10 +722,17 @@ function Composer({ data }: { data: LoadedData }) {
   const playGrooveLoop = () => {
     if (!grooveHits.length) return;
     synth.unlock();
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    const epoch = playbackEpochRef.current + 1;
+    playbackEpochRef.current = epoch;
     synth.stopAll();
     const drumTune = drumTuningForKey(k);
     const ev = grooveEvents(grooveHits, { timeSig, beatSec, partMeters });
     const schedulePass = (origin: number) => {
+      if (playbackEpochRef.current !== epoch) return;
       ev.drums.forEach((d) => synth.playDrum(d.voice, {
         at: d.at,
         vel: d.vel,
@@ -722,7 +749,7 @@ function Composer({ data }: { data: LoadedData }) {
     nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
     // Groove practice always loops; keep the Loop control in sync and prime ahead of the seam.
     if (!loopPlayRef.current) chooseLoop(true);
-    if (ev.total > 0) primeLoopAhead(synth.audioTime() ?? origin, ev.total);
+    if (ev.total > 0) primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
     setPlayMode('groove');
     setTransport({ origin, events: ev });
     setPlaySec(0);
@@ -741,41 +768,44 @@ function Composer({ data }: { data: LoadedData }) {
     if (!transport || !loopPlay) return;
     const period = transport.events.total;
     if (period <= 0) return;
-    primeLoopAhead(synth.audioTime() ?? playOriginRef.current, period);
+    primeLoopAhead(synth.audioTime() ?? playOriginRef.current, period, playbackEpochRef.current);
   }, [loopPlay, transport]);
 
   // Drive playhead from the audio clock. Origin stays fixed; playhead wraps each period.
   // Loop cycles are primed continuously against the audio clock (not via React state at the seam).
   useEffect(() => {
     if (!transport) return;
-    let raf = 0;
     const period = transport.events.total;
+    const epoch = playbackEpochRef.current;
     const tick = () => {
+      if (playbackEpochRef.current !== epoch) return;
       const now = synth.audioTime();
       if (now === null) {
-        raf = requestAnimationFrame(tick);
+        playRafRef.current = requestAnimationFrame(tick);
         return;
       }
       const elapsed = now - playOriginRef.current;
       // Groove practice always loops; timeline respects the Loop toggle.
       const looping = playModeRef.current === 'groove' || loopPlayRef.current;
       if (looping && period > 0) {
-        primeLoopAhead(now, period);
+        primeLoopAhead(now, period, epoch);
+        if (playbackEpochRef.current !== epoch) return;
         setPlaySec(loopPlayhead(elapsed, period));
-        raf = requestAnimationFrame(tick);
+        playRafRef.current = requestAnimationFrame(tick);
         return;
       }
       if (elapsed >= period) {
-        setTransport(null);
-        setPlaySec(0);
-        setPlayMode(null);
+        stopPlayback();
         return;
       }
       setPlaySec(elapsed);
-      raf = requestAnimationFrame(tick);
+      playRafRef.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    playRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    };
   }, [transport]);
 
   const playActive = transport ? activeAt(transport.events, playSec) : null;
