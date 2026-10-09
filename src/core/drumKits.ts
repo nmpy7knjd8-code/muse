@@ -16,20 +16,20 @@ export const DRUM_KITS: DrumKitMeta[] = [
   {
     id: 'acoustic',
     name: 'Acoustic',
-    blurb: 'Warm kit body — taiko kick weight, roomy cymbals, natural tom ring.',
-    tags: ['acoustic', 'warm', 'live'],
+    blurb: 'Real FluidR3 kit one-shots — acoustic kick, snare, hats, toms, crash & ride.',
+    tags: ['acoustic', 'sampled', 'live'],
   },
   {
     id: 'electronic',
     name: 'Electronic',
-    blurb: 'Tight click kicks, short snares, bright hats — club / broken-beat colour.',
-    tags: ['electronic', 'tight', 'club'],
+    blurb: 'Synthesised tight kicks, short snares, bright hats — club / broken-beat colour.',
+    tags: ['electronic', 'tight', 'synth'],
   },
   {
     id: 'fusion',
     name: 'Fusion',
-    blurb: 'Longer ride wash, warmer toms, soft kick click — jazz-fusion / weird pocket.',
-    tags: ['fusion', 'ride', 'warm'],
+    blurb: 'Same real kit with longer cymbal wash and soft steel colour on melodic toms.',
+    tags: ['fusion', 'sampled', 'ride'],
   },
 ];
 

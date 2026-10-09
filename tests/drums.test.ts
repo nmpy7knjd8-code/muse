@@ -5,7 +5,8 @@ import {
   setSlotChord, setSlotDrums, slotDrums, timelineEvents, toggleDrumHit,
   activeAt, normalizeArtists,
 } from '../src/core';
-import { readFileSync } from 'node:fs';
+import { DRUM_GM_NOTE, DRUM_SAMPLE_NOTES } from '../src/ui/drumKit';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('drum kit & patterns', () => {
@@ -15,6 +16,21 @@ describe('drum kit & patterns', () => {
     expect(isDrumKitId('fusion')).toBe(true);
     expect(isDrumKitId('trap')).toBe(false);
     expect(drumKitById('electronic')?.tags).toContain('electronic');
+    expect(drumKitById('acoustic')?.tags).toContain('sampled');
+  });
+
+  it('ships real GM drum one-shots for every kit voice', () => {
+    expect(DRUM_SAMPLE_NOTES.length).toBeGreaterThanOrEqual(12);
+    expect(DRUM_GM_NOTE.BD).toBe(36);
+    expect(DRUM_GM_NOTE.SD).toBe(38);
+    expect(DRUM_GM_NOTE.HH).toBe(42);
+    expect(DRUM_GM_NOTE.HO).toBe(46);
+    expect(DRUM_GM_NOTE.CC).toBe(49);
+    for (const n of DRUM_SAMPLE_NOTES) {
+      const p = resolve(process.cwd(), `public/samples/drums/${n}.mp3`);
+      expect(existsSync(p), `missing drums/${n}.mp3`).toBe(true);
+      expect(readFileSync(p).byteLength).toBeGreaterThan(2000);
+    }
   });
 
   it('ships rock + electro/fusion grooves alongside teaching cells', () => {
