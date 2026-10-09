@@ -71,8 +71,8 @@ const SECTIONS: Section[] = [
     id: 'bestfit',
     toc: 'Best fit',
     title: 'Best fit first cards',
-    use: 'Under the Circle of Fifths, ranked cards show symbol, Roman numeral, mood tags, a short why, and a mini piano of the suggestion. When you already have a chord, blue-grey keys are “now” and coloured keys are “next.” ▶ previews; ＋ adds.',
-    musicality: 'Rank is Muse’s best guess at the strongest next step — not a rule. Use the why line and the now→next piano to see voice leading before you commit.',
+    use: 'Under the Circle of Fifths, ranked cards show symbol, Roman numeral, mood tags, a short why, and a mini piano of the suggestion. The why leads with how the pick continues your recent sequence (After C–Am–F, IV→V…) — not just mood labels on the chord. When you already have a chord, blue-grey keys are “now” and coloured keys are “next.” ▶ previews; ＋ adds.',
+    musicality: 'Rank is Muse’s best guess at the strongest next step — not a rule. Read the sequence why (cadence, falling fifth, axis continuation) and the now→next piano before you commit.',
   },
   {
     id: 'melody',

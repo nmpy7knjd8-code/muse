@@ -151,6 +151,9 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     const s = eng.suggestChords({ key: key('C'), progression: prog('C F G'), adventure: 0, limit: 8 });
     expect(s[0].id).toBe('C');
     expect(s[0].why.toLowerCase()).toMatch(/cadence/);
+    // Sequence-aware: names the path and the V→I move, not just a mood tag.
+    expect(s[0].why).toMatch(/After .*G/);
+    expect(s[0].why).toMatch(/V→I|cadence home/);
   });
   it('after a predominant, lifts the dominant toward the top', () => {
     const s = eng.suggestChords({ key: key('C'), progression: prog('C Dm'), adventure: 0.2, limit: 10 });
@@ -158,11 +161,23 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     expect(dom).toBeGreaterThanOrEqual(0);
     expect(dom).toBeLessThan(4);
     expect(s[dom]!.why.toLowerCase()).toMatch(/dominant|fifth|v\b|toward/);
+    expect(s[dom]!.why).toMatch(/After .*Dm|From Dm/);
   });
   it('recognises the pop I–V–vi → IV continuation', () => {
     const s = eng.suggestChords({ key: key('C'), progression: prog('C G Am'), adventure: 0.25, limit: 10 });
     expect(s[0].id === 'F' || s[0].id === 'Fmaj7').toBe(true);
-    expect(s[0].why.toLowerCase()).toMatch(/common continuation|iv\b|subdominant|in this key/);
+    expect(s[0].why.toLowerCase()).toMatch(/axis|common continuation|iv\b|after/);
+    expect(s[0].why).toMatch(/After C–G–Am|After .*Am/);
+  });
+  it('explains suggestions via the previous sequence, not mood-only labels', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C Am F'), adventure: 0.25, limit: 8 });
+    for (const x of s.slice(0, 5)) {
+      expect(x.why).toMatch(/After C–Am–F|After Am–F|From F/);
+      // Must mention a functional / root move, not only a mood word.
+      expect(x.why).toMatch(/→|falling fifth|common tones|resolves|cadence|dominant|axis|relative|parallel/);
+    }
+    const g = s.find((x) => x.id === 'G' || x.id === 'G7');
+    if (g) expect(g.why.toLowerCase()).toMatch(/dominant|opens the cadence|falling fifth|iv→v|→v\b/);
   });
   it('from the tonic, ranks V/V among early secondary options', () => {
     const s = eng.suggestChords({ key: key('C'), progression: prog('C'), adventure: 0.35, limit: 20 });
