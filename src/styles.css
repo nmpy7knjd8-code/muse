@@ -607,6 +607,58 @@ svg .cnote { fill: #bbb; font-size: 10px; text-anchor: middle; }
 .ghead i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .best-fit-under-cof { margin-top: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
 .best-fit-under-cof .ghead { margin-top: 8px; }
+.recent-chords {
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 8px 0 4px;
+}
+.recent-chords-top {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.recent-chords-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted); flex: 0 0 auto;
+}
+.recent-chords-row {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0;
+}
+.recent-chord {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 4px 9px; border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--panel2);
+  font-size: 13px; line-height: 1.2;
+}
+.recent-chord b { font-size: 13.5px; font-weight: 700; }
+.recent-chord small { font-size: 11px; color: var(--muted); }
+.recent-chord.now {
+  background: rgba(156, 124, 244, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(156, 124, 244, 0.25);
+}
+.recent-now {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--accent);
+}
+.recent-moves {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.recent-moves li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px;
+  font-size: 12px; line-height: 1.35; color: var(--text);
+}
+.recent-move-pair b { font-weight: 700; }
+.recent-move-root {
+  font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.recent-move-root.root-up { color: #7fd0a8; }
+.recent-move-root.root-down { color: #f0a070; }
+.recent-move-root.root-same { color: var(--muted); }
+.recent-move-nrt {
+  font-size: 11px; color: #b9a7ff; white-space: nowrap;
+}
+.recent-move-effect {
+  color: var(--muted); white-space: nowrap;
+}
 .strip-tools {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
   gap: 8px 12px; margin: 0 0 8px; padding: 0 2px;

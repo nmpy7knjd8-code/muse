@@ -11,7 +11,7 @@ import {
   setSlotChord, slotBass, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents, clampSlotsToPartMeters,
   REL_COLORS, REL_LABEL, type RelKind,
-  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, openPaletteChords, rootMotion, secondaryPaletteChords,
+  colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, openPaletteChords, rootMotion, secondaryPaletteChords,
   TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, BPM_PRESETS, DEFAULT_BPM, beatSecFromBpm, clampBpm,
   beatsPerBar, clampSlotsToMeter, parseMeter, defaultPartMeters, timeSigEqual,
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
@@ -976,9 +976,87 @@ function Composer({ data }: { data: LoadedData }) {
     ? Object.entries(profile.moods).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => lex.label(id).toLowerCase()).join(' · ')
     : '';
 
+  /** Last few timeline chords — context for Best fit (just above the ranked list). */
+  const recentChordsBlock = () => {
+    const recent = chords.slice(-3);
+    if (!recent.length) return null;
+    const start = chords.length - recent.length;
+    const steps = recent.slice(1).map((c, i) => {
+      const from = recent[i]!;
+      const absTo = start + i + 1;
+      const fromMoods = engine.chordMoods(from, k, absTo > 1 ? chords[absTo - 2] : undefined);
+      const toMoods = engine.chordMoods(c, k, from);
+      const root = rootMotion(from, c);
+      const shift = lex.shift(fromMoods, toMoods);
+      const nrt = nrtTag(from, c);
+      const effect = shift ? `${shift.arrow} ${shift.text}` : (toMoods[0] ? `leans ${lex.label(toMoods[0].id).toLowerCase()}` : null);
+      return {
+        key: `${absTo}:${chordSymbol(from)}>${chordSymbol(c)}`,
+        from: chordSymbol(from, true),
+        to: chordSymbol(c, true),
+        fromRn: romanOf(from, k),
+        toRn: romanOf(c, k),
+        root,
+        nrt: nrt ? nrtPathLabel(nrt) : null,
+        effect,
+        dirClass: root.dir === '↑' ? 'root-up' : root.dir === '↓' ? 'root-down' : 'root-same',
+      };
+    });
+    return (
+      <div className="recent-chords" aria-label="Recent chords">
+        <div className="recent-chords-top">
+          <span className="recent-chords-label">Recent</span>
+          <div className="recent-chords-row" role="list">
+            {recent.map((c, i) => {
+              const abs = start + i;
+              const isNow = i === recent.length - 1;
+              const prev = abs > 0 ? chords[abs - 1] : undefined;
+              const moodId = engine.chordMoods(c, k, prev)[0]?.id ?? 'floating';
+              const color = lex.color(moodId);
+              return (
+                <button
+                  key={`${abs}:${chordSymbol(c)}`}
+                  type="button"
+                  role="listitem"
+                  className={'recent-chord' + (isNow ? ' now' : '')}
+                  style={{ borderColor: color }}
+                  title={isNow ? `Now · ${chordSymbol(c, true)} (${romanOf(c, k)})` : `Tap to hear ${chordSymbol(c, true)}`}
+                  onClick={() => playChord(c, abs > 0 ? timelineVoicings[abs - 1] : undefined)}
+                >
+                  <b>{chordSymbol(c, true)}</b>
+                  <small>{romanOf(c, k)}</small>
+                  {isNow && <span className="recent-now">now</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {steps.length > 0 && (
+          <ul className="recent-moves">
+            {steps.map((s) => (
+              <li key={s.key}>
+                <span className="recent-move-pair">
+                  <b>{s.from}</b>
+                  <span className="muted">({s.fromRn})</span>
+                  {' → '}
+                  <b>{s.to}</b>
+                  <span className="muted">({s.toRn})</span>
+                </span>
+                <span className={'recent-move-root ' + s.dirClass} title="Bass/root motion">{s.root.label}</span>
+                {s.nrt && <span className="recent-move-nrt" title="Neo-Riemannian step">{s.nrt}</span>}
+                {s.effect && <span className="recent-move-effect" title="Mood effect">{s.effect}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
+      {recentChordsBlock()}
       <div className="ghead">
         Best fit first
         {moodFilterLabel ? <span className="ghead-mood" title="Active mood filter"> · {moodFilterLabel}</span> : null}
