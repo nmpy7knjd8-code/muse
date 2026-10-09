@@ -192,6 +192,8 @@ function Composer({ data }: { data: LoadedData }) {
   const openTutorial = () => { setDrawer(null); setTutorialOpen(true); };
   /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
   const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
+  const transportRef = useRef(transport);
+  transportRef.current = transport;
   const [playSec, setPlaySec] = useState(0);
   /** Loop ▶ Play when the timeline ends (default on). */
   const [loopPlay, setLoopPlay] = useState(() => {
@@ -479,6 +481,12 @@ function Composer({ data }: { data: LoadedData }) {
   const persistPart = (key: string, id: InstrumentId | 'off') => {
     try { localStorage.setItem(key, id); } catch { /* private mode */ }
   };
+  // While ▶ Play / Loop is running, only mute pitched parts so the drum groove keeps going
+  // (auditioning or adding a chord must not call stopAll and kill the kit).
+  const silenceForPreview = () => {
+    if (transportRef.current) synth.stopTonal();
+    else synth.stopAll();
+  };
   const previewPart = (id: InstrumentId, part: 'chords' | 'melody' | 'bass') => {
     synth.unlock();
     synth.setInstrument(id); // reverb send follows last previewed part
@@ -486,12 +494,12 @@ function Composer({ data }: { data: LoadedData }) {
     const demo = cur ?? diatonicChords(k)[0];
     if (part === 'melody') {
       const m = fitMidiToInstrument(60, INSTRUMENTS[id]);
-      void synth.ensureLoaded(id).then(() => { synth.stopAll(); synth.playNotes([m], { dur: 0.7, instrument: id }); });
+      void synth.ensureLoaded(id).then(() => { silenceForPreview(); synth.playNotes([m], { dur: 0.7, instrument: id }); });
       return;
     }
     if (part === 'bass') {
       void synth.ensureLoaded(id).then(() => {
-        synth.stopAll();
+        silenceForPreview();
         synth.playNotes([bassLineMidi(demo, INSTRUMENTS[id])], { dur: 1.0, instrument: id });
       });
       return;
@@ -501,7 +509,7 @@ function Composer({ data }: { data: LoadedData }) {
     else if (def.voicing === 'bass') setVisTab('circle');
     else setVisTab('piano');
     void synth.ensureLoaded(id).then(() => {
-      synth.stopAll();
+      silenceForPreview();
       synth.playNotes(chordMidis(demo, pianoVoicing(demo), def, { omitBass: bassInst !== 'off' }), { dur: 1.2, instrument: id });
     });
   };
@@ -557,13 +565,13 @@ function Composer({ data }: { data: LoadedData }) {
   // Hear policy (going forward): preview ONLY the candidate next chord/note — never previous → next.
   const playChord = (c: Chord, prev?: number[]) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     playChordParts(c, pianoVoicing(c, prev));
   };
   const playMove = (s: ChordSuggestion) => {
     // Exception: when harmonizing a pending N.C. bar, overlay that bar's melody under the candidate chord.
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     if (pendingHarm?.notes.length) {
       const prev = harmPreviewEvents(pendingHarm.notes, { timeSig, beatSec });
       playChordParts(s.chord, s.voicing, { dur: prev.chordDur, vel: 0.62 });
@@ -589,7 +597,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playNoteMove = (n: NoteSuggestion) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     if (tab === 'bass') {
       const id = bassInst === 'off' ? 'bass' : bassInst;
       synth.playNotes([fitMidi(n.midi, id)], { dur: 0.7, vel: 0.92, instrument: id });
@@ -599,7 +607,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playBridge = (b: ChordBridge) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     void synth.ensureLoaded(chordInst);
     const from = slots[b.fromIndex]?.chord;
     const to = slots[b.toIndex]?.chord;
@@ -806,7 +814,7 @@ function Composer({ data }: { data: LoadedData }) {
     flash('Rest');
   };
   const playChordSequence = (cs: Chord[], step = 0.8, dur = 0.75) => {
-    synth.stopAll();
+    silenceForPreview();
     const voiced = voiceProgression(cs);
     cs.forEach((c, i) => playChordParts(c, voiced[i], {
       at: i * step, dur, vel: i === cs.length - 1 ? 0.78 : 0.7,
@@ -814,7 +822,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playChordPath = (p: ChordPath) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     const voiced = voiceProgression([...chords, ...p.chords]);
     const base = chords.length;
     const step = beatSec * 2.14;
@@ -844,7 +852,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playNotePath = (p: NotePath) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     const noteStep = Math.max(0.22, beatSec * 1.05);
     const under = tab === 'bass' ? bassChord : noteChord;
     if (under) {

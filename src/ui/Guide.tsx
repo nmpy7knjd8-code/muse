@@ -98,7 +98,7 @@ const SECTIONS: Section[] = [
     id: 'drums',
     toc: 'Drums',
     title: 'Drums tab — percussion grid, play together, loop',
-    use: 'Open Drums next to Bass. Pick a kit sound (Acoustic / Electronic / Fusion) — that only changes timbre. Load a starter groove (standard rock, electro-broken, fusion-ride weird, and the teaching cells) or tap the grid. Stacked cells sound together. Key tones show which notes pitched voices lock to — tap to audition. ▶ Play layers drums with chords/melody/bass; Loop repeats the cell.',
+    use: 'Open Drums next to Bass. Pick a kit sound (Acoustic / Electronic / Fusion) — that only changes timbre. Load a starter groove (standard rock, electro-broken, fusion-ride weird, and the teaching cells) or tap the grid. Stacked cells sound together. Key tones show which notes pitched voices lock to — tap to audition. ▶ Play layers drums with chords/melody/bass; Loop repeats the cell. While the loop runs, tapping chord suggestions or ＋ Add keeps the drum groove going so you can audition harmony over the beat.',
     musicality: 'Drum tab is a coordination map: timekeeper ostinato (hat/ride), backbeat (snare 2 & 4), foundation (kick), and colour (toms/crash). Kits and patterns mix independently — Electronic + Garage rock, Fusion kit + rock drive, Acoustic + fusion ride. Pitched voices agree with harmony so the kit sits in the same mode as the other parts.',
     tip: 'A/B kits on the same groove, then swap patterns. Change the key at the top to retune pitched rows. If the cell does not feel good looping, change one limb before you expand the form.',
     jump: 'drums',
