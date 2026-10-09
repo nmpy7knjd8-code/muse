@@ -17,7 +17,7 @@ import {
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
   type ChordBridge, activeAt, type TimelineEvents,
-  type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById,
+  type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById, progressionDrumTension,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -325,6 +325,19 @@ function Composer({ data }: { data: LoadedData }) {
     }));
     return steps.length ? progressionTension(steps, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null;
   }, [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Bar currently edited on the Drums tab (selected tension bar, else last). */
+  const drumEditIndex = useMemo(() => {
+    if (!slots.length) return 0;
+    if (tensionPick !== null) {
+      const si = chordedSlotIndices[tensionPick];
+      if (si != null) return si;
+    }
+    return slots.length - 1;
+  }, [slots.length, tensionPick, chordedSlotIndices]);
+  const drumTension = useMemo(() => {
+    if (!slots.some((s) => slotDrums(s).length)) return null;
+    return progressionDrumTension(slots.map((s) => slotDrums(s)), drumMeter);
+  }, [slots, drumMeter]);
   const tensionMelodyNotes: TensionMelNote[][] = useMemo(
     () => slots.filter((s) => s.chord).map((s) => {
       const out: TensionMelNote[] = [];
@@ -689,12 +702,9 @@ function Composer({ data }: { data: LoadedData }) {
   const dropBass = (si: number, ni: number) => { snapshot(); setSlots((s) => removeBassAt(s, si, ni)); };
   const writeDrums = (hits: DrumHit[], index?: number) => {
     snapshot();
-    const i = index ?? Math.max(0, slots.length ? slots.length - 1 : 0);
-    // Prefer the selected tension bar, else the last bar, else create bar 0.
-    const target = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? i) : i;
     setSlots((s) => {
-      const idx = s.length ? Math.min(target, s.length - 1) : 0;
-      return setSlotDrums(s, idx, hits);
+      const idx = Math.max(0, Math.min(index ?? drumEditIndex, Math.max(0, s.length - 1)));
+      return setSlotDrums(s, s.length ? idx : 0, hits);
     });
   };
   const loadDrumPattern = (hits: DrumHit[], beats: number, subdiv: 1 | 2 | 4) => {
@@ -1981,15 +1991,19 @@ function Composer({ data }: { data: LoadedData }) {
           </div>
         ) : (
           <DrumPad
-            hits={slotDrums(slots[slots.length ? slots.length - 1 : 0] ?? { chord: null, notes: [] })}
+            hits={slotDrums(slots[drumEditIndex] ?? { chord: null, notes: [] })}
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
+            meter={drumMeter}
+            prevHits={drumEditIndex > 0 ? slotDrums(slots[drumEditIndex - 1]!) : undefined}
+            progression={drumTension}
+            barIndex={drumEditIndex}
             playBeat={playActive && transport
               ? (playActive.drums[0]
                 ? playActive.drums[0]!.beat
                 : null)
               : null}
-            onChange={(hits) => writeDrums(hits)}
+            onChange={(hits) => writeDrums(hits, drumEditIndex)}
             onPreview={previewDrum}
             onLoadPattern={loadDrumPattern}
           />

@@ -3,12 +3,22 @@ import type { ReactNode } from 'react';
 import {
   DRUM_PATTERNS, DRUM_THEORY_PILLARS, DRUM_VOICES, DrumArtic, DrumHit, DrumVoiceId,
   cycleDrumArtic, drumRoleHint, drumTabAscii, drumVel, toggleDrumHit,
+  coachDrumBar, type DrumTensionState, type PartMeter,
 } from '../core';
+import { DrumTensionStrip } from './DrumTensionStrip';
 
 interface Props {
   hits: DrumHit[];
   beats: number;
   subdiv: 1 | 2 | 4;
+  /** Full drum part meter (for tension analysis). */
+  meter: PartMeter;
+  /** Previous bar hits when the timeline has prior drums (release vs prev). */
+  prevHits?: DrumHit[];
+  /** Multi-bar drum tension curve. */
+  progression?: DrumTensionState | null;
+  /** Active timeline bar index for the strip. */
+  barIndex?: number;
   /** Highlight playhead column while looping (beat in part pulses). */
   playBeat?: number | null;
   onChange: (hits: DrumHit[]) => void;
@@ -24,25 +34,29 @@ function cellArtic(hits: DrumHit[], voice: DrumVoiceId, beat: number): DrumArtic
 }
 
 export function DrumPad({
-  hits, beats, subdiv, playBeat, onChange, onPreview, onLoadPattern,
+  hits, beats, subdiv, meter, prevHits, progression, barIndex = 0, playBeat, onChange, onPreview, onLoadPattern,
 }: Props): ReactNode {
   const step = 1 / subdiv;
   const cols = Math.round(beats * subdiv);
   const ascii = drumTabAscii(hits, beats, subdiv, GRID_VOICES.filter((v) => hits.some((h) => h.voice === v)));
+  const coach = coachDrumBar(hits, meter, prevHits);
 
   return (
     <div className="drum-pad" aria-label="Drum percussion tab">
       <div className="drum-theory-strip" aria-label="Percussion theory">
         <p className="drum-theory-lead">
           <b>Percussion theory.</b> Columns are time; rows are kit voices. Stacked marks in one column
-          sound together — that simultaneous layering is the groove.
+          sound together — that simultaneous layering is the groove. The pocket is a rhythmic tonic:
+          leave it to build tension, return to release.
         </p>
         <ul className="drum-pillars">
-          {DRUM_THEORY_PILLARS.slice(0, 4).map((p) => (
+          {DRUM_THEORY_PILLARS.filter((p) => ['Simultaneous columns', 'Ostinato first', 'Backbeat vs foundation', 'Build & release'].includes(p.name)).map((p) => (
             <li key={p.name}><b>{p.name}.</b> {p.detail}</li>
           ))}
         </ul>
       </div>
+
+      <DrumTensionStrip coach={coach} progression={progression} selectedBar={barIndex} />
 
       <div className="drum-patterns" role="list" aria-label="Starter grooves">
         {DRUM_PATTERNS.map((p) => (
