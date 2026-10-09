@@ -19,6 +19,8 @@ export interface ArtistTryIt {
   label: string; key: { tonic: string; mode: string }; roman: string[]; meter?: string; bassPedal?: string;
   pedal?: { degree: string; chordIndices: number[] }; melodyDegrees?: string[]; howToPlay?: string; moods: string[];
   kbRefs: ArtistKbRef[]; techniqueIds: string[]; original?: boolean;
+  /** Optional Muse drum pattern id (see DRUM_PATTERNS) loaded with the harmony exercise. */
+  drumPatternId?: string;
 }
 export interface Artist {
   id: string; name: string; era?: string; origin?: string; genres: string[]; documentation?: string; hook: string; aestheticSummary: string;
@@ -59,6 +61,7 @@ export function normalizeArtists(raw: Json): ArtistsFile | null {
       pedal: t.pedal && typeof t.pedal.degree === 'string' ? { degree: str(t.pedal.degree), chordIndices: arr(t.pedal.chordIndices).filter((i) => Number.isInteger(i)) } : undefined,
       melodyDegrees: t.melodyDegrees ? strs(t.melodyDegrees) : undefined, howToPlay: t.howToPlay ? str(t.howToPlay) : undefined,
       moods: strs(t.moods), kbRefs: refs(t.kbRefs), techniqueIds: strs(t.techniqueIds), original: t.original !== false,
+      drumPatternId: t.drumPatternId ? str(t.drumPatternId) : undefined,
     })),
     listeningGuide: arr(a.listeningGuide).filter((g) => g && g.title).map((g, i) => ({ step: typeof g.step === 'number' ? g.step : i + 1, title: str(g.title), what: str(g.what) })),
     relatedArtists: strs(a.relatedArtists), notes: strs(a.notes),

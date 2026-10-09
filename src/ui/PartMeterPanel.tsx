@@ -31,7 +31,7 @@ export function PartMeterPanel({
   const step = pulseStep(meter.subdiv);
   const capacity = slotsPerPartBar(meter);
   const matched = timeSigEqual(meter.timeSig, master) && meter.subdiv === 1;
-  const title = part === 'chords' ? 'Chords' : part === 'melody' ? 'Melody' : 'Bass';
+  const title = part === 'chords' ? 'Chords' : part === 'melody' ? 'Melody' : part === 'bass' ? 'Bass' : 'Drums';
   const poly = !timeSigEqual(meter.timeSig, master);
 
   const occupied = new Map<number, TimelineNote>();

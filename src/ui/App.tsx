@@ -8,15 +8,16 @@ import {
   INSTRUMENTS, INSTRUMENT_IDS, bassLineMidi, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
   TimelineSlot, activeBassSlotIndex, activeSlotIndex, bassOf, chordTargetIndex, chordsOf, clearSlotChord, insertBassNote, insertNote,
   insertRest, isSounding, labelBassSlot, labelSlot, melodyOf, nextBassBeat, nextNoteBeat, noteDurations, removeBassAt, removeNoteAt, removeSlot,
-  setSlotChord, slotBass, timelineEvents, timelineText, toMidiTimeline,
+  setSlotChord, setSlotDrums, slotBass, slotDrums, timelineEvents, timelineText, toMidiTimeline,
   harmPreviewEvents, clampSlotsToPartMeters,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, openPaletteChords, rootMotion, secondaryPaletteChords,
   TimeSig, TIME_SIG_PRESETS, DEFAULT_TIME_SIG, BPM_PRESETS, DEFAULT_BPM, beatSecFromBpm, clampBpm,
-  beatsPerBar, clampSlotsToMeter, parseMeter, defaultPartMeters, timeSigEqual,
+  beatsPerBar, parseMeter, defaultPartMeters, timeSigEqual,
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
   type ChordBridge, activeAt, type TimelineEvents,
+  type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -30,12 +31,13 @@ import { MoodChordRef } from './MoodChordRef';
 import { ChordConnections } from './ChordConnections';
 import { PlaybackRibbon, ribbonNotesFromEvents } from './PlaybackRibbon';
 import { PartMeterPanel } from './PartMeterPanel';
+import { DrumPad } from './DrumPad';
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
 
-type Tab = 'chords' | 'melody' | 'bass';
+type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
 /** Left drawer pages — Guide / Artist Lens / mood reference live off the main strip. */
 type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists';
@@ -138,7 +140,7 @@ function Composer({ data }: { data: LoadedData }) {
     try { localStorage.setItem('muse.timeSig', timeSigLabel(ts)); } catch { /* private mode */ }
     setPartMeters((pm) => {
       const next = { ...pm };
-      (['chords', 'melody', 'bass'] as PartId[]).forEach((id) => {
+      (['chords', 'melody', 'bass', 'drums'] as PartId[]).forEach((id) => {
         if (timeSigEqual(pm[id].timeSig, timeSig)) next[id] = { ...pm[id], timeSig: { ...ts } };
       });
       setSlots((s) => clampSlotsToPartMeters(s, next));
@@ -163,19 +165,26 @@ function Composer({ data }: { data: LoadedData }) {
   const beats = beatsPerBar(timeSig);
   const [tab, setTab] = useState<Tab>('chords');
   const [inputPane, setInputPane] = useState<InputPane>('write');
-  const [partMeters, setPartMeters] = useState<PartMeters>(() => defaultPartMeters(timeSig));
+  const [partMeters, setPartMeters] = useState<PartMeters>(() => {
+    const base = defaultPartMeters(timeSig);
+    // Ensure drums exists even if older sessions only had three parts.
+    return { ...base, drums: base.drums };
+  });
   const choosePartMeter = (id: PartId, next: PartMeter) => {
     const merged = { ...partMeters, [id]: next };
     setPartMeters(merged);
     setSlots((s) => clampSlotsToPartMeters(s, merged));
   };
   const matchPartToSession = (id: PartId) => {
-    choosePartMeter(id, { timeSig: { ...timeSig }, subdiv: 1 });
+    // Drums keep 16th-grid default when matching session meter.
+    choosePartMeter(id, { timeSig: { ...timeSig }, subdiv: id === 'drums' ? 4 : 1 });
   };
   const melMeter = partMeters.melody;
   const bassMeter = partMeters.bass;
+  const drumMeter = partMeters.drums ?? { timeSig: { ...timeSig }, subdiv: 4 as const };
   const melBeats = beatsPerBar(melMeter.timeSig);
   const bassBeats = beatsPerBar(bassMeter.timeSig);
+  const drumBeats = beatsPerBar(drumMeter.timeSig);
   const [drawer, setDrawer] = useState<DrawerPage | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const openTutorial = () => { setDrawer(null); setTutorialOpen(true); };
@@ -607,6 +616,8 @@ function Composer({ data }: { data: LoadedData }) {
         at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.88, instrument: bassInstId,
       }));
     }
+    // Drum kit: same `at` across voices = simultaneous (layered limbs).
+    ev.drums.forEach((d) => synth.playDrum(d.voice, { at: d.at, vel: d.vel, artic: d.artic }));
   };
   playAllRef.current = () => playAll({ soft: true });
   const togglePlay = () => {
@@ -676,6 +687,38 @@ function Composer({ data }: { data: LoadedData }) {
   const removeAt = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => removeSlot(s, i)); };
   const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
   const dropBass = (si: number, ni: number) => { snapshot(); setSlots((s) => removeBassAt(s, si, ni)); };
+  const writeDrums = (hits: DrumHit[], index?: number) => {
+    snapshot();
+    const i = index ?? Math.max(0, slots.length ? slots.length - 1 : 0);
+    // Prefer the selected tension bar, else the last bar, else create bar 0.
+    const target = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? i) : i;
+    setSlots((s) => {
+      const idx = s.length ? Math.min(target, s.length - 1) : 0;
+      return setSlotDrums(s, idx, hits);
+    });
+  };
+  const loadDrumPattern = (hits: DrumHit[], beats: number, subdiv: 1 | 2 | 4) => {
+    synth.unlock();
+    // Align drum part meter to the pattern grid, then write onto the active/last bar.
+    if (beats !== drumBeats || subdiv !== drumMeter.subdiv) {
+      choosePartMeter('drums', { timeSig: { num: beats, den: drumMeter.timeSig.den }, subdiv });
+    }
+    const target = slots.length ? slots.length - 1 : 0;
+    snapshot();
+    setSlots((s) => setSlotDrums(s.length ? s : [{ chord: null, notes: [], bass: [], drums: [] }], Math.max(0, target), hits));
+    // Preview one bar of the pattern immediately.
+    const pulse = beatSec * (beatsPerBar(timeSig) / beats);
+    hits.forEach((h) => synth.playDrum(h.voice, {
+      at: h.beat * pulse,
+      vel: h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78),
+      artic: h.artic,
+    }));
+    flash(`Loaded groove · ${hits.length} hits — ▶ Loop to practice`);
+  };
+  const previewDrum = (voice: DrumVoiceId, artic: DrumArtic = 'normal') => {
+    synth.unlock();
+    synth.playDrum(voice, { vel: artic === 'ghost' ? 0.28 : artic === 'accent' ? 0.95 : 0.78, artic });
+  };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
   const clearAll = () => { stopPlayback(); synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
   const addNote = (m: number) => {
@@ -868,27 +911,59 @@ function Composer({ data }: { data: LoadedData }) {
     if (!l) return flash('Could not read that exercise');
     snapshot();
     chooseTonic(l.tonic); chooseMode(l.mode);
-    const nextSlots = l.chords.map((chord) => ({ chord, notes: [] as TimelineSlot['notes'], bass: [] as TimelineSlot['notes'], locked: false }));
+    const pat = t.drumPatternId ? drumPatternById(t.drumPatternId) : undefined;
+    const nextSlots = l.chords.map((chord, i) => ({
+      chord,
+      notes: [] as TimelineSlot['notes'],
+      bass: [] as TimelineSlot['notes'],
+      drums: pat && i === 0 ? pat.hits.map((h) => ({ ...h })) : [],
+      locked: false,
+    }));
     if (l.timeSig) {
       setTimeSig(l.timeSig);
       try { localStorage.setItem('muse.timeSig', timeSigLabel(l.timeSig)); } catch { /* private mode */ }
-      setPartMeters(defaultPartMeters(l.timeSig));
-      setSlots(clampSlotsToMeter(nextSlots, beatsPerBar(l.timeSig)));
-    } else setSlots(nextSlots);
+      const parts = defaultPartMeters(l.timeSig);
+      if (pat) parts.drums = { timeSig: { num: pat.beats, den: l.timeSig.den }, subdiv: pat.subdiv };
+      setPartMeters(parts);
+      setSlots(clampSlotsToPartMeters(nextSlots, parts));
+    } else {
+      if (pat) {
+        setPartMeters((pm) => ({ ...pm, drums: { timeSig: { num: pat.beats, den: pm.drums.timeSig.den }, subdiv: pat.subdiv } }));
+      }
+      setSlots(nextSlots);
+    }
     setMeterNote(l.meterNote ?? null);
-    setTab('chords');
+    setTab(pat ? 'drums' : 'chords');
     setSelectedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     synth.unlock();
     playChordSequence(l.chords);
+    if (pat) {
+      const pulse = beatSec * (beatsPerBar(l.timeSig ?? timeSig) / pat.beats);
+      pat.hits.forEach((h) => synth.playDrum(h.voice, {
+        at: h.beat * pulse,
+        vel: h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78),
+        artic: h.artic,
+      }));
+    }
     const meterBit = l.timeSig ? ` · ${timeSigLabel(l.timeSig)}` : l.meterNote ? ` · ${l.meterNote}` : '';
-    flash(`Loaded "${t.label}" (${artist.name} style)${meterBit} — undo to go back`);
+    const drumBit = pat ? ` · drums “${pat.name}”` : '';
+    flash(`Loaded "${t.label}" (${artist.name} style)${meterBit}${drumBit} — undo to go back`);
   };
   const previewTryIt = (t: ArtistTryIt) => {
     const l = loadTryIt(t);
     if (!l) return;
     synth.unlock();
     playChordSequence(l.chords);
+    const pat = t.drumPatternId ? drumPatternById(t.drumPatternId) : undefined;
+    if (pat) {
+      const pulse = beatSec * (beatsPerBar(l.timeSig ?? timeSig) / pat.beats);
+      pat.hits.forEach((h) => synth.playDrum(h.voice, {
+        at: h.beat * pulse,
+        vel: h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78),
+        artic: h.artic,
+      }));
+    }
   };
 
   // ---- Listen (mic YIN/chroma) or MIDI keyboard (Web MIDI → same note/chord callbacks) ----
@@ -1374,7 +1449,7 @@ function Composer({ data }: { data: LoadedData }) {
       <section className="strip" aria-label="Timeline">
         {slots.length === 0 ? (
           <p className="muted small">
-            Tap chords below to start, or switch to Melody / Bass — all share this timeline.
+            Tap chords below to start, or switch to Melody / Bass / Drums — all share this timeline.
             New here?{' '}
             <button type="button" className="pill tutorial-launch" onClick={openTutorial}>Tutorial</button>
             {' '}or open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.
@@ -1411,7 +1486,7 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
           <div
-            className={'timeline' + (slots.some((s) => s.notes.length || slotBass(s).length) ? '' : ' chords-only')}
+            className={'timeline' + (slots.some((s) => s.notes.length || slotBass(s).length || slotDrums(s).length) ? '' : ' chords-only')}
             role="list"
             ref={timelineRef}
           >
@@ -1423,8 +1498,9 @@ function Composer({ data }: { data: LoadedData }) {
               const tensionOn = chordedIdx >= 0 && tensionPick === chordedIdx;
               const playOn = playActive?.chordIndex === i;
               const bassPlayId = bassInst === 'off' ? 'bass' : bassInst;
-              const showLanes = labeled.length > 0 || bassLabeled.length > 0
-                || slots.some((x) => x.notes.length || slotBass(x).length);
+              const drumHits = slotDrums(s);
+              const showLanes = labeled.length > 0 || bassLabeled.length > 0 || drumHits.length > 0
+                || slots.some((x) => x.notes.length || slotBass(x).length || slotDrums(x).length);
               const barMidis = s.chord
                 ? (chordedIdx >= 0 ? (timelineVoicings[chordedIdx] ?? pianoVoicing(s.chord)) : pianoVoicing(s.chord))
                 : [];
@@ -1581,6 +1657,22 @@ function Composer({ data }: { data: LoadedData }) {
                         </div>
                       );
                     })}
+                  </div>
+                  )}
+                  {showLanes && (
+                  <div className="tdrums" aria-label={`Bar ${i + 1} drums`}>
+                    {drumHits.length === 0 && <span className="muted small">·</span>}
+                    {drumHits.length > 0 && (
+                      <button
+                        type="button"
+                        className={'tdrum-chip' + (playActive?.drums.some((d) => d.index === i) ? ' playing' : '')}
+                        title={`${drumHits.length} drum hits — open Drums tab to edit`}
+                        onClick={() => { setTab('drums'); setInputPane('write'); }}
+                      >
+                        🥁 {Array.from(new Set(drumHits.map((h) => h.voice))).join(' ')}
+                        <small>{drumHits.length}</small>
+                      </button>
+                    )}
                   </div>
                   )}
                 </div>
@@ -1760,6 +1852,7 @@ function Composer({ data }: { data: LoadedData }) {
             <button type="button" role="tab" aria-selected={tab === 'chords'} className={tab === 'chords' ? 'on' : ''} onClick={() => { setTab('chords'); setSelectedId(null); setInputPane('write'); }}>Chords</button>
             <button type="button" role="tab" aria-selected={tab === 'melody'} className={tab === 'melody' ? 'on' : ''} onClick={() => { setTab('melody'); setSelectedId(null); setInputPane('write'); }}>Melody</button>
             <button type="button" role="tab" aria-selected={tab === 'bass'} className={tab === 'bass' ? 'on' : ''} onClick={() => { setTab('bass'); setSelectedId(null); setInputPane('write'); if (bassInst === 'off') chooseBassInst('bass'); }}>Bass</button>
+            <button type="button" role="tab" aria-selected={tab === 'drums'} className={tab === 'drums' ? 'on' : ''} onClick={() => { setTab('drums'); setSelectedId(null); setInputPane('write'); }}>Drums</button>
           </div>
           <div className="seg input-pane" role="group" aria-label={`${tab} pane`}>
             <button type="button" className={inputPane === 'write' ? 'on' : ''} aria-pressed={inputPane === 'write'} onClick={() => setInputPane('write')}>Write</button>
@@ -1769,7 +1862,7 @@ function Composer({ data }: { data: LoadedData }) {
         {inputPane === 'meter' ? (
           <PartMeterPanel
             part={tab}
-            meter={partMeters[tab]}
+            meter={partMeters[tab] ?? drumMeter}
             master={timeSig}
             laneNotes={tab === 'melody'
               ? (slots[activeSlotIndex(slots, melBeats, melMeter.subdiv)]?.notes ?? [])
@@ -1777,11 +1870,12 @@ function Composer({ data }: { data: LoadedData }) {
                 ? slotBass(slots[activeBassSlotIndex(slots, bassBeats, bassMeter.subdiv)] ?? { chord: null, notes: [], bass: [] })
                 : []}
             onChange={(next) => choosePartMeter(tab, next)}
-            onAddRest={tab === 'chords' ? undefined : addRest}
+            onAddRest={tab === 'chords' || tab === 'drums' ? undefined : addRest}
             onMatchSession={() => matchPartToSession(tab)}
           />
         ) : (
         <>
+        {tab !== 'drums' && (
         <div className={'listen' + (listen ? ' on' : '')}>
           <div className="seg listen-src" role="group" aria-label="Input source">
             <button type="button" className={inputSource === 'mic' ? 'on' : ''} onClick={() => chooseInputSource('mic')} aria-pressed={inputSource === 'mic'}>Mic</button>
@@ -1818,6 +1912,7 @@ function Composer({ data }: { data: LoadedData }) {
             </span>
           )}
         </div>
+        )}
         {tab === 'chords' ? (
           <>
             {(() => {
@@ -1861,7 +1956,7 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
             <FitExplainer mode="melody" keyInfo={k} underChord={noteChord} />
           </div>
-        ) : (
+        ) : tab === 'bass' ? (
           <div className="melody-input bass-input">
             <PianoViz
               scalePcs={scale}
@@ -1884,6 +1979,20 @@ function Composer({ data }: { data: LoadedData }) {
             </div>
             <FitExplainer mode="bass" keyInfo={k} underChord={bassChord} />
           </div>
+        ) : (
+          <DrumPad
+            hits={slotDrums(slots[slots.length ? slots.length - 1 : 0] ?? { chord: null, notes: [] })}
+            beats={drumBeats}
+            subdiv={drumMeter.subdiv}
+            playBeat={playActive && transport
+              ? (playActive.drums[0]
+                ? playActive.drums[0]!.beat
+                : null)
+              : null}
+            onChange={(hits) => writeDrums(hits)}
+            onPreview={previewDrum}
+            onLoadPattern={loadDrumPattern}
+          />
         )}
         </>
         )}

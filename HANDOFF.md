@@ -10,6 +10,11 @@ Run: `npm install && npm run dev`. Test: `npx vitest run`. Build: `npm run build
 ## Done on main
 v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/mood map/circle/Tonnetz visuals; mood journey; lore mode; Listen mode (mic note + chord recognition); sampled instruments + picker; clearer scale tint; Artist Lens tab; tension budget + curve view; chords + melody timeline (two lanes, note↔chord labels, N.C. harmonize, shared play/MIDI); NextPickBoard; CoF tap-to-add + direction labels; root ↑/↓; key persistence; bass + electric guitar; expanded Artist Lens (virtuosic + classic rock) + request box.
 
+## Drum percussion tab (this branch)
+- Fourth writing lane **Drums**: kit grid (CC/Rd/HH/HO/SD/toms/BD/Hf), 16th-default part meter, ASCII tab, starter grooves with percussion theory (pocket, ghosts, linear, additive, 4-over-3).
+- ▶ Play schedules drum one-shots with chords/melody/bass; same subdivision = simultaneous; Loop unchanged.
+- Guide: Drums section + percussion theory group; TOOL Artist Lens deepened (Carey pocket technique, listening how-to, try-its with `drumPatternId`).
+
 ## Chord ↔ melody link (this branch)
 - Hear a suggested chord under a pending N.C. melody plays chord + that bar’s notes together (`harmPreviewEvents`).
 - Harmonize banner when a bar has melody waiting; NextPickBoard switches to clash→fit × calm→tense.
