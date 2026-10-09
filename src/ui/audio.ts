@@ -159,7 +159,8 @@ function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number):
   return post;
 }
 
-interface Voice { stop(at: number): void; end: number }
+type VoiceKind = 'tonal' | 'drum';
+interface Voice { stop(at: number): void; end: number; kind: VoiceKind }
 
 export class AudioEngine {
   ctx: BaseAudioContext | null = null;
@@ -316,6 +317,23 @@ export class AudioEngine {
     this.busyUntil = Math.min(this.busyUntil, performance.now() + 450);
   }
 
+  /**
+   * Stop pitched instruments (chords / melody / bass) but leave kit one-shots running.
+   * Used while ▶ Play / Loop is active so auditioning a chord doesn’t kill the drum groove.
+   */
+  stopTonal(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const keep: Voice[] = [];
+    for (const v of this.voices) {
+      if (v.kind === 'drum') keep.push(v);
+      else v.stop(t);
+    }
+    this.voices = keep;
+    // Drums may still be sounding; don’t collapse busyUntil as aggressively as stopAll.
+    if (!keep.length) this.busyUntil = Math.min(this.busyUntil, performance.now() + 450);
+  }
+
   private now() { return this.ctx ? this.ctx.currentTime + 0.03 : 0; }
 
   /** One note: sampled when the instrument is loaded, otherwise the fallback synth. */
@@ -362,7 +380,7 @@ export class AudioEngine {
       const stopAt = Math.min(natural, off + def.release * 6);
       src.start(start);
       src.stop(stopAt + 0.01);
-      v = { end: stopAt, stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ } } };
+      v = { end: stopAt, kind: 'tonal', stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ } } };
     } else {
       v = this.fallbackVoice(midi, start, vel, out, off, def);
     }
@@ -463,7 +481,15 @@ export class AudioEngine {
       end = off + def.release * 6;
     }
     oscs.forEach((o) => { o.start(start); o.stop(end); });
-    return { end, stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); oscs.forEach((o) => { try { o.stop(t + 0.3); } catch { /* ok */ } }); } };
+    return {
+      end,
+      kind: 'tonal',
+      stop: (t) => {
+        g.cancelScheduledValues(t);
+        g.setTargetAtTime(0, t, 0.04);
+        oscs.forEach((o) => { try { o.stop(t + 0.3); } catch { /* ok */ } });
+      },
+    };
   }
 
   /** Play notes together (a chord is strummed/rolled per instrument, with slight humanization). */
@@ -510,7 +536,7 @@ export class AudioEngine {
       midi: opts.midi,
       melodic: opts.melodic,
     });
-    this.voices.push({ end, stop });
+    this.voices.push({ end, stop, kind: 'drum' });
     this.markBusy(end);
   }
 }

@@ -98,7 +98,7 @@ const SECTIONS: Section[] = [
     id: 'drums',
     toc: 'Drums',
     title: 'Drums tab — percussion grid, play together, loop',
-    use: 'Open Drums next to Bass. Load a starter groove or tap the kit grid (closed / half / open / foot hats, snare & rim, two kicks, three toms, crash / splash, ride / bell). Stacked cells sound together. The Key tones strip shows which notes pitched voices lock to for the session key/mode — tap to audition; melodic steel chips preview scale degrees. ▶ Play layers drums with chords/melody/bass; Loop repeats the cell. Meter sets the drum pulse and 16th-grid precision.',
+    use: 'Open Drums next to Bass. Load a starter groove or tap the kit grid (closed / half / open / foot hats, snare & rim, two kicks, three toms, crash / splash, ride / bell). Stacked cells sound together. The Key tones strip shows which notes pitched voices lock to for the session key/mode — tap to audition; melodic steel chips preview scale degrees. ▶ Play layers drums with chords/melody/bass; Loop repeats the cell. While the loop runs, tapping chord suggestions or ＋ Add keeps the drum groove going so you can audition harmony over the beat. Meter sets the drum pulse and 16th-grid precision.',
     musicality: 'Drum tab is a coordination map: timekeeper ostinato (hat/ride), backbeat (snare 2 & 4), foundation (kick), and colour (toms/crash). Pitched voices agree with harmony — kick/floor on 1, mid tom on 3 (or ♭3), high tom and ride bell on 5 — so the kit sits in the same mode as the other parts. Ghost notes are soft chatter; linear vs layered is independence vs stacks.',
     tip: 'Change the key at the top — pitched drum rows retune. If the cell does not feel good looping, change one limb before you expand the form.',
     jump: 'drums',
