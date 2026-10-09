@@ -33,3 +33,4 @@ export * from './connections';
 export * from './playbackCursor';
 export * from './drums';
 export * from './drumTension';
+export * from './drumTuning';

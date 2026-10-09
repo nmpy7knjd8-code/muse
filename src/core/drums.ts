@@ -4,15 +4,20 @@
 /** Standard drum-tab line labels (top → bottom kit order). */
 export type DrumVoiceId =
   | 'CC' // crash
-  | 'Rd' // ride
-  | 'HH' // closed hi-hat (hand)
+  | 'Cs' // splash
+  | 'Rd' // ride bow
+  | 'Rb' // ride bell (key-tuned)
+  | 'HH' // closed hi-hat
+  | 'HHs' // half-open hi-hat
   | 'HO' // open hi-hat
+  | 'Hf' // hi-hat foot (chick)
   | 'SD' // snare
-  | 'T1' // high tom
-  | 'T2' // mid tom
-  | 'FT' // floor tom
-  | 'BD' // bass / kick
-  | 'Hf'; // hi-hat foot (chick)
+  | 'RS' // rim / side stick
+  | 'T1' // high tom (key 5th)
+  | 'T2' // mid tom (key 3rd)
+  | 'FT' // floor tom (key tonic)
+  | 'BD' // kick (key tonic)
+  | 'BDp'; // punch / short kick (key 5th)
 
 export type DrumArtic = 'normal' | 'ghost' | 'accent' | 'open' | 'closed';
 
@@ -24,6 +29,8 @@ export interface DrumHit {
   /** 0..1; ghost ≈ 0.28, accent ≈ 0.95. */
   vel?: number;
   artic?: DrumArtic;
+  /** Optional MIDI for key-tuned / melodic hits (toms, kick, ride bell, steel accents). */
+  midi?: number;
 }
 
 export interface DrumVoiceDef {
@@ -41,16 +48,21 @@ export interface DrumVoiceDef {
 
 /** Kit legend — order matches common ASCII drum tab (cymbals → snare/toms → kick). */
 export const DRUM_VOICES: DrumVoiceDef[] = [
-  { id: 'CC', label: 'Crash', short: 'CC', limb: 'either', role: 'crash', mark: 'x', theory: 'Accent / section marker — usually with a kick or snare for weight.' },
-  { id: 'Rd', label: 'Ride', short: 'Rd', limb: 'RH', role: 'time', mark: 'x', theory: 'Jazz/rock timekeeper; bell accents cut through the mix.' },
-  { id: 'HH', label: 'Hi-hat', short: 'HH', limb: 'RH', role: 'time', mark: 'x', theory: 'Primary rock/pop ostinato. Steady 8ths or 16ths lock the pocket.' },
-  { id: 'HO', label: 'Open hat', short: 'HO', limb: 'RH', role: 'colour', mark: 'o', theory: 'Open hat = breath/release; close it cleanly on the next pulse.' },
-  { id: 'SD', label: 'Snare', short: 'SD', limb: 'LH', role: 'backbeat', mark: 'o', theory: 'Backbeat on 2 & 4 in common time; ghosts chatter between accents.' },
-  { id: 'T1', label: 'High tom', short: 'T1', limb: 'either', role: 'colour', mark: 'o', theory: 'Fill colour and melodic tom ostinatos (wires often off in heavy grooves).' },
-  { id: 'T2', label: 'Mid tom', short: 'T2', limb: 'either', role: 'colour', mark: 'o', theory: 'Bridges high tom and floor in fills and additive grooves.' },
-  { id: 'FT', label: 'Floor tom', short: 'FT', limb: 'either', role: 'colour', mark: 'o', theory: 'Low melodic weight; pairs with kick for heavy downbeats.' },
-  { id: 'BD', label: 'Kick', short: 'BD', limb: 'RF', role: 'foundation', mark: 'o', theory: 'Foundation pulse. On 1 & 3 = rock; syncopation = funk/fusion push.' },
-  { id: 'Hf', label: 'Hat foot', short: 'Hf', limb: 'LF', role: 'foot-time', mark: 'x', theory: 'Jazz “chick” on 2 & 4; also closes open hats and adds four-limb independence.' },
+  { id: 'CC', label: 'Crash', short: 'CC', limb: 'either', role: 'crash', mark: 'x', theory: 'Section marker — usually with a kick for weight.' },
+  { id: 'Cs', label: 'Splash', short: 'Cs', limb: 'either', role: 'crash', mark: 'x', theory: 'Short crash colour; often pairs with the mode’s ♭7 / characteristic tone.' },
+  { id: 'Rd', label: 'Ride', short: 'Rd', limb: 'RH', role: 'time', mark: 'x', theory: 'Jazz/rock timekeeper on the bow.' },
+  { id: 'Rb', label: 'Ride bell', short: 'Rb', limb: 'RH', role: 'colour', mark: 'b', theory: 'Bell accent — Muse tunes it to the key’s 5th so it rings with the harmony.' },
+  { id: 'HH', label: 'Hat closed', short: 'HH', limb: 'RH', role: 'time', mark: 'x', theory: 'Tight closed hat — primary rock/pop ostinato.' },
+  { id: 'HHs', label: 'Hat half', short: 'HHs', limb: 'RH', role: 'colour', mark: 'x', theory: 'Half-open “chick-sizzle” — funk/disco breath without full open wash.' },
+  { id: 'HO', label: 'Hat open', short: 'HO', limb: 'RH', role: 'colour', mark: 'o', theory: 'Open hat = release; close it cleanly on the next pulse.' },
+  { id: 'Hf', label: 'Hat foot', short: 'Hf', limb: 'LF', role: 'foot-time', mark: 'x', theory: 'Pedal chick on 2 & 4; four-limb independence.' },
+  { id: 'SD', label: 'Snare', short: 'SD', limb: 'LH', role: 'backbeat', mark: 'o', theory: 'Backbeat on 2 & 4; ghosts chatter between accents.' },
+  { id: 'RS', label: 'Rim / stick', short: 'RS', limb: 'LH', role: 'colour', mark: 'x', theory: 'Side stick / rim — dry backbeat colour for verses.' },
+  { id: 'T1', label: 'High tom', short: 'T1', limb: 'either', role: 'colour', mark: 'o', theory: 'Key 5th by default — melodic fills that stay in mode.' },
+  { id: 'T2', label: 'Mid tom', short: 'T2', limb: 'either', role: 'colour', mark: 'o', theory: 'Key 3rd (or ♭3) — bridges floor and high tom in the mode.' },
+  { id: 'FT', label: 'Floor tom', short: 'FT', limb: 'either', role: 'colour', mark: 'o', theory: 'Key tonic — low melodic weight with the kick.' },
+  { id: 'BD', label: 'Kick', short: 'BD', limb: 'RF', role: 'foundation', mark: 'o', theory: 'Key tonic fundamental — foundation pulse that agrees with the bass.' },
+  { id: 'BDp', label: 'Kick punch', short: 'BDp', limb: 'RF', role: 'foundation', mark: 'o', theory: 'Shorter punch kick — often the 5th; good for syncopated dance hits.' },
 ];
 
 export const DRUM_VOICE_IDS = DRUM_VOICES.map((v) => v.id);
@@ -69,13 +81,15 @@ export function drumVel(h: DrumHit): number {
   }
 }
 
-/** Tab character for a hit (ghost = g, accent = O/X, open hat = o). */
+/** Tab character for a hit (ghost = g, accent = O/X, open hat = o, bell = b). */
 export function drumMark(h: DrumHit): string {
   const artic = h.artic ?? 'normal';
   if (artic === 'ghost') return 'g';
-  if (h.voice === 'HH' || h.voice === 'Rd' || h.voice === 'CC' || h.voice === 'Hf') {
-    return artic === 'accent' ? 'X' : 'x';
-  }
+  if (h.voice === 'Rb') return artic === 'accent' ? 'B' : 'b';
+  if (h.voice === 'RS') return 'x';
+  const cymbal = h.voice === 'HH' || h.voice === 'HHs' || h.voice === 'Hf'
+    || h.voice === 'Rd' || h.voice === 'CC' || h.voice === 'Cs';
+  if (cymbal) return artic === 'accent' ? 'X' : 'x';
   if (artic === 'open' || h.voice === 'HO') return 'o';
   return artic === 'accent' ? 'O' : 'o';
 }
@@ -261,10 +275,12 @@ export function toggleDrumHit(
   voice: DrumVoiceId,
   beat: number,
   artic: DrumArtic = 'normal',
+  midi?: number,
 ): DrumHit[] {
   const i = hits.findIndex((h) => h.voice === voice && Math.abs(h.beat - beat) < 1e-6);
   if (i >= 0) return hits.filter((_, j) => j !== i);
-  return [...hits, { voice, beat, artic }].sort((a, b) => a.beat - b.beat || a.voice.localeCompare(b.voice));
+  return [...hits, { voice, beat, artic, ...(midi != null ? { midi } : {}) }]
+    .sort((a, b) => a.beat - b.beat || a.voice.localeCompare(b.voice));
 }
 
 /** Cycle articulation for an existing hit (normal → ghost → accent → remove). */
@@ -278,7 +294,7 @@ export function cycleDrumArtic(hits: DrumHit[], voice: DrumVoiceId, beat: number
   const next: DrumArtic | 'off' =
     cur === 'normal' ? 'ghost' : cur === 'ghost' ? 'accent' : 'off';
   if (next === 'off') return hits.filter((_, j) => j !== i);
-  return hits.map((h, j) => (j === i ? { ...h, artic: next } : h));
+  return hits.map((h, j) => (j === i ? { ...h, artic: next, midi: h.midi } : h));
 }
 
 /** Clone hits into a fresh array (immutable edits). */
