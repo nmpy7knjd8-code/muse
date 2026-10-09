@@ -6,22 +6,17 @@ import {
   DrumArtic, DrumHit, DrumKitId, DrumVoiceId,
   cycleDrumArtic, defaultMidiForVoice, drumRoleHint, drumTabAscii, drumTuningForKey, drumVel,
   keyName, noteName, spellInKey, toggleDrumHit, voiceTuneLabel,
-  coachDrumBar, type DrumKeyTuning, type DrumTensionState, type Key, type PartMeter,
+  type DrumKeyTuning, type Key,
 } from '../core';
-import { DrumTensionStrip } from './DrumTensionStrip';
 
 interface Props {
   hits: DrumHit[];
   beats: number;
   subdiv: 1 | 2 | 4;
-  meter: PartMeter;
   /** Session key — pitched kit voices pair to this mode. */
   keyInfo: Key;
   /** Sound character — independent of the written groove (mix & match). */
   kit?: DrumKitId;
-  prevHits?: DrumHit[];
-  progression?: DrumTensionState | null;
-  barIndex?: number;
   playBeat?: number | null;
   onChange: (hits: DrumHit[]) => void;
   onPreview: (voice: DrumVoiceId, artic?: DrumArtic, midi?: number) => void;
@@ -113,13 +108,12 @@ function KeyToneStrip({
 }
 
 export function DrumPad({
-  hits, beats, subdiv, meter, keyInfo, kit = DEFAULT_DRUM_KIT, prevHits, progression, barIndex = 0, playBeat,
+  hits, beats, subdiv, keyInfo, kit = DEFAULT_DRUM_KIT, playBeat,
   onChange, onPreview, onLoadPattern, onChooseKit, onPreviewTone,
 }: Props): ReactNode {
   const step = 1 / subdiv;
   const cols = Math.round(beats * subdiv);
   const ascii = drumTabAscii(hits, beats, subdiv, GRID_VOICES.filter((v) => hits.some((h) => h.voice === v)));
-  const coach = coachDrumBar(hits, meter, prevHits);
   const tuning = drumTuningForKey(keyInfo);
   const kitMeta = DRUM_KITS.find((k) => k.id === kit) ?? DRUM_KITS[0]!;
 
@@ -145,8 +139,6 @@ export function DrumPad({
         onPreviewVoice={(voice, midi) => onPreview(voice, 'normal', midi)}
         onPreviewTone={onPreviewTone}
       />
-
-      <DrumTensionStrip coach={coach} progression={progression} selectedBar={barIndex} />
 
       <div className="drum-kits" role="radiogroup" aria-label="Drum kit sound">
         <div className="drum-kits-head">

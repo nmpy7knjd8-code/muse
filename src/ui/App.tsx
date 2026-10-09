@@ -17,7 +17,7 @@ import {
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
   type ChordBridge, activeAt, type TimelineEvents,
-  type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById, progressionDrumTension,
+  type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
 } from '../core';
 import { applyKeyTuning } from './DrumPad';
@@ -343,10 +343,6 @@ function Composer({ data }: { data: LoadedData }) {
     }
     return slots.length - 1;
   }, [slots.length, tensionPick, chordedSlotIndices]);
-  const drumTension = useMemo(() => {
-    if (!slots.some((s) => slotDrums(s).length)) return null;
-    return progressionDrumTension(slots.map((s) => slotDrums(s)), drumMeter);
-  }, [slots, drumMeter]);
   const tensionMelodyNotes: TensionMelNote[][] = useMemo(
     () => slots.filter((s) => s.chord).map((s) => {
       const out: TensionMelNote[] = [];
@@ -2063,12 +2059,8 @@ function Composer({ data }: { data: LoadedData }) {
             hits={slotDrums(slots[drumEditIndex] ?? { chord: null, notes: [] })}
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
-            meter={drumMeter}
             keyInfo={k}
             kit={drumKit}
-            prevHits={drumEditIndex > 0 ? slotDrums(slots[drumEditIndex - 1]!) : undefined}
-            progression={drumTension}
-            barIndex={drumEditIndex}
             playBeat={playActive && transport
               ? (playActive.drums[0]
                 ? playActive.drums[0]!.beat
