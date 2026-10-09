@@ -1,13 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DRUM_PATTERNS, cycleDrumArtic, defaultPartMeters, drumPatternById, drumTabAscii,
-  drumVel, parseChord, setSlotChord, setSlotDrums, slotDrums, timelineEvents, toggleDrumHit,
+  DEFAULT_DRUM_KIT, DRUM_KITS, DRUM_PATTERNS, cycleDrumArtic, defaultPartMeters,
+  drumKitById, drumPatternById, drumTabAscii, drumVel, isDrumKitId, parseChord,
+  setSlotChord, setSlotDrums, slotDrums, timelineEvents, toggleDrumHit,
   activeAt, normalizeArtists,
 } from '../src/core';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('drum kit & patterns', () => {
+  it('ships mixable kit sound presets', () => {
+    expect(DRUM_KITS.map((k) => k.id)).toEqual(['acoustic', 'electronic', 'fusion']);
+    expect(DEFAULT_DRUM_KIT).toBe('acoustic');
+    expect(isDrumKitId('fusion')).toBe(true);
+    expect(isDrumKitId('trap')).toBe(false);
+    expect(drumKitById('electronic')?.tags).toContain('electronic');
+  });
+
+  it('ships rock + electro/fusion grooves alongside teaching cells', () => {
+    expect(DRUM_PATTERNS.length).toBeGreaterThanOrEqual(12);
+    const garage = drumPatternById('garage-rock')!;
+    expect(garage.tags).toContain('rock');
+    expect(garage.hits.some((h) => h.voice === 'HO')).toBe(true);
+
+    const drive = drumPatternById('rock-drive-16')!;
+    expect(drive.subdiv).toBe(4);
+    expect(drive.hits.filter((h) => h.voice === 'HH').length).toBeGreaterThanOrEqual(12);
+
+    const electro = drumPatternById('electro-broken')!;
+    expect(electro.hits.some((h) => h.voice === 'BDp')).toBe(true);
+    expect(electro.tags).toContain('broken-beat');
+
+    const fusion = drumPatternById('fusion-ride-weird')!;
+    expect(fusion.hits.some((h) => h.voice === 'Rd')).toBe(true);
+    expect(fusion.hits.some((h) => h.voice === 'Rb')).toBe(true);
+    expect(fusion.tags).toContain('weird');
+  });
+
   it('ships starter grooves with simultaneous-capable hits', () => {
     expect(DRUM_PATTERNS.length).toBeGreaterThanOrEqual(6);
     const rock = drumPatternById('backbeat-rock')!;
