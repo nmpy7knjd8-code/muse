@@ -7,6 +7,12 @@ import type { TimelineEvents } from './timeline';
  */
 export const LOOP_PRE_SCHEDULE_SEC = 0.08;
 
+/**
+ * Extra cushion beyond one full period so a slow React/rAF frame on mobile
+ * can’t leave the AudioContext queue empty at the seam.
+ */
+export const LOOP_LOOKAHEAD_SEC = 0.25;
+
 /** Exact audio-clock origin of the next loop cycle (zero-gap seam). */
 export function nextLoopOrigin(origin: number, period: number): number {
   return origin + period;
@@ -15,6 +21,30 @@ export function nextLoopOrigin(origin: number, period: number): number {
 /** True when elapsed time is close enough to the seam that the next cycle should already be scheduled. */
 export function shouldPrimeLoop(elapsed: number, period: number, lead = LOOP_PRE_SCHEDULE_SEC): boolean {
   return period > 1e-6 && elapsed >= period - lead;
+}
+
+/**
+ * Cycle start times that still need to be queued so the schedule stays ahead of `now`.
+ * Always keeps at least one full period (+ cushion) in the queue — critical for drum loops.
+ * `nextOrigin` is the first not-yet-scheduled cycle; returns at most `maxCycles` origins.
+ */
+export function loopOriginsToPrime(
+  nextOrigin: number,
+  period: number,
+  now: number,
+  lookahead = LOOP_LOOKAHEAD_SEC,
+  maxCycles = 8,
+): number[] {
+  if (period <= 1e-6 || maxCycles <= 0) return [];
+  // ≥ one period ahead so the upcoming seam is already fully scheduled.
+  const until = now + period + Math.max(lookahead, LOOP_PRE_SCHEDULE_SEC);
+  const out: number[] = [];
+  let o = nextOrigin;
+  for (let i = 0; i < maxCycles && o < until; i++) {
+    out.push(o);
+    o += period;
+  }
+  return out;
 }
 
 /** Playhead seconds within a looping period (never negative). */

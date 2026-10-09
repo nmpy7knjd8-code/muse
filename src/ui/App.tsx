@@ -17,7 +17,7 @@ import {
   beatsPerBar, parseMeter, defaultPartMeters, timeSigEqual,
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
-  type ChordBridge, activeAt, nextLoopOrigin, shouldPrimeLoop, type TimelineEvents,
+  type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
 } from '../core';
@@ -217,9 +217,14 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const loopPlayRef = useRef(loopPlay);
   loopPlayRef.current = loopPlay;
-  /** Absolute AudioContext time through which loop cycles are already queued (zero-gap seams). */
-  const primedThroughRef = useRef(0);
+  /**
+   * Next loop-cycle origin still to queue on the audio clock.
+   * Priming stays ahead of `audioTime()` so seams never wait on React/rAF.
+   */
+  const nextPrimeOriginRef = useRef(0);
   const schedulePassRef = useRef<(origin: number) => void>(() => {});
+  /** Fixed audio-clock origin for the current ▶ Play / Loop groove (does not advance each cycle). */
+  const playOriginRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const barRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
@@ -627,10 +632,19 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const stopPlayback = () => {
     synth.stopAll();
-    primedThroughRef.current = 0;
+    nextPrimeOriginRef.current = 0;
+    playOriginRef.current = 0;
     setTransport(null);
     setPlaySec(0);
     setPlayMode(null);
+  };
+  /** Queue every cycle still needed so the audio thread stays ahead of the playhead. */
+  const primeLoopAhead = (now: number, period: number) => {
+    if (period <= 0) return;
+    for (const o of loopOriginsToPrime(nextPrimeOriginRef.current, period, now)) {
+      schedulePassRef.current(o);
+      nextPrimeOriginRef.current = nextLoopOrigin(o, period);
+    }
   };
   const playAll = () => {
     synth.unlock();
@@ -673,13 +687,12 @@ function Composer({ data }: { data: LoadedData }) {
     };
     schedulePassRef.current = schedulePass;
     const origin = synth.scheduleOrigin();
+    playOriginRef.current = origin;
     schedulePass(origin);
-    // With Loop on, prime the next cycle immediately so the seam has zero lag.
+    nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
+    // With Loop on, keep ≥1 extra cycle in the AudioContext queue before the first seam.
     if (loopPlayRef.current && ev.total > 0) {
-      schedulePass(nextLoopOrigin(origin, ev.total));
-      primedThroughRef.current = origin + 2 * ev.total;
-    } else {
-      primedThroughRef.current = origin + ev.total;
+      primeLoopAhead(synth.audioTime() ?? origin, ev.total);
     }
     setPlayMode('timeline');
     setTransport({ origin, events: ev });
@@ -704,15 +717,12 @@ function Composer({ data }: { data: LoadedData }) {
     };
     schedulePassRef.current = schedulePass;
     const origin = synth.scheduleOrigin();
+    playOriginRef.current = origin;
     schedulePass(origin);
-    if (ev.total > 0) {
-      schedulePass(nextLoopOrigin(origin, ev.total));
-      primedThroughRef.current = origin + 2 * ev.total;
-    } else {
-      primedThroughRef.current = origin;
-    }
-    // Groove practice always loops; keep the Loop control in sync.
+    nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
+    // Groove practice always loops; keep the Loop control in sync and prime ahead of the seam.
     if (!loopPlayRef.current) chooseLoop(true);
+    if (ev.total > 0) primeLoopAhead(synth.audioTime() ?? origin, ev.total);
     setPlayMode('groove');
     setTransport({ origin, events: ev });
     setPlaySec(0);
@@ -726,50 +736,32 @@ function Composer({ data }: { data: LoadedData }) {
     else playGrooveLoop();
   };
 
-  // If Loop is turned on mid-play, prime the next cycle so the upcoming seam stays gapless.
+  // If Loop is turned on mid-play, catch the queue up immediately (rAF also primes each frame).
   useEffect(() => {
     if (!transport || !loopPlay) return;
     const period = transport.events.total;
     if (period <= 0) return;
-    if (primedThroughRef.current < transport.origin + 2 * period - 1e-9) {
-      schedulePassRef.current(nextLoopOrigin(transport.origin, period));
-      primedThroughRef.current = transport.origin + 2 * period;
-    }
+    primeLoopAhead(synth.audioTime() ?? playOriginRef.current, period);
   }, [loopPlay, transport]);
 
-  // Drive playhead from the audio clock; scroll the timeline to the sounding bar.
-  // Loop advances the origin at the exact seam; the next cycle’s notes were primed earlier.
+  // Drive playhead from the audio clock. Origin stays fixed; playhead wraps each period.
+  // Loop cycles are primed continuously against the audio clock (not via React state at the seam).
   useEffect(() => {
     if (!transport) return;
     let raf = 0;
+    const period = transport.events.total;
     const tick = () => {
       const now = synth.audioTime();
       if (now === null) {
         raf = requestAnimationFrame(tick);
         return;
       }
-      const elapsed = now - transport.origin;
-      const period = transport.events.total;
+      const elapsed = now - playOriginRef.current;
       // Groove practice always loops; timeline respects the Loop toggle.
       const looping = playModeRef.current === 'groove' || loopPlayRef.current;
       if (looping && period > 0) {
-        if (elapsed >= period) {
-          const next = nextLoopOrigin(transport.origin, period);
-          // Queue the cycle after the one that’s about to start (already primed through next+period).
-          if (primedThroughRef.current < next + period - 1e-9) {
-            schedulePassRef.current(nextLoopOrigin(next, period));
-            primedThroughRef.current = next + 2 * period;
-          }
-          setTransport({ origin: next, events: transport.events });
-          setPlaySec(Math.max(0, now - next));
-          return;
-        }
-        // Safety prime if somehow behind (e.g. Loop toggled on mid-play).
-        if (shouldPrimeLoop(elapsed, period) && primedThroughRef.current < transport.origin + 2 * period - 1e-9) {
-          schedulePassRef.current(nextLoopOrigin(transport.origin, period));
-          primedThroughRef.current = transport.origin + 2 * period;
-        }
-        setPlaySec(elapsed);
+        primeLoopAhead(now, period);
+        setPlaySec(loopPlayhead(elapsed, period));
         raf = requestAnimationFrame(tick);
         return;
       }
@@ -860,7 +852,15 @@ function Composer({ data }: { data: LoadedData }) {
     });
   };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
-  const clearAll = () => { stopPlayback(); synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
+  const clearAll = () => {
+    // Always kill Play / Loop groove first so cleared notes can’t keep sounding.
+    stopPlayback();
+    synth.unlock();
+    snapshot();
+    setSlots((s) => s.filter((x) => x.locked));
+    setMeterNote(null);
+    setSelectedId(null);
+  };
   const addNote = (m: number) => {
     synth.unlock();
     synth.playNotes([fitMidi(m)], { dur: 0.6, instrument: melodyInst });
