@@ -17,8 +17,8 @@ import {
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
   type ChordBridge, activeAt, nextLoopOrigin, shouldPrimeLoop, type TimelineEvents,
-  type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById, progressionDrumTension,
-  drumTuningForKey, defaultMidiForVoice,
+  type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
+  drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
 } from '../core';
 import { applyKeyTuning } from './DrumPad';
 import { loadData, type LoadedData } from './data';
@@ -192,6 +192,8 @@ function Composer({ data }: { data: LoadedData }) {
   const openTutorial = () => { setDrawer(null); setTutorialOpen(true); };
   /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
   const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
+  const transportRef = useRef(transport);
+  transportRef.current = transport;
   const [playSec, setPlaySec] = useState(0);
   /** Loop ▶ Play when the timeline ends (default on). */
   const [loopPlay, setLoopPlay] = useState(() => {
@@ -343,10 +345,6 @@ function Composer({ data }: { data: LoadedData }) {
     }
     return slots.length - 1;
   }, [slots.length, tensionPick, chordedSlotIndices]);
-  const drumTension = useMemo(() => {
-    if (!slots.some((s) => slotDrums(s).length)) return null;
-    return progressionDrumTension(slots.map((s) => slotDrums(s)), drumMeter);
-  }, [slots, drumMeter]);
   const tensionMelodyNotes: TensionMelNote[][] = useMemo(
     () => slots.filter((s) => s.chord).map((s) => {
       const out: TensionMelNote[] = [];
@@ -442,6 +440,24 @@ function Composer({ data }: { data: LoadedData }) {
     } catch { /* private mode */ }
     return 'off';
   });
+  const [drumKit, setDrumKit] = useState<DrumKitId>(() => {
+    try {
+      const v = localStorage.getItem('muse.drumKit');
+      if (v && isDrumKitId(v)) return v;
+    } catch { /* private mode */ }
+    return synth.drumKit || DEFAULT_DRUM_KIT;
+  });
+  const chooseDrumKit = (id: DrumKitId) => {
+    setDrumKit(id);
+    synth.unlock();
+    synth.setDrumKit(id);
+    // Quick A/B of the kit colour: kick + snare + hat stack.
+    const tune = drumTuningForKey(k);
+    synth.playDrum('BD', { vel: 0.9, artic: 'accent', midi: defaultMidiForVoice('BD', tune) });
+    synth.playDrum('SD', { at: 0.12, vel: 0.85, artic: 'accent' });
+    synth.playDrum('HH', { at: 0.12, vel: 0.55 });
+    flash(`Kit · ${id}`);
+  };
   const activeParts = useMemo(() => {
     const ids: InstrumentId[] = [chordInst, melodyInst];
     if (bassInst !== 'off') ids.push(bassInst);
@@ -463,6 +479,12 @@ function Composer({ data }: { data: LoadedData }) {
   const persistPart = (key: string, id: InstrumentId | 'off') => {
     try { localStorage.setItem(key, id); } catch { /* private mode */ }
   };
+  // While ▶ Play / Loop is running, only mute pitched parts so the drum groove keeps going
+  // (auditioning or adding a chord must not call stopAll and kill the kit).
+  const silenceForPreview = () => {
+    if (transportRef.current) synth.stopTonal();
+    else synth.stopAll();
+  };
   const previewPart = (id: InstrumentId, part: 'chords' | 'melody' | 'bass') => {
     synth.unlock();
     synth.setInstrument(id); // reverb send follows last previewed part
@@ -470,12 +492,12 @@ function Composer({ data }: { data: LoadedData }) {
     const demo = cur ?? diatonicChords(k)[0];
     if (part === 'melody') {
       const m = fitMidiToInstrument(60, INSTRUMENTS[id]);
-      void synth.ensureLoaded(id).then(() => { synth.stopAll(); synth.playNotes([m], { dur: 0.7, instrument: id }); });
+      void synth.ensureLoaded(id).then(() => { silenceForPreview(); synth.playNotes([m], { dur: 0.7, instrument: id }); });
       return;
     }
     if (part === 'bass') {
       void synth.ensureLoaded(id).then(() => {
-        synth.stopAll();
+        silenceForPreview();
         synth.playNotes([bassLineMidi(demo, INSTRUMENTS[id])], { dur: 1.0, instrument: id });
       });
       return;
@@ -485,7 +507,7 @@ function Composer({ data }: { data: LoadedData }) {
     else if (def.voicing === 'bass') setVisTab('circle');
     else setVisTab('piano');
     void synth.ensureLoaded(id).then(() => {
-      synth.stopAll();
+      silenceForPreview();
       synth.playNotes(chordMidis(demo, pianoVoicing(demo), def, { omitBass: bassInst !== 'off' }), { dur: 1.2, instrument: id });
     });
   };
@@ -544,13 +566,13 @@ function Composer({ data }: { data: LoadedData }) {
   // Hear policy (going forward): preview ONLY the candidate next chord/note — never previous → next.
   const playChord = (c: Chord, prev?: number[]) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     playChordParts(c, pianoVoicing(c, prev));
   };
   const playMove = (s: ChordSuggestion) => {
     // Exception: when harmonizing a pending N.C. bar, overlay that bar's melody under the candidate chord.
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     if (pendingHarm?.notes.length) {
       const prev = harmPreviewEvents(pendingHarm.notes, { timeSig, beatSec });
       playChordParts(s.chord, s.voicing, { dur: prev.chordDur, vel: 0.62 });
@@ -576,7 +598,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playNoteMove = (n: NoteSuggestion) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     if (tab === 'bass') {
       const id = bassInst === 'off' ? 'bass' : bassInst;
       synth.playNotes([fitMidi(n.midi, id)], { dur: 0.7, vel: 0.92, instrument: id });
@@ -586,7 +608,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playBridge = (b: ChordBridge) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     void synth.ensureLoaded(chordInst);
     const from = slots[b.fromIndex]?.chord;
     const to = slots[b.toIndex]?.chord;
@@ -830,7 +852,7 @@ function Composer({ data }: { data: LoadedData }) {
     flash('Rest');
   };
   const playChordSequence = (cs: Chord[], step = 0.8, dur = 0.75) => {
-    synth.stopAll();
+    silenceForPreview();
     const voiced = voiceProgression(cs);
     cs.forEach((c, i) => playChordParts(c, voiced[i], {
       at: i * step, dur, vel: i === cs.length - 1 ? 0.78 : 0.7,
@@ -838,7 +860,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playChordPath = (p: ChordPath) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     const voiced = voiceProgression([...chords, ...p.chords]);
     const base = chords.length;
     const step = beatSec * 2.14;
@@ -868,7 +890,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const playNotePath = (p: NotePath) => {
     synth.unlock();
-    synth.stopAll();
+    silenceForPreview();
     const noteStep = Math.max(0.22, beatSec * 1.05);
     const under = tab === 'bass' ? bassChord : noteChord;
     if (under) {
@@ -1222,6 +1244,11 @@ function Composer({ data }: { data: LoadedData }) {
       <div className="ghead">
         Best fit first
         {moodFilterLabel ? <span className="ghead-mood" title="Active mood filter"> · {moodFilterLabel}</span> : null}
+        {tab === 'chords' && (chordSugs as ChordSuggestion[]).some((s) => s.breathe) ? (
+          <span className="ghead-breathe" title="Some cards are grounding options — less of the requested mood, better place to land">
+            {' '}· breathe chips ground tense moods
+          </span>
+        ) : null}
       </div>
       {ranked.map((s, i) => {
         const isChord = 'chord' in s;
@@ -1250,6 +1277,9 @@ function Composer({ data }: { data: LoadedData }) {
                 {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
                 {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
                 {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
+                {cs?.breathe && (
+                  <span className="breathe" title="Grounding option — sounds good, less of the requested mood. A place to breathe.">breathe</span>
+                )}
                 {cs?.harmony && <span className="fit" title="melody fit">{Math.round(((cs.harmony.fit + 1) / 2) * 100)}% melody</span>}
                 {ns?.relation && (
                   <span className="reltag" style={{ borderColor: REL_COLORS[ns.relation.kind], color: REL_COLORS[ns.relation.kind] }}>
@@ -2071,11 +2101,8 @@ function Composer({ data }: { data: LoadedData }) {
             hits={slotDrums(slots[drumEditIndex] ?? { chord: null, notes: [] })}
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
-            meter={drumMeter}
             keyInfo={k}
-            prevHits={drumEditIndex > 0 ? slotDrums(slots[drumEditIndex - 1]!) : undefined}
-            progression={drumTension}
-            barIndex={drumEditIndex}
+            kit={drumKit}
             playBeat={playActive && transport
               ? (playActive.drums[0]
                 ? playActive.drums[0]!.beat
@@ -2084,6 +2111,7 @@ function Composer({ data }: { data: LoadedData }) {
             onChange={(hits) => writeDrums(hits, drumEditIndex)}
             onPreview={previewDrum}
             onLoadPattern={loadDrumPattern}
+            onChooseKit={chooseDrumKit}
             onPreviewTone={previewDrumTone}
           />
         )}

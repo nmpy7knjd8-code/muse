@@ -76,6 +76,35 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     expect(top(myst)).toBeGreaterThan(top(base));
     expect(top(myst)).toBeGreaterThanOrEqual(2);
   });
+  it('under a tense mood, surfaces grounding breathe options without burying mood hits', () => {
+    const omin = eng.suggestChords({
+      key: key('C'),
+      progression: prog('C Am F'),
+      targetMoods: ['ominous'],
+      adventure: 0.4,
+      limit: 20,
+    });
+    const calm = eng.suggestChords({
+      key: key('C'),
+      progression: prog('C Am F'),
+      targetMoods: ['peaceful', 'warm'],
+      adventure: 0.35,
+      limit: 20,
+    });
+    const breaths = omin.filter((x) => x.breathe);
+    expect(breaths.length).toBeGreaterThanOrEqual(1);
+    expect(breaths.length).toBeLessThanOrEqual(3);
+    expect(breaths.some((x) => /breathe/i.test(x.why))).toBe(true);
+    expect(omin.slice(0, 10).some((x) => x.breathe)).toBe(true);
+    // Calm moods should not invent breathe chips.
+    expect(calm.some((x) => x.breathe)).toBe(false);
+    // When the KB carries ominous tags, mood hits stay ahead of breathe injects.
+    const hasMoodSignal = omin.some((x) => x.moodMatch > 0.35);
+    if (hasMoodSignal) {
+      expect(omin.slice(0, 3).every((x) => x.breathe)).toBe(false);
+      expect(omin.slice(0, 10).some((x) => !x.breathe && x.moodMatch > 0.35)).toBe(true);
+    }
+  });
   it('the adventure slider promotes unusual moves', () => {
     const safe = eng.suggestChords({ key: key('C'), progression: prog('C F'), adventure: 0 });
     const wild = eng.suggestChords({ key: key('C'), progression: prog('C F'), adventure: 1 });
@@ -122,6 +151,9 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     const s = eng.suggestChords({ key: key('C'), progression: prog('C F G'), adventure: 0, limit: 8 });
     expect(s[0].id).toBe('C');
     expect(s[0].why.toLowerCase()).toMatch(/cadence/);
+    // Sequence-aware: names the path and the V→I move, not just a mood tag.
+    expect(s[0].why).toMatch(/After .*G/);
+    expect(s[0].why).toMatch(/V→I|cadence home/);
   });
   it('after a predominant, lifts the dominant toward the top', () => {
     const s = eng.suggestChords({ key: key('C'), progression: prog('C Dm'), adventure: 0.2, limit: 10 });
@@ -129,11 +161,23 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     expect(dom).toBeGreaterThanOrEqual(0);
     expect(dom).toBeLessThan(4);
     expect(s[dom]!.why.toLowerCase()).toMatch(/dominant|fifth|v\b|toward/);
+    expect(s[dom]!.why).toMatch(/After .*Dm|From Dm/);
   });
   it('recognises the pop I–V–vi → IV continuation', () => {
     const s = eng.suggestChords({ key: key('C'), progression: prog('C G Am'), adventure: 0.25, limit: 10 });
     expect(s[0].id === 'F' || s[0].id === 'Fmaj7').toBe(true);
-    expect(s[0].why.toLowerCase()).toMatch(/common continuation|iv\b|subdominant|in this key/);
+    expect(s[0].why.toLowerCase()).toMatch(/axis|common continuation|iv\b|after/);
+    expect(s[0].why).toMatch(/After C–G–Am|After .*Am/);
+  });
+  it('explains suggestions via the previous sequence, not mood-only labels', () => {
+    const s = eng.suggestChords({ key: key('C'), progression: prog('C Am F'), adventure: 0.25, limit: 8 });
+    for (const x of s.slice(0, 5)) {
+      expect(x.why).toMatch(/After C–Am–F|After Am–F|From F/);
+      // Must mention a functional / root move, not only a mood word.
+      expect(x.why).toMatch(/→|falling fifth|common tones|resolves|cadence|dominant|axis|relative|parallel/);
+    }
+    const g = s.find((x) => x.id === 'G' || x.id === 'G7');
+    if (g) expect(g.why.toLowerCase()).toMatch(/dominant|opens the cadence|falling fifth|iv→v|→v\b/);
   });
   it('from the tonic, ranks V/V among early secondary options', () => {
     const s = eng.suggestChords({ key: key('C'), progression: prog('C'), adventure: 0.35, limit: 20 });

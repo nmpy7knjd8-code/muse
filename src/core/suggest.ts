@@ -52,6 +52,13 @@ export interface ChordSuggestion {
   tension: CandidateTension | null;
   /** when harmonizing melody notes: fit (−1..1) and each note's relation to this chord */
   harmony: { fit: number; relations: NoteRelation[] } | null;
+  /**
+   * Under a tense mood (ominous, etc.): grounding/release option that sounds good
+   * but is not strongly mood-aligned. Soft-lifted into Best fit with a light UI chip.
+   */
+  breathe?: boolean;
+  /** Internal 0..~1.5 quality used to pick breathe options. */
+  breatheScore?: number;
 }
 
 export interface NoteSuggestion {
@@ -283,6 +290,63 @@ function moodContrast(list: { score: number; moodMatch: number }[], gain = MOOD_
   for (const x of list) x.score += gain * 0.6 * ((x.moodMatch - lo) / (hi - lo) - 0.5);
 }
 
+/** Mood-target tension at/above this → surface grounding “breathe” options. HEURISTIC. */
+const BREATHE_TENSION_GATE = 0.65;
+/**
+ * How well a candidate grounds / releases under a tense mood request.
+ * Favours stability, cadence, debt paydown — not mood match. HEURISTIC.
+ */
+function breatheQuality(opts: {
+  features: MoodDimensions;
+  tension: CandidateTension | null;
+  cadence: number;
+  resolveSec: number;
+  tonicHome: boolean;
+  relativeCalm: boolean;
+  diatonic: boolean;
+}): number {
+  let q = 0.3 * (opts.features.stability ?? 0) + 0.22 * (1 - (opts.features.tension ?? 0.5));
+  if (opts.tension) {
+    q += 0.35 * Math.max(0, opts.tension.adjust) + 0.22 * opts.tension.release;
+  }
+  q += Math.max(0, opts.cadence) * 0.55 + Math.max(0, opts.resolveSec) * 0.35;
+  if (opts.tonicHome) q += 0.28;
+  if (opts.relativeCalm) q += 0.14;
+  if (opts.diatonic) q += 0.1;
+  return q;
+}
+
+/**
+ * Under a high-tension mood, keep the mood-ranked top intact, then inject up to 3
+ * grounding “breathe” chords (marked for a light UI chip) so the list has somewhere to land.
+ */
+function injectBreatheOptions(out: ChordSuggestion[], moodTension: number | null, limit: number): ChordSuggestion[] {
+  out.sort((a, b) => b.score - a.score);
+  if (moodTension == null || moodTension < BREATHE_TENSION_GATE || out.length < 4) {
+    return out.slice(0, limit);
+  }
+  const moodSorted = out.map((s) => s.moodMatch).sort((a, b) => a - b);
+  const moodMedian = moodSorted[Math.floor(moodSorted.length / 2)] ?? 0.5;
+  const topKeep = Math.min(3, out.length);
+  const top = out.slice(0, topKeep);
+  const topIds = new Set(top.map((s) => s.id));
+  const key = (s: ChordSuggestion) =>
+    (s.breatheScore ?? 0) - 0.45 * s.moodMatch + (s.diatonic ? 0.12 : 0);
+  const picks = out
+    .filter((s) => !topIds.has(s.id) && (s.breatheScore ?? 0) >= 0.28 && s.moodMatch <= moodMedian + 0.08)
+    .sort((a, b) => key(b) - key(a))
+    .slice(0, 3);
+  for (const s of picks) {
+    s.breathe = true;
+    if (!/^Breathe —/.test(s.why)) {
+      s.why = `Breathe — grounds the phrase without chasing the mood. ${s.why}`;
+    }
+  }
+  const pickIds = new Set(picks.map((s) => s.id));
+  const rest = out.filter((s) => !topIds.has(s.id) && !pickIds.has(s.id));
+  return [...top, ...picks, ...rest].slice(0, limit);
+}
+
 /** Soft identity for variety: same root + triad class (C ≈ Cmaj7 ≈ C6). */
 function chordFamilyId(c: Chord): string {
   return `${pc(c.root)}:${triadClass(c.quality)}`;
@@ -485,6 +549,107 @@ function stockProgressionBonus(prog: Chord[], chord: Chord, k: Key): number {
     if (a === 10 && b === 8 && c === 7) return 0.14;
   }
   return 0;
+}
+
+/** Last few chord symbols joined with en-dashes for “After C–Am–F …” blurbs. */
+function stretchLabel(prog: Chord[], max = 3): string {
+  return prog.slice(-max).map((c) => chordSymbol(c, true)).join('–');
+}
+
+/**
+ * Very brief how-this-continues-the-sequence line (not mood-of-chord labels).
+ * Mirrors note-suggestion stretch awareness: name the recent path, then the move.
+ */
+export function describeSequenceRelation(
+  prog: Chord[],
+  chord: Chord,
+  k: Key,
+  opts: {
+    roman: string;
+    cadence: number;
+    stock: number;
+    predDom: number;
+    prepareSec: number;
+    resolveSec: number;
+    fifths: number;
+    nrt: string | null;
+    commonTones: number;
+    withholdHome?: boolean;
+  },
+): string | null {
+  if (!prog.length) return null;
+  const cur = prog[prog.length - 1]!;
+  const fromRn = analyzeRoman(cur, k);
+  const from = fromRn.secondary ?? fromRn.text;
+  const to = opts.roman;
+  const after = prog.length >= 2 ? `After ${stretchLabel(prog)}` : `From ${chordSymbol(cur, true)}`;
+  const move = `${from}→${to}`;
+
+  if (opts.resolveSec >= 0.2) {
+    return `${after}, ${from} resolves into ${to}`;
+  }
+  if (opts.withholdHome && mod(pc(chord.root) - pc(k.tonic), 12) === 0 && opts.cadence < 0.26) {
+    return `${after}, keep building — ${move} is home too soon`;
+  }
+  if (opts.cadence >= 0.26) return `${after}, ${move} cadence home`;
+  if (opts.cadence >= 0.1) return `${after}, ${move} deceptive turn`;
+
+  if (opts.stock >= 0.12 && prog.length >= 2) {
+    const t = pc(k.tonic);
+    const a = mod(pc(prog[prog.length - 2]!.root) - t, 12);
+    const b = mod(pc(prog[prog.length - 1]!.root) - t, 12);
+    const c = mod(pc(chord.root) - t, 12);
+    const fam = MODE_BY_ID[k.mode].family;
+    if (a === 0 && b === 7 && c === 5) return `${after}, axis lands on ${to}`;
+    if (a === 0 && b === 9 && c === 7) return `${after}, ${move} opens the cadence`;
+    if (a === 9 && b === 5 && c === 7) return `${after}, ${move} — pop turn to the dominant`;
+    if (a === 9 && b === 5 && c === 0) return `${after}, ${move} returns through the axis`;
+    if (a === 2 && b === 7 && c === 0) return `${after}, ii–V lands on ${to}`;
+    if (fam === 'minor' && a === 0 && b === 10 && c === 8) return `${after}, Andalusian step to ${to}`;
+    if (fam === 'minor' && a === 10 && b === 8 && c === 7) return `${after}, cascade aims at ${to}`;
+    return `${after}, ${move} common continuation`;
+  }
+
+  if (opts.predDom >= 0.12) return `${after}, ${move} toward the dominant`;
+  if (opts.prepareSec >= 0.18) return `${after}, launches ${to} from ${from}`;
+  if (opts.fifths >= 0.16) return `${after}, falling fifth into ${to}`;
+
+  if (opts.nrt === 'R') return `${after}, ${move} relative slide`;
+  if (opts.nrt === 'P') return `${after}, ${move} parallel flip`;
+  if (opts.nrt === 'L') return `${after}, ${move} leading-tone slide`;
+  if (opts.nrt && opts.nrt.length === 2) return `${after}, ${move} via ${opts.nrt}`;
+
+  if (opts.commonTones >= 2) return `${after}, ${move} keeps ${opts.commonTones} common tones`;
+
+  const fromRole = degreeRoleSafe(fromRn.offset);
+  const toRole = degreeRoleSafe(analyzeRoman(chord, k).offset);
+  if (fromRole && toRole && fromRole !== toRole) {
+    return `${after}, ${move} (${fromRole} → ${toRole})`;
+  }
+  return `${after}, ${move}`;
+}
+
+function degreeRoleSafe(offset: number): string {
+  // offset is 0..11 pitch-class from tonic; map diatonic degrees roughly.
+  if (offset === 0) return 'tonic';
+  if (offset === 2) return 'predominant';
+  if (offset === 3 || offset === 4) return 'mediant';
+  if (offset === 5) return 'predominant';
+  if (offset === 7) return 'dominant';
+  if (offset === 8 || offset === 9) return 'relative';
+  if (offset === 10 || offset === 11) return 'dominant';
+  return '';
+}
+
+/** Mood-only KB blurbs we skip as support under a sequence headline. */
+function kbLooksLikeMoodTag(s: string): boolean {
+  return /^(feels|sounds|mood|colour|color|bright|dark|warm|cool|tense|calm|dreamy|mystical)\b/i.test(s.trim());
+}
+
+/** Keep supporting KB text short so the sequence line stays the readable lead. */
+function trimWhySupport(s: string): string {
+  const t = firstSentence(s);
+  return t.length > 90 ? `${t.slice(0, 87).trim()}…` : t;
 }
 
 /**
@@ -761,6 +926,11 @@ export class SuggestionEngine {
       const stock = stockHome ? stockRaw * 0.3 : stockRaw;
       const modal = modalColourBonus(chord, k);
       const guides = guideToneBonus(cur, chord, opts.tensionStyle);
+      const tonicHome = off === 0 && (plainTriad || chord.quality === 'maj7' || chord.quality === 'm7' || chord.quality === '6' || chord.quality === 'add9');
+      const relativeCalm = fam === 'major' && off === 9 && (chord.quality === 'min' || chord.quality === 'm7');
+      const breatheScore = breatheQuality({
+        features, tension, cadence, resolveSec, tonicHome, relativeCalm, diatonic: rn.diatonic,
+      });
       const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6
         + moodBonus + simplicity + startBias + variety + resolveSec + prepareSec + nrtBonus + fifths
         + cadence + predDom + bass + stock + modal + guides
@@ -768,20 +938,33 @@ export class SuggestionEngine {
         + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
       const top = allEv[0];
       const roman = rn.secondary ?? rn.text;
-      let why = top
+      // Lead with how this continues the written sequence (not mood-of-chord tags).
+      const seqWhy = describeSequenceRelation(prog, chord, k, {
+        roman,
+        cadence,
+        stock,
+        predDom,
+        prepareSec,
+        resolveSec,
+        fifths,
+        nrt,
+        commonTones: ct,
+        withholdHome: withholdHome
+          && !!tension?.reasons.includes('too early to resolve — keep the build going'),
+      });
+      const kbBit = top
         ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
         : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
-      if (tension?.reasons.includes('too early to resolve — keep the build going') && mod(pc(chord.root) - t, 12) === 0) {
-        why = `Keep the build going — ${why}`;
-      } else if (cadence >= 0.26) why = `Cadence home — ${why}`;
-      else if (cadence >= 0.1) why = `Deceptive turn — ${why}`;
-      else if (stock >= 0.18) why = `Common continuation — ${why}`;
-      else if (prepareSec >= 0.18) why = `Secondary setup — ${why}`;
-      else if (predDom >= 0.12) why = `Toward the dominant — ${why}`;
+      // Sequence relation is the headline; keep a short KB clause only when it adds a different angle.
+      let why = seqWhy
+        ? (kbBit && !kbLooksLikeMoodTag(kbBit) && !seqWhy.includes(firstSentence(kbBit).slice(0, 18))
+          ? `${seqWhy}. ${trimWhySupport(kbBit)}`
+          : seqWhy)
+        : kbBit;
       if (harmony) {
-        const n = harmony.relations.length, ct = harmony.relations.filter((r) => r.kind === 'chord').length;
+        const n = harmony.relations.length, hct = harmony.relations.filter((r) => r.kind === 'chord').length;
         const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
-        why = `Melody fit — ${harmony.relations.map((r) => r.label).join(' · ')}: ${ct}/${n} notes sit in the chord${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
+        why = `Melody fit — ${harmony.relations.map((r) => r.label).join(' · ')}: ${hct}/${n} notes sit in the chord${bad ? `, ${bad} rub${bad > 1 ? 's' : ''}` : ''}. ${why}`;
       }
       out.push({
         id: chordSymbol(chord),
@@ -807,11 +990,13 @@ export class SuggestionEngine {
         match: pm,
         tension,
         harmony,
+        breatheScore,
       });
     }
-    if (profile) moodContrast(out);
-    out.sort((x, y) => y.score - x.score);
-    return out.slice(0, opts.limit ?? 16);
+    const mt = profile ? moodTarget(profile) : null;
+    // Soften mood restacking slightly under high-tension requests (still mood-led).
+    if (profile) moodContrast(out, mt != null && mt >= BREATHE_TENSION_GATE ? MOOD_GAIN * 0.85 : MOOD_GAIN);
+    return injectBreatheOptions(out, mt, opts.limit ?? 16);
   }
 
   suggestNotes(opts: NoteSuggestOptions): NoteSuggestion[] {

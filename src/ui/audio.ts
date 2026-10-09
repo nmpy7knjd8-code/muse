@@ -2,7 +2,10 @@
 // velocity, humanized strums, a generated convolution reverb, and a compressor + limiter master bus.
 // Works on any BaseAudioContext, so the offline preview renderer uses exactly the same code.
 // Realtime use must be unlocked from a user gesture (iOS Safari autoplay rules).
-import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument, nearestSample, rng, sampleNotes, type DrumVoiceId } from '../core';
+import {
+  DEFAULT_DRUM_KIT, INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument,
+  nearestSample, rng, sampleNotes, type DrumKitId, type DrumVoiceId,
+} from '../core';
 import { drumBanks, scheduleDrumHit } from './drumKit';
 
 type AudioSessionNav = Navigator & { audioSession?: { type: string } };
@@ -159,7 +162,8 @@ function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number):
   return post;
 }
 
-interface Voice { stop(at: number): void; end: number }
+type VoiceKind = 'tonal' | 'drum';
+interface Voice { stop(at: number): void; end: number; kind: VoiceKind }
 
 export class AudioEngine {
   ctx: BaseAudioContext | null = null;
@@ -173,6 +177,8 @@ export class AudioEngine {
   private busyUntil = 0;
   private rand: () => number = Math.random;
   instrument: InstrumentId = 'piano';
+  /** Active drum kit sound character (mix & match with any groove pattern). */
+  drumKit: DrumKitId = DEFAULT_DRUM_KIT;
   unlocked = false;
 
   constructor(opts: { remember?: boolean; seed?: number } = {}) {
@@ -180,6 +186,8 @@ export class AudioEngine {
     if (opts.remember && typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY) as InstrumentId | null;
       if (saved && saved in INSTRUMENTS) this.instrument = saved;
+      const kit = localStorage.getItem('muse.drumKit');
+      if (kit === 'acoustic' || kit === 'electronic' || kit === 'fusion') this.drumKit = kit;
     }
     this.remember = !!opts.remember;
   }
@@ -253,6 +261,13 @@ export class AudioEngine {
     if (this.ctx) void this.ensureLoaded(id);
   }
 
+  /** Switch drum kit sound character without changing the written groove. */
+  setDrumKit(id: DrumKitId): void {
+    this.drumKit = id;
+    if (this.remember) try { localStorage.setItem('muse.drumKit', id); } catch { /* private mode */ }
+    this.emit();
+  }
+
   /** Lazy-load (fetch + decode) an instrument's samples; resolves when ready (or failed → synth fallback). */
   ensureLoaded(id: InstrumentId = this.instrument): Promise<void> {
     if (!this.ctx) return Promise.resolve();
@@ -322,6 +337,23 @@ export class AudioEngine {
     this.busyUntil = Math.min(this.busyUntil, performance.now() + 450);
   }
 
+  /**
+   * Stop pitched instruments (chords / melody / bass) but leave kit one-shots running.
+   * Used while ▶ Play / Loop is active so auditioning a chord doesn’t kill the drum groove.
+   */
+  stopTonal(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const keep: Voice[] = [];
+    for (const v of this.voices) {
+      if (v.kind === 'drum') keep.push(v);
+      else v.stop(t);
+    }
+    this.voices = keep;
+    // Drums may still be sounding; don’t collapse busyUntil as aggressively as stopAll.
+    if (!keep.length) this.busyUntil = Math.min(this.busyUntil, performance.now() + 450);
+  }
+
   private now() { return this.ctx ? this.ctx.currentTime + 0.03 : 0; }
 
   /** One note: sampled when the instrument is loaded, otherwise the fallback synth. */
@@ -368,7 +400,7 @@ export class AudioEngine {
       const stopAt = Math.min(natural, off + def.release * 6);
       src.start(start);
       src.stop(stopAt + 0.01);
-      v = { end: stopAt, stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ } } };
+      v = { end: stopAt, kind: 'tonal', stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ } } };
     } else {
       v = this.fallbackVoice(midi, start, vel, out, off, def);
     }
@@ -469,7 +501,15 @@ export class AudioEngine {
       end = off + def.release * 6;
     }
     oscs.forEach((o) => { o.start(start); o.stop(end); });
-    return { end, stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); oscs.forEach((o) => { try { o.stop(t + 0.3); } catch { /* ok */ } }); } };
+    return {
+      end,
+      kind: 'tonal',
+      stop: (t) => {
+        g.cancelScheduledValues(t);
+        g.setTargetAtTime(0, t, 0.04);
+        oscs.forEach((o) => { try { o.stop(t + 0.3); } catch { /* ok */ } });
+      },
+    };
   }
 
   /** Play notes together (a chord is strummed/rolled per instrument, with slight humanization). */
@@ -508,7 +548,7 @@ export class AudioEngine {
   playDrum(
     voice: DrumVoiceId,
     opts: {
-      at?: number; vel?: number; artic?: string; midi?: number; melodic?: boolean;
+      at?: number; vel?: number; artic?: string; midi?: number; melodic?: boolean; kit?: DrumKitId;
       /** Fixed schedule origin from `scheduleOrigin()` / loop seam — omit for pad taps. */
       origin?: number;
     } = {},
@@ -523,8 +563,9 @@ export class AudioEngine {
       artic: opts.artic,
       midi: opts.midi,
       melodic: opts.melodic,
+      kit: opts.kit ?? this.drumKit,
     });
-    this.voices.push({ end, stop });
+    this.voices.push({ end, stop, kind: 'drum' });
     this.markBusy(end);
   }
 }
