@@ -7,7 +7,7 @@ import { degreeLabel, intervalName, midiName, mod, pc, spell } from './notes';
 import { RomanNumeral, analyzeRoman, parseRoman } from './roman';
 import { Key, MODE_BY_ID, diatonicChords, inScale, keyName, spellInKey } from './scales';
 import { VoiceLine, commonTones, pianoVoicing, voiceLeading, voiceLeadingCost } from './voicing';
-import { neoRiemannianPath } from './relations';
+import { fifthsDistance, fifthsIndex, fifthsMovePlain, neoRiemannianPath } from './relations';
 import { NoteRelation, REL_FIT, beatWeight, melodyFit, noteRelation } from './noteRelation';
 import { TimeSig, strongBeats } from './meter';
 import { CandidateTension, TENSION_GAIN, TENSION_MAX, TensionSettings, TensionStyleId, candidateTension, moodTarget, progressionTension, tooEarlyToResolve } from './harmonyTension';
@@ -399,15 +399,124 @@ function nrtSmoothBonus(nrt: string | null): number {
   return 0;
 }
 
+/** True when root motion is a falling fifth (ascending perfect fourth on the circle). */
+function isFallingFifthRoot(from: Chord, to: Chord): boolean {
+  return mod(pc(to.root) - pc(from.root), 12) === 5;
+}
+
 /**
  * Descending-fifth / ascending-fourth root motion is the backbone of functional sequences.
  * Priors cover diatonic cases; a light bonus still helps chromatic / secondary chains. HEURISTIC.
  */
 function fallingFifthBonus(cur: Chord | undefined, chord: Chord): number {
   if (!cur) return 0;
-  const asc = mod(pc(chord.root) - pc(cur.root), 12);
-  if (asc === 5) return 0.16; // root up a fourth = falling fifth
+  return isFallingFifthRoot(cur, chord) ? 0.16 : 0;
+}
+
+/**
+ * How many consecutive falling-fifth links end at the last chord of `prog`
+ * (Am→Dm→G → 2). Advanced circle-of-fifths: sequences, not only the previous chord.
+ */
+function fallingFifthChainLength(prog: Chord[]): number {
+  let chain = 0;
+  for (let i = prog.length - 1; i >= 1; i--) {
+    if (!isFallingFifthRoot(prog[i - 1]!, prog[i]!)) break;
+    chain++;
+  }
+  return chain;
+}
+
+/**
+ * Reward continuing a falling-fifths chain across a recent stretch
+ * (e.g. Am→Dm→G → prefer C). Complements single-step fallingFifthBonus. HEURISTIC.
+ */
+function fallingFifthChainBonus(prog: Chord[], chord: Chord): number {
+  const chain = fallingFifthChainLength(prog);
+  if (chain < 1 || !prog.length) return 0;
+  if (!isFallingFifthRoot(prog[prog.length - 1]!, chord)) return 0;
+  if (chain === 1) return 0.14; // third link of a new sequence
+  if (chain === 2) return 0.22; // classic cycle-of-fifths landing
+  return 0.18;
+}
+
+/**
+ * Prefer roots near the CoF neighbourhood of the recent stretch (last ≤4).
+ * Uses circular mean of fifths-index so a sequence (not only the previous chord)
+ * defines the local area on the dial. HEURISTIC.
+ */
+function fifthsNeighbourhoodBonus(prog: Chord[], chord: Chord, adventure: number): number {
+  const window = prog.slice(-4);
+  if (window.length < 2) return 0;
+  let sx = 0;
+  let sy = 0;
+  for (const c of window) {
+    const ang = (fifthsIndex(pc(c.root)) / 12) * Math.PI * 2;
+    sx += Math.cos(ang);
+    sy += Math.sin(ang);
+  }
+  const meanIdx = mod(Math.round((Math.atan2(sy, sx) / (Math.PI * 2)) * 12), 12);
+  const candIdx = fifthsIndex(pc(chord.root));
+  const steps = Math.abs(mod(candIdx - meanIdx + 6, 12) - 6);
+  // Keep caps tiny so stock skeletons (I–V–vi→IV) and priors still lead.
+  if (steps <= 1) return 0.06;
+  if (steps <= 2) return 0.03;
+  if (steps >= 5 && adventure < 0.65) return -0.05;
   return 0;
+}
+
+/**
+ * Melody note vs circle of fifths: neighbours of the last note and of the arrival
+ * chord root feel close on the dial; opposite-side leaps feel unstable. HEURISTIC.
+ */
+function noteCircleBonus(
+  midiPc: number,
+  lastMidi: number | undefined,
+  chordRoot: number | null,
+  isChordTone: boolean,
+  scaleTone: boolean,
+): { quality: number; hint: string | null } {
+  let quality = 0;
+  let hint: string | null = null;
+  if (lastMidi !== undefined) {
+    const from = mod(lastMidi, 12);
+    const d = fifthsDistance(from, midiPc);
+    const ad = Math.abs(d);
+    if (ad === 1) {
+      quality += 0.14;
+      hint = fifthsMovePlain(from, midiPc).hint;
+    } else if (ad === 2) quality += 0.06;
+    else if (ad >= 5) quality -= 0.08;
+  }
+  if (chordRoot != null) {
+    const dRoot = Math.abs(fifthsDistance(chordRoot, midiPc));
+    if (dRoot === 0) quality += 0.08;
+    else if (dRoot === 1 && (isChordTone || scaleTone)) quality += 0.1;
+  }
+  return { quality, hint };
+}
+
+/**
+ * When the recent chord stretch is a falling-fifths chain, nudge melody toward the
+ * next expected root on the circle (and strengthen V→I when the chain earned it). HEURISTIC.
+ */
+function noteFallingFifthSequenceBonus(
+  stretch: Chord[],
+  midiPc: number,
+  scaleDegreeOff: number,
+  arrivalIsDominant: boolean,
+): { quality: number; anticipates: boolean } {
+  const chain = fallingFifthChainLength(stretch);
+  if (chain < 1 || !stretch.length) return { quality: 0, anticipates: false };
+  const arrival = stretch[stretch.length - 1]!;
+  const expectedNext = mod(pc(arrival.root) + 5, 12);
+  let quality = 0;
+  let anticipates = false;
+  if (midiPc === expectedNext) {
+    quality += chain >= 2 ? 0.18 : 0.12;
+    anticipates = true;
+  }
+  if (arrivalIsDominant && scaleDegreeOff === 0 && chain >= 2) quality += 0.12;
+  return { quality, anticipates };
 }
 
 /** Sounding bass PC (slash bass when present, else root). */
@@ -915,6 +1024,7 @@ export class SuggestionEngine {
       const prepareSec = secondaryPrepareBonus(cur, chord, k, a);
       const nrtBonus = nrtSmoothBonus(nrt);
       const fifths = fallingFifthBonus(cur, chord);
+      const fifthsChain = fallingFifthChainBonus(prog, chord);
       // Soft-gate authentic/deceptive cadences while the recent stretch is still building.
       const cadenceRaw = cadenceBonus(cur, chord, k, a);
       const cadence = withholdHome ? cadenceRaw * 0.28 : cadenceRaw;
@@ -924,6 +1034,10 @@ export class SuggestionEngine {
       // ii–V→I / vi–IV–I stock landings on tonic also wait until debt earns them.
       const stockHome = withholdHome && mod(pc(chord.root) - t, 12) === 0;
       const stock = stockHome ? stockRaw * 0.3 : stockRaw;
+      // Neighbourhood is a light CoF tint — skip when stock or a fifths step already names the move.
+      const fifthsHood = (stock >= 0.18 || fifths > 0 || fifthsChain > 0)
+        ? 0
+        : fifthsNeighbourhoodBonus(prog, chord, a);
       const modal = modalColourBonus(chord, k);
       const guides = guideToneBonus(cur, chord, opts.tensionStyle);
       const tonicHome = off === 0 && (plainTriad || chord.quality === 'maj7' || chord.quality === 'm7' || chord.quality === '6' || chord.quality === 'add9');
@@ -933,6 +1047,7 @@ export class SuggestionEngine {
       });
       const score = kbStrength * 0.8 + smooth + (1 - a) * commonness * 1.6 + a * (1 - commonness) * 1.6
         + moodBonus + simplicity + startBias + variety + resolveSec + prepareSec + nrtBonus + fifths
+        + fifthsChain + fifthsHood
         + cadence + predDom + bass + stock + modal + guides
         + (tension && prog.length ? TENSION_GAIN * tension.adjust : 0)
         + (harmony ? HARMONIZE_GAIN * harmony.fit : 0);
@@ -961,6 +1076,10 @@ export class SuggestionEngine {
           ? `${seqWhy}. ${trimWhySupport(kbBit)}`
           : seqWhy)
         : kbBit;
+      // Multi-chord falling-fifths story (CoF sequences) when that term drove the rank.
+      if (fifthsChain >= 0.14 && !/falling.?fifth/i.test(why)) {
+        why = `Falling-fifths chain — ${why}`;
+      }
       if (harmony) {
         const n = harmony.relations.length, hct = harmony.relations.filter((r) => r.kind === 'chord').length;
         const bad = harmony.relations.filter((r) => r.kind === 'clash' || r.kind === 'avoid').length;
@@ -1130,6 +1249,16 @@ export class SuggestionEngine {
           if ((penOff === 5 || penOff === 2) && chordSet.has(midiPc)) quality += 0.15;
         }
       }
+      // Circle of fifths: neighbours of the last note / arrival root; sequence chain lookahead.
+      const cof = noteCircleBonus(midiPc, last, chord ? pc(chord.root) : null, isChordTone, scaleTone);
+      quality += cof.quality;
+      const seqFifths = noteFallingFifthSequenceBonus(
+        stretch,
+        midiPc,
+        off,
+        !!(finalRn && finalRn.offset === 7),
+      );
+      quality += seqFifths.quality;
       // Primary fit signal: how the note sits on the under-chord (or in the key when no chord).
       // Resolutions are “fit” musically even when the arrival is not a chord tone of V.
       const fit = isResolution ? 0.95 : relation ? REL_FIT[relation.kind] : (scaleTone ? 0.4 : -0.25);
@@ -1176,6 +1305,8 @@ export class SuggestionEngine {
         else if (relation) bits.push(relation.kind === 'chord' ? 'sits in the chord' : relation.kind === 'tension' ? 'colour over the chord' : relation.kind === 'avoid' ? 'rubs if held' : 'clashes the chord');
       }
       if (stretchTxt && finalSym && isResolution) bits.push('resolves a tendency tone');
+      if (seqFifths.anticipates) bits.push('aims along the falling-fifths chain');
+      else if (cof.hint) bits.push(cof.hint);
       out.push({
         id: `n${midi}`,
         midi,

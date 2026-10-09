@@ -82,7 +82,7 @@ const SECTIONS: Section[] = [
     musicality: 'Melody that hugs chord tones on strong beats feels singable; colour notes and mild rubs create interest; clashes want resolution. That push–pull is melodic storytelling.',
     jump: 'melody',
     jumpLabel: 'Open Melody',
-    tip: 'Hear on a suggestion previews only the next note — not the whole line — so you judge the step itself.',
+    tip: 'Hear on a suggestion previews only the next note — not the whole line — so you judge the step itself. Circle-neighbour steps (and falling-fifths chain aims) show up in the why line.',
   },
   {
     id: 'bass',
@@ -179,8 +179,8 @@ const SECTIONS: Section[] = [
     toc: 'Circle',
     title: 'Circle of fifths',
     use: 'Big letters add a chord (or melody note on the Melody tab). Letter brightness follows next-pick ranking. Rim chips are Muse’s next picks — variants of the same root stack outward; each pill shows rank + a short quality. Tap a chip to hear. Same-root colour shows “same root” instead of a looping arrow. Ranked Best fit cards sit under the circle.',
-    musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable.',
-    tip: 'Under the timeline, set Chords / Melody / Bass instruments separately — ▶ Play layers them with Drums.',
+    musicality: 'Neighbors on the circle are close harmonic relatives. Clockwise often brightens and aims home (V side); counter-clockwise opens the door (IV side). Opposite = farthest / unstable. Best-fit chords reward falling-fifths chains across a recent stretch (not only the last chord) — e.g. Am→Dm→G pulling toward C. Next melody notes also prefer circle neighbours of the last pitch and of the arrival chord root, and can aim one link ahead on a falling-fifths sequence.',
+    tip: 'Watch letter brightness on Melody: rim picks that sit one step on the circle from your last note usually sing cleaner than opposite-side leaps.',
   },
   {
     id: 'tension',
