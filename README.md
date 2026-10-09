@@ -11,29 +11,25 @@ npm install
 npm run dev            # http://localhost:5173
 npm test               # vitest (core logic)
 npm run build          # tsc -b && vite build -> dist/
-npm run preview        # serves dist/ at http://0.0.0.0:4173/
+npm run preview        # serves dist/ at http://0.0.0.0:4173/muse/
 ```
 To use it on an iPhone, open the preview URL in Safari and choose Share → Add to Home Screen.
 Two features need **HTTPS** on a real device (localhost doesn't count): the service worker (offline use)
 and the microphone ("Hum it in"). Serve it through any static host or an HTTPS tunnel.
 
 ## Live
-**https://museio.io** — custom domain on GitHub Pages (see `public/CNAME`). Fallback while DNS
-propagates: https://nmpy7knjd8-code.github.io/muse/ (once the custom domain is active, GitHub
-usually redirects this to museio.io).
+https://nmpy7knjd8-code.github.io/muse/ — deployed by `.github/workflows/pages.yml` on every push to `main`
+(tests → build with `BASE_PATH=/<repo>/` → GitHub Pages). Production builds default to the `/muse/` base
+(see `vite.config.ts`; override with `BASE_PATH=/`). All runtime paths (data fetches, manifest, service
+worker) are relative to that base. Local `npm run preview` serves at http://localhost:4173/muse/.
 
-Deployed by `.github/workflows/pages.yml` on every push to `main` (tests → build with `BASE_PATH=/`
-→ Pages). All runtime paths are relative to that base.
-
-### Pointing DNS at GitHub Pages
-1. Buy/register **museio.io** at any registrar.
-2. Repo → **Settings → Pages → Custom domain** → enter `museio.io` → Save (enable HTTPS after DNS verifies).
-3. At the registrar, set apex **A** records for `museio.io` to:
-   - `185.199.108.153`
-   - `185.199.109.153`
-   - `185.199.110.153`
-   - `185.199.111.153`
-4. Optional: `www` **CNAME** → `nmpy7knjd8-code.github.io` (and add `www.museio.io` in Pages if you want both).
+### Optional: custom domain (museio.io)
+Do **not** switch `BASE_PATH` to `/` until the domain is registered, DNS A records point at GitHub Pages,
+and Settings → Pages → Custom domain shows `museio.io` verified with HTTPS. Switching early makes the
+`github.io/muse/` URL serve root-absolute `/assets/...` links that 404. When ready:
+1. Add `public/CNAME` containing `museio.io`
+2. Set Pages custom domain + apex A records (`185.199.108.153` … `185.199.111.153`)
+3. Change the workflow `BASE_PATH` to `/` (and `PAGES_BASE` in `vite.config.ts`)
 
 ## Features
 - Key/mode picker with auto key detection (from both chords and melody).

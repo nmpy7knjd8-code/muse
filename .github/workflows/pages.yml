@@ -25,11 +25,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Build (root base for custom domain museio.io)
+      - name: Build (base = /<repo>/)
         run: npm run build
         env:
-          # Apex custom domain serves at /. Use BASE_PATH=/muse/ only if dropping the custom domain.
-          BASE_PATH: /
+          # Project Pages URL is https://<user>.github.io/<repo>/. Use BASE_PATH=/ only after a
+          # verified custom domain (e.g. museio.io) is active in Settings → Pages.
+          BASE_PATH: /${{ github.event.repository.name }}/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

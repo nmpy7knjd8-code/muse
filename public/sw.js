@@ -2,7 +2,7 @@
 // Navigation & theory data: network-first (fresh when online, cached when offline).
 // Hashed static assets: cache-first.
 // All paths are relative to the service worker's own location, so the app works under any sub-path
-// (e.g. custom domain museio.io at /, or https://<user>.github.io/<repo>/).
+// (e.g. GitHub Pages: https://<user>.github.io/<repo>/).
 const CACHE = 'muse-v5';
 const BASE = new URL('./', self.location.href).href;
 const at = (p) => new URL(p, BASE).href;
