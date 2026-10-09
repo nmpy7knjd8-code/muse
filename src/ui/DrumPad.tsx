@@ -2,27 +2,28 @@
 // Pitched voices (kick, toms, ride bell) still lock to the session key/mode when played.
 import type { ReactNode } from 'react';
 import {
-  DRUM_PATTERNS, DRUM_THEORY_PILLARS, DRUM_VOICES, DrumArtic, DrumHit, DrumVoiceId,
+  DEFAULT_DRUM_KIT, DRUM_KITS, DRUM_PATTERNS, DRUM_THEORY_PILLARS, DRUM_VOICES,
+  DrumArtic, DrumHit, DrumKitId, DrumVoiceId,
   cycleDrumArtic, defaultMidiForVoice, drumRoleHint, drumTabAscii, drumTuningForKey, drumVel,
   keyName, toggleDrumHit, voiceTuneLabel,
-  coachDrumBar, type DrumKeyTuning, type DrumTensionState, type Key, type PartMeter,
+  type DrumKeyTuning, type Key,
 } from '../core';
-import { DrumTensionStrip } from './DrumTensionStrip';
 
 interface Props {
   hits: DrumHit[];
   beats: number;
   subdiv: 1 | 2 | 4;
-  meter: PartMeter;
   /** Session key — pitched kit voices pair to this mode. */
   keyInfo: Key;
-  prevHits?: DrumHit[];
-  progression?: DrumTensionState | null;
-  barIndex?: number;
+  /** Sound character — independent of the written groove (mix & match). */
+  kit?: DrumKitId;
   playBeat?: number | null;
   onChange: (hits: DrumHit[]) => void;
   onPreview: (voice: DrumVoiceId, artic?: DrumArtic, midi?: number) => void;
   onLoadPattern: (hits: DrumHit[], beats: number, subdiv: 1 | 2 | 4) => void;
+  onChooseKit?: (id: DrumKitId) => void;
+  /** Melodic steel accent preview (scale degree) — Key tones strip is hidden. */
+  onPreviewTone?: (midi: number, label: string) => void;
 }
 
 const GRID_VOICES: DrumVoiceId[] = [
@@ -44,14 +45,14 @@ function hitMark(voice: DrumVoiceId, artic: DrumArtic): string {
 }
 
 export function DrumPad({
-  hits, beats, subdiv, meter, keyInfo, prevHits, progression, barIndex = 0, playBeat,
-  onChange, onPreview, onLoadPattern,
+  hits, beats, subdiv, keyInfo, kit = DEFAULT_DRUM_KIT, playBeat,
+  onChange, onPreview, onLoadPattern, onChooseKit,
 }: Props): ReactNode {
   const step = 1 / subdiv;
   const cols = Math.round(beats * subdiv);
   const ascii = drumTabAscii(hits, beats, subdiv, GRID_VOICES.filter((v) => hits.some((h) => h.voice === v)));
-  const coach = coachDrumBar(hits, meter, prevHits);
   const tuning = drumTuningForKey(keyInfo);
+  const kitMeta = DRUM_KITS.find((k) => k.id === kit) ?? DRUM_KITS[0]!;
 
   const midiFor = (voice: DrumVoiceId) => defaultMidiForVoice(voice, tuning);
 
@@ -61,6 +62,7 @@ export function DrumPad({
         <p className="drum-theory-lead">
           <b>Percussion theory.</b> Columns are time; rows are kit voices (several hats, kicks, toms, crash/splash, ride/bell).
           Stacked marks sound together. Pitched voices — kick, toms, ride bell — lock to <b>{keyName(keyInfo, true)}</b>.
+          Kits change sound colour; patterns change the groove — mix freely.
         </p>
         <ul className="drum-pillars">
           {DRUM_THEORY_PILLARS.filter((p) => ['Simultaneous columns', 'Ostinato first', 'Backbeat vs foundation', 'Build & release'].includes(p.name)).map((p) => (
@@ -69,7 +71,28 @@ export function DrumPad({
         </ul>
       </div>
 
-      <DrumTensionStrip coach={coach} progression={progression} selectedBar={barIndex} />
+      <div className="drum-kits" role="radiogroup" aria-label="Drum kit sound">
+        <div className="drum-kits-head">
+          <span className="drum-kits-kicker">Kit sound</span>
+          <span className="small muted">{kitMeta.blurb}</span>
+        </div>
+        <div className="drum-kits-row">
+          {DRUM_KITS.map((k) => (
+            <button
+              key={k.id}
+              type="button"
+              role="radio"
+              aria-checked={kit === k.id}
+              className={'drum-kit-chip' + (kit === k.id ? ' on' : '')}
+              title={k.blurb}
+              onClick={() => onChooseKit?.(k.id)}
+            >
+              <span className="drum-kit-name">{k.name}</span>
+              <span className="drum-kit-tags">{k.tags.slice(0, 2).join(' · ')}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="drum-patterns" role="list" aria-label="Starter grooves">
         {DRUM_PATTERNS.map((p) => (

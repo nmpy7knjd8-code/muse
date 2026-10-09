@@ -1,13 +1,58 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DRUM_PATTERNS, cycleDrumArtic, defaultPartMeters, drumPatternById, drumTabAscii,
-  drumVel, parseChord, setSlotChord, setSlotDrums, slotDrums, timelineEvents, toggleDrumHit,
+  DEFAULT_DRUM_KIT, DRUM_KITS, DRUM_PATTERNS, cycleDrumArtic, defaultPartMeters,
+  drumKitById, drumPatternById, drumTabAscii, drumVel, isDrumKitId, parseChord,
+  setSlotChord, setSlotDrums, slotDrums, timelineEvents, toggleDrumHit,
   activeAt, normalizeArtists,
 } from '../src/core';
-import { readFileSync } from 'node:fs';
+import { DRUM_GM_NOTE, DRUM_SAMPLE_NOTES } from '../src/ui/drumKit';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 describe('drum kit & patterns', () => {
+  it('ships mixable kit sound presets', () => {
+    expect(DRUM_KITS.map((k) => k.id)).toEqual(['acoustic', 'electronic', 'fusion']);
+    expect(DEFAULT_DRUM_KIT).toBe('acoustic');
+    expect(isDrumKitId('fusion')).toBe(true);
+    expect(isDrumKitId('trap')).toBe(false);
+    expect(drumKitById('electronic')?.tags).toContain('electronic');
+    expect(drumKitById('acoustic')?.tags).toContain('sampled');
+  });
+
+  it('ships real GM drum one-shots for every kit voice', () => {
+    expect(DRUM_SAMPLE_NOTES.length).toBeGreaterThanOrEqual(12);
+    expect(DRUM_GM_NOTE.BD).toBe(36);
+    expect(DRUM_GM_NOTE.SD).toBe(38);
+    expect(DRUM_GM_NOTE.HH).toBe(42);
+    expect(DRUM_GM_NOTE.HO).toBe(46);
+    expect(DRUM_GM_NOTE.CC).toBe(49);
+    for (const n of DRUM_SAMPLE_NOTES) {
+      const p = resolve(process.cwd(), `public/samples/drums/${n}.mp3`);
+      expect(existsSync(p), `missing drums/${n}.mp3`).toBe(true);
+      expect(readFileSync(p).byteLength).toBeGreaterThan(2000);
+    }
+  });
+
+  it('ships rock + electro/fusion grooves alongside teaching cells', () => {
+    expect(DRUM_PATTERNS.length).toBeGreaterThanOrEqual(12);
+    const garage = drumPatternById('garage-rock')!;
+    expect(garage.tags).toContain('rock');
+    expect(garage.hits.some((h) => h.voice === 'HO')).toBe(true);
+
+    const drive = drumPatternById('rock-drive-16')!;
+    expect(drive.subdiv).toBe(4);
+    expect(drive.hits.filter((h) => h.voice === 'HH').length).toBeGreaterThanOrEqual(12);
+
+    const electro = drumPatternById('electro-broken')!;
+    expect(electro.hits.some((h) => h.voice === 'BDp')).toBe(true);
+    expect(electro.tags).toContain('broken-beat');
+
+    const fusion = drumPatternById('fusion-ride-weird')!;
+    expect(fusion.hits.some((h) => h.voice === 'Rd')).toBe(true);
+    expect(fusion.hits.some((h) => h.voice === 'Rb')).toBe(true);
+    expect(fusion.tags).toContain('weird');
+  });
+
   it('ships starter grooves with simultaneous-capable hits', () => {
     expect(DRUM_PATTERNS.length).toBeGreaterThanOrEqual(6);
     const rock = drumPatternById('backbeat-rock')!;
