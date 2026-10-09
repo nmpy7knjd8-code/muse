@@ -15,6 +15,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - ▶ Play schedules drum one-shots with chords/melody/bass; same subdivision = simultaneous; Loop unchanged.
 - Guide: Drums section + percussion theory group; TOOL Artist Lens deepened (Carey pocket technique, listening how-to, try-its with `drumPatternId`).
 - **Rhythm tension (build & release):** `drumTension.ts` — tonic beat pattern / density / syncopation / fill → leaky debt (shared `stepDebt`); Drums tab strip + build-fill / release-crash patterns; Guide “Drum tension” theory. Parallel to harmony TensionCurve (does not rewrite chord ranking).
+- **Kit quality + key tones:** multi-variant hats/kicks/toms/crash/splash/ride/bell/rim (`drumKit.ts`); `drumTuning.ts` pairs pitched voices to the session key/mode; FluidR3 steeldrum + taiko samples under `public/samples/`.
 
 ## Chord ↔ melody link (this branch)
 - Hear a suggested chord under a pending N.C. melody plays chord + that bar’s notes together (`harmPreviewEvents`).

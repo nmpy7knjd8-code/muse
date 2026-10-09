@@ -28,10 +28,10 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
 - Unified timeline: melody lane above, chords below, optional bass and drums. Melody notes are
   labelled chord tone / tension / avoid / clash. Play, copy, and MIDI export lanes together
   (drums render as ASCII tab in Copy). Pending N.C. melody can be harmonized by the next-chord suggestions.
-- **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop). Starter grooves
-  teach pocket, ghosts, linear 16ths, additive meter, and 4-over-3 hat groups. Procedural kit
-  playback layers under chords/melody/bass. Guide + Artist Lens (TOOL / Danny Carey) go deep on
-  how to play.
+- **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop) with several hats,
+  kicks, toms, crash/splash, ride/bell, and rim. Pitched voices lock to the session key/mode
+  (kick=1, mid tom=3, high tom/ride bell=5, etc.) with FluidR3 steel-drum / taiko sample colour.
+  Rhythm tension strip teaches build & release. Guide + Artist Lens (TOOL) go deep on how to play.
 - Chord palette, typed chords (`F#m7`, `Bb/D`, …), and a tap piano for melody.
 - Suggestions grouped and coloured by mood. Each card shows the roman numeral, 1–3 mood tags, a
   mood-shift arrow, a "why" line from the theory KB, and a common/colourful/unusual marker.
@@ -124,8 +124,9 @@ the research worker; `research/artists/` has the build and validation.
 ## Credits
 - **Piano:** Salamander Grand Piano (V2/V3) by Alexander Holm, CC BY 3.0
   (https://creativecommons.org/licenses/by/3.0/), via https://github.com/Tonejs/audio (salamander/).
-- **Nylon & steel acoustic guitar, acoustic bass, Rhodes (Electric Piano 1), Warm Pad, Electronic (lead_2_sawtooth):** FluidR3_GM
+- **Nylon & steel acoustic guitar, acoustic bass, Rhodes (Electric Piano 1), Warm Pad, Electronic (lead_2_sawtooth), steel drums, taiko:** FluidR3_GM
   soundfont by Frank Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts (CC BY 3.0).
+  Steel drums + taiko colour the key-tuned drum voices (toms / ride bell / kick body).
 - **Metal guitar:** MusyngKite `electric_guitar_clean` samples (same midi-js-soundfonts pack, CC BY 3.0)
   through a live high-gain amp + speaker-cab path in `src/ui/audio.ts` — clean electric guitar into an
   amp, not FluidR3’s synth-like `distortion_guitar`.

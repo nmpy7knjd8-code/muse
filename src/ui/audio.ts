@@ -2,7 +2,8 @@
 // velocity, humanized strums, a generated convolution reverb, and a compressor + limiter master bus.
 // Works on any BaseAudioContext, so the offline preview renderer uses exactly the same code.
 // Realtime use must be unlocked from a user gesture (iOS Safari autoplay rules).
-import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument, nearestSample, rng, sampleNotes } from '../core';
+import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument, nearestSample, rng, sampleNotes, type DrumVoiceId } from '../core';
+import { drumBanks, scheduleDrumHit } from './drumKit';
 
 type AudioSessionNav = Navigator & { audioSession?: { type: string } };
 export type LoadState = { state: 'idle' | 'loading' | 'ready' | 'error'; progress: number };
@@ -490,128 +491,26 @@ export class AudioEngine {
   }
 
   /**
-   * Procedural drum one-shot (no sample pack). Voices share the master bus so they
-   * layer with chords/melody/bass on ▶ Play. Same `at` across voices = simultaneous.
+   * Multi-variant kit one-shot (hats / toms / kicks / crash / ride / rim) plus
+   * key-tuned MIDI for pitched voices. Layers FluidR3 taiko / steel-drum samples
+   * when available. Same `at` across voices = simultaneous.
    */
   playDrum(
-    voice: 'CC' | 'Rd' | 'HH' | 'HO' | 'SD' | 'T1' | 'T2' | 'FT' | 'BD' | 'Hf',
-    opts: { at?: number; vel?: number; artic?: string } = {},
+    voice: DrumVoiceId,
+    opts: { at?: number; vel?: number; artic?: string; midi?: number; melodic?: boolean } = {},
   ): void {
     const ctx = this.ctx, input = this.input;
     if (!ctx || !input) return;
+    void drumBanks.ensure(ctx);
     const start = (opts.at ?? 0) + this.now();
-    const vel = Math.max(0.05, Math.min(1, opts.vel ?? 0.78));
-    const artic = opts.artic ?? 'normal';
-    const out = ctx.createGain();
-    out.connect(input);
-    const g = out.gain;
-    let end = start + 0.4;
-    const noiseBuf = (seconds: number) => {
-      const n = Math.max(1, Math.floor(ctx.sampleRate * seconds));
-      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-      return buf;
-    };
-    const stoppers: Array<(t: number) => void> = [];
-
-    if (voice === 'BD') {
-      const o = ctx.createOscillator();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(148, start);
-      o.frequency.exponentialRampToValueAtTime(48, start + 0.08);
-      const click = ctx.createOscillator();
-      click.type = 'triangle';
-      click.frequency.value = 180;
-      const clickG = ctx.createGain();
-      clickG.gain.setValueAtTime(0.25 * vel, start);
-      clickG.gain.exponentialRampToValueAtTime(0.001, start + 0.03);
-      o.connect(out);
-      click.connect(clickG).connect(out);
-      g.setValueAtTime(0, start);
-      g.linearRampToValueAtTime(0.95 * vel, start + 0.004);
-      g.exponentialRampToValueAtTime(0.001, start + 0.28);
-      o.start(start); o.stop(start + 0.32);
-      click.start(start); click.stop(start + 0.05);
-      end = start + 0.35;
-      stoppers.push((t) => { try { o.stop(t); click.stop(t); } catch { /* ok */ } });
-    } else if (voice === 'SD') {
-      const tone = ctx.createOscillator();
-      tone.type = 'triangle';
-      tone.frequency.value = artic === 'ghost' ? 180 : 210;
-      const toneG = ctx.createGain();
-      toneG.gain.setValueAtTime((artic === 'ghost' ? 0.15 : 0.35) * vel, start);
-      toneG.gain.exponentialRampToValueAtTime(0.001, start + 0.12);
-      const src = ctx.createBufferSource();
-      src.buffer = noiseBuf(0.25);
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = 1800;
-      bp.Q.value = 0.9;
-      const nG = ctx.createGain();
-      nG.gain.setValueAtTime((artic === 'ghost' ? 0.22 : 0.55) * vel, start);
-      nG.gain.exponentialRampToValueAtTime(0.001, start + (artic === 'ghost' ? 0.06 : 0.16));
-      tone.connect(toneG).connect(out);
-      src.connect(bp).connect(nG).connect(out);
-      g.setValueAtTime(1, start);
-      tone.start(start); tone.stop(start + 0.15);
-      src.start(start); src.stop(start + 0.22);
-      end = start + 0.25;
-      stoppers.push((t) => { try { tone.stop(t); src.stop(t); } catch { /* ok */ } });
-    } else if (voice === 'HH' || voice === 'Hf' || voice === 'HO' || voice === 'CC' || voice === 'Rd') {
-      const src = ctx.createBufferSource();
-      const len = voice === 'CC' ? 1.2 : voice === 'Rd' ? 0.7 : voice === 'HO' ? 0.45 : 0.12;
-      src.buffer = noiseBuf(len);
-      const hp = ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = voice === 'CC' ? 400 : voice === 'Rd' ? 600 : voice === 'HO' ? 5000 : 7000;
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = voice === 'Rd' ? 4200 : voice === 'CC' ? 3500 : 9000;
-      bp.Q.value = voice === 'Rd' ? 0.6 : 0.8;
-      src.connect(hp).connect(bp).connect(out);
-      const peak = (voice === 'CC' ? 0.55 : voice === 'Rd' ? 0.4 : voice === 'HO' ? 0.42 : 0.32) * vel
-        * (artic === 'accent' ? 1.15 : artic === 'ghost' ? 0.45 : 1);
-      g.setValueAtTime(0, start);
-      g.linearRampToValueAtTime(peak, start + 0.002);
-      g.exponentialRampToValueAtTime(0.001, start + (voice === 'CC' ? 0.9 : voice === 'Rd' ? 0.45 : voice === 'HO' ? 0.28 : 0.06));
-      src.start(start); src.stop(start + len);
-      end = start + len;
-      stoppers.push((t) => { try { src.stop(t); } catch { /* ok */ } });
-    } else {
-      // Toms: pitched sine + short noise
-      const freq = voice === 'T1' ? 220 : voice === 'T2' ? 160 : 110;
-      const o = ctx.createOscillator();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(freq * 1.35, start);
-      o.frequency.exponentialRampToValueAtTime(freq, start + 0.06);
-      const src = ctx.createBufferSource();
-      src.buffer = noiseBuf(0.15);
-      const bp = ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = freq * 2;
-      const nG = ctx.createGain();
-      nG.gain.setValueAtTime(0.2 * vel, start);
-      nG.gain.exponentialRampToValueAtTime(0.001, start + 0.08);
-      o.connect(out);
-      src.connect(bp).connect(nG).connect(out);
-      g.setValueAtTime(0, start);
-      g.linearRampToValueAtTime(0.7 * vel, start + 0.004);
-      g.exponentialRampToValueAtTime(0.001, start + 0.32);
-      o.start(start); o.stop(start + 0.35);
-      src.start(start); src.stop(start + 0.12);
-      end = start + 0.38;
-      stoppers.push((t) => { try { o.stop(t); src.stop(t); } catch { /* ok */ } });
-    }
-
-    this.voices.push({
-      end,
-      stop: (t) => {
-        g.cancelScheduledValues(t);
-        g.setTargetAtTime(0, t, 0.02);
-        stoppers.forEach((s) => s(t));
-      },
+    const { end, stop } = scheduleDrumHit(ctx, input, voice, {
+      at: start,
+      vel: opts.vel ?? 0.78,
+      artic: opts.artic,
+      midi: opts.midi,
+      melodic: opts.melodic,
     });
+    this.voices.push({ end, stop });
     this.markBusy(end);
   }
 }

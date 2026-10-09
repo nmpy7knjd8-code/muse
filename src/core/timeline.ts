@@ -303,7 +303,7 @@ export interface TimelineEvents {
   chords: Array<{ index: number; chord: Chord; at: number; dur: number }>;
   notes: Array<{ midi: number; at: number; dur: number; index: number; beat: number }>;
   bass: Array<{ midi: number; at: number; dur: number; index: number; beat: number }>;
-  drums: Array<{ voice: DrumHit['voice']; at: number; dur: number; vel: number; artic: DrumHit['artic']; index: number; beat: number }>;
+  drums: Array<{ voice: DrumHit['voice']; at: number; dur: number; vel: number; artic: DrumHit['artic']; midi?: number; index: number; beat: number }>;
   total: number;
 }
 
@@ -367,9 +367,10 @@ export function timelineEvents(
       ev.drums.push({
         voice: h.voice,
         at: i * step + h.beat * drumPulse - t0,
-        dur: Math.min(0.18, drumPulse * 0.85),
+        dur: Math.min(0.22, drumPulse * 0.9),
         vel,
         artic: h.artic,
+        midi: h.midi,
         index: i,
         beat: h.beat,
       });

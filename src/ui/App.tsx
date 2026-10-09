@@ -18,7 +18,9 @@ import {
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
   type ChordBridge, activeAt, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById, progressionDrumTension,
+  drumTuningForKey, defaultMidiForVoice,
 } from '../core';
+import { applyKeyTuning } from './DrumPad';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, StaffChordViz, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
@@ -629,8 +631,15 @@ function Composer({ data }: { data: LoadedData }) {
         at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.88, instrument: bassInstId,
       }));
     }
-    // Drum kit: same `at` across voices = simultaneous (layered limbs).
-    ev.drums.forEach((d) => synth.playDrum(d.voice, { at: d.at, vel: d.vel, artic: d.artic }));
+    // Drum kit: same `at` across voices = simultaneous; pitched voices use key MIDI.
+    const drumTune = drumTuningForKey(k);
+    ev.drums.forEach((d) => synth.playDrum(d.voice, {
+      at: d.at,
+      vel: d.vel,
+      artic: d.artic,
+      midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune),
+      melodic: true,
+    }));
   };
   playAllRef.current = () => playAll({ soft: true });
   const togglePlay = () => {
@@ -713,21 +722,36 @@ function Composer({ data }: { data: LoadedData }) {
     if (beats !== drumBeats || subdiv !== drumMeter.subdiv) {
       choosePartMeter('drums', { timeSig: { num: beats, den: drumMeter.timeSig.den }, subdiv });
     }
+    const tuned = applyKeyTuning(hits, drumTuningForKey(k));
     const target = slots.length ? slots.length - 1 : 0;
     snapshot();
-    setSlots((s) => setSlotDrums(s.length ? s : [{ chord: null, notes: [], bass: [], drums: [] }], Math.max(0, target), hits));
-    // Preview one bar of the pattern immediately.
+    setSlots((s) => setSlotDrums(s.length ? s : [{ chord: null, notes: [], bass: [], drums: [] }], Math.max(0, target), tuned));
+    // Preview one bar of the pattern immediately (key-tuned pitched voices).
     const pulse = beatSec * (beatsPerBar(timeSig) / beats);
-    hits.forEach((h) => synth.playDrum(h.voice, {
+    tuned.forEach((h) => synth.playDrum(h.voice, {
       at: h.beat * pulse,
       vel: h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78),
       artic: h.artic,
+      midi: h.midi,
+      melodic: true,
     }));
-    flash(`Loaded groove · ${hits.length} hits — ▶ Loop to practice`);
+    flash(`Loaded groove · ${hits.length} hits in ${keyName(k)} — ▶ Loop to practice`);
   };
-  const previewDrum = (voice: DrumVoiceId, artic: DrumArtic = 'normal') => {
+  const previewDrum = (voice: DrumVoiceId, artic: DrumArtic = 'normal', midi?: number) => {
     synth.unlock();
-    synth.playDrum(voice, { vel: artic === 'ghost' ? 0.28 : artic === 'accent' ? 0.95 : 0.78, artic });
+    const tune = drumTuningForKey(k);
+    synth.playDrum(voice, {
+      vel: artic === 'ghost' ? 0.28 : artic === 'accent' ? 0.95 : 0.78,
+      artic,
+      midi: midi ?? defaultMidiForVoice(voice, tune),
+      melodic: true,
+    });
+  };
+  const previewDrumTone = (midi: number, label: string) => {
+    synth.unlock();
+    // Melodic steel accent — hear the scale degree that toms/bells pair with.
+    synth.playDrum('T1', { vel: 0.8, midi, melodic: true });
+    flash(`Mode tone ${label}`);
   };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
   const clearAll = () => { stopPlayback(); synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
@@ -922,11 +946,12 @@ function Composer({ data }: { data: LoadedData }) {
     snapshot();
     chooseTonic(l.tonic); chooseMode(l.mode);
     const pat = t.drumPatternId ? drumPatternById(t.drumPatternId) : undefined;
+    const tunedPatHits = pat ? applyKeyTuning(pat.hits, drumTuningForKey(l.key)) : [];
     const nextSlots = l.chords.map((chord, i) => ({
       chord,
       notes: [] as TimelineSlot['notes'],
       bass: [] as TimelineSlot['notes'],
-      drums: pat && i === 0 ? pat.hits.map((h) => ({ ...h })) : [],
+      drums: pat && i === 0 ? tunedPatHits.map((h) => ({ ...h })) : [],
       locked: false,
     }));
     if (l.timeSig) {
@@ -950,10 +975,12 @@ function Composer({ data }: { data: LoadedData }) {
     playChordSequence(l.chords);
     if (pat) {
       const pulse = beatSec * (beatsPerBar(l.timeSig ?? timeSig) / pat.beats);
-      pat.hits.forEach((h) => synth.playDrum(h.voice, {
+      tunedPatHits.forEach((h) => synth.playDrum(h.voice, {
         at: h.beat * pulse,
         vel: h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78),
         artic: h.artic,
+        midi: h.midi,
+        melodic: true,
       }));
     }
     const meterBit = l.timeSig ? ` · ${timeSigLabel(l.timeSig)}` : l.meterNote ? ` · ${l.meterNote}` : '';
@@ -967,11 +994,14 @@ function Composer({ data }: { data: LoadedData }) {
     playChordSequence(l.chords);
     const pat = t.drumPatternId ? drumPatternById(t.drumPatternId) : undefined;
     if (pat) {
+      const tunedHits = applyKeyTuning(pat.hits, drumTuningForKey(l.key));
       const pulse = beatSec * (beatsPerBar(l.timeSig ?? timeSig) / pat.beats);
-      pat.hits.forEach((h) => synth.playDrum(h.voice, {
+      tunedHits.forEach((h) => synth.playDrum(h.voice, {
         at: h.beat * pulse,
         vel: h.vel ?? (h.artic === 'ghost' ? 0.28 : h.artic === 'accent' ? 0.95 : 0.78),
         artic: h.artic,
+        midi: h.midi,
+        melodic: true,
       }));
     }
   };
@@ -1995,6 +2025,7 @@ function Composer({ data }: { data: LoadedData }) {
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
             meter={drumMeter}
+            keyInfo={k}
             prevHits={drumEditIndex > 0 ? slotDrums(slots[drumEditIndex - 1]!) : undefined}
             progression={drumTension}
             barIndex={drumEditIndex}
@@ -2006,6 +2037,7 @@ function Composer({ data }: { data: LoadedData }) {
             onChange={(hits) => writeDrums(hits, drumEditIndex)}
             onPreview={previewDrum}
             onLoadPattern={loadDrumPattern}
+            onPreviewTone={previewDrumTone}
           />
         )}
         </>

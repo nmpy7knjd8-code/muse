@@ -1428,3 +1428,41 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 }
 .drum-t-theory { margin-top: 8px; display: grid; gap: 4px; }
 .drum-t-theory p { margin: 0; color: #a89484; }
+
+/* ---- Key-tuned drum tones ---- */
+.drum-keytones {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background:
+    radial-gradient(90% 70% at 0% 0%, rgba(111, 176, 168, 0.14), transparent 55%),
+    linear-gradient(165deg, #1e2828 0%, #141a1a 100%);
+  border: 1px solid rgba(111, 176, 168, 0.32);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.drum-keytones-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+}
+.drum-keytones-kicker {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: #6fb0a8;
+}
+.drum-keytones-pairs, .drum-scale-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.drum-keytone-chip, .drum-scale-chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 6px 9px; border-radius: 9px; cursor: pointer;
+  border: 1px solid rgba(111, 176, 168, 0.35);
+  background: #1a2222; color: #d8ece8; text-align: left;
+}
+.drum-keytone-chip:hover, .drum-scale-chip:hover {
+  border-color: rgba(111, 176, 168, 0.75);
+}
+.drum-keytone-voice { font-size: 10px; font-weight: 700; color: #6fb0a8; }
+.drum-keytone-note { font-size: 12px; font-weight: 650; }
+.drum-scale-tones { display: flex; flex-direction: column; gap: 4px; }
+.drum-scale-chip b { font-size: 12px; color: #ffe082; }
+.drum-scale-chip span { font-size: 10px; color: #9ab5b0; }
+.drum-voice-tune {
+  font-size: 9px; color: #6fb0a8; font-weight: 600; letter-spacing: 0.02em;
+}

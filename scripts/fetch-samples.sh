@@ -38,5 +38,9 @@ fetch rhodes   $FL/electric_piano_1-mp3      flat 36 90 3 3 0.8 80k 1
 fetch pad      $FL/pad_2_warm-mp3            flat 36 84 3 3 1.0 72k 1
 fetch synth    $FL/lead_2_sawtooth-mp3       flat 36 90 3 2.8 0.8 80k 1
 fetch bass     $FL/acoustic_bass-mp3         flat 28 55 3 2.5 0.8 80k 1
+# Melodic percussion for key-paired drum tones (toms / ride bell / steel accents).
+fetch steeldrum $FL/steel_drums-mp3 flat 48 84 1 2.2 0.7 80k 1
+# Taiko body for kick fundamentals.
+fetch taiko     $FL/taiko_drum-mp3  flat 36 60 3 2.0 0.6 80k 1
 rm -rf "$TMP"
 du -sh "$OUT" "$OUT"/*
