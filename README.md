@@ -38,7 +38,7 @@ and Settings → Pages → Custom domain shows `museio.io` verified with HTTPS. 
   (drums render as ASCII tab in Copy). Pending N.C. melody can be harmonized by the next-chord suggestions.
 - **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop) with several hats,
   kicks, toms, crash/splash, ride/bell, and rim. Pitched voices lock to the session key/mode
-  (kick=1, mid tom=3, high tom/ride bell=5, etc.) with FluidR3 steel-drum / taiko sample colour.
+  (kick=1, mid tom=3, high tom/ride bell=5, etc.). Acoustic / Fusion kits play real FluidR3 GM one-shots.
   Rhythm tension strip teaches build & release. Guide + Artist Lens (TOOL) go deep on how to play.
 - Chord palette, typed chords (`F#m7`, `Bb/D`, …), and a tap piano for melody.
 - Suggestions grouped and coloured by mood. Each card shows the roman numeral, 1–3 mood tags, a
@@ -131,7 +131,7 @@ the research worker; `research/artists/` has the build and validation.
 - Live input: **Mic** (YIN notes / chroma chords) or **MIDI** keyboard (Web MIDI). Same hold-to-add behaviour; MIDI does not touch the mic AudioSession.
 - iPhone: audio starts on the first tap, and the AudioSession is set to `playback`. If you hear nothing,
   check the ring/silent switch and the volume. The app shows this tip.
-- `scripts/fetch-samples.sh` reproduces the sample set.
+- `scripts/fetch-samples.sh` reproduces the pitched instrument sample set; `scripts/fetch-drums.sh` rebuilds the GM drum one-shots.
 - `audio-previews/` has rendered previews of C–Am–F–G for each instrument. They are made with the same
   engine in an `OfflineAudioContext` (`?render-preview` hook, `src/ui/renderPreview.ts`).
 
@@ -140,7 +140,10 @@ the research worker; `research/artists/` has the build and validation.
   (https://creativecommons.org/licenses/by/3.0/), via https://github.com/Tonejs/audio (salamander/).
 - **Nylon & steel acoustic guitar, acoustic bass, Rhodes (Electric Piano 1), Warm Pad, Electronic (lead_2_sawtooth), steel drums, taiko:** FluidR3_GM
   soundfont by Frank Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts (CC BY 3.0).
-  Steel drums + taiko colour the key-tuned drum voices (toms / ride bell / kick body).
+  Steel drums + taiko can still colour melodic drum accents.
+- **Acoustic / Fusion drum kit:** FluidR3_GM Power-kit percussion one-shots (CC BY 3.0), extracted from
+  https://github.com/surikov/webaudiofontdata renders into `public/samples/drums/<gmNote>.mp3`
+  (`scripts/fetch-drums.sh`). The Electronic kit remains synthesised on purpose.
 - **Metal guitar:** MusyngKite `electric_guitar_clean` samples (same midi-js-soundfonts pack, CC BY 3.0)
   through a live high-gain amp + speaker-cab path in `src/ui/audio.ts` — clean electric guitar into an
   amp, not FluidR3’s synth-like `distortion_guitar`.
