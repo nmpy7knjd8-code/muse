@@ -23,6 +23,14 @@ https://nmpy7knjd8-code.github.io/muse/ — deployed by `.github/workflows/pages
 (see `vite.config.ts`; override with `BASE_PATH=/`). All runtime paths (data fetches, manifest, service
 worker) are relative to that base. Local `npm run preview` serves at http://localhost:4173/muse/.
 
+### Optional: custom domain (museio.io)
+Do **not** switch `BASE_PATH` to `/` until the domain is registered, DNS A records point at GitHub Pages,
+and Settings → Pages → Custom domain shows `museio.io` verified with HTTPS. Switching early makes the
+`github.io/muse/` URL serve root-absolute `/assets/...` links that 404. When ready:
+1. Add `public/CNAME` containing `museio.io`
+2. Set Pages custom domain + apex A records (`185.199.108.153` … `185.199.111.153`)
+3. Change the workflow `BASE_PATH` to `/` (and `PAGES_BASE` in `vite.config.ts`)
+
 ## Features
 - Key/mode picker with auto key detection (from both chords and melody).
 - Unified timeline: melody lane above, chords below, optional bass and drums. Melody notes are
@@ -30,7 +38,7 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
   (drums render as ASCII tab in Copy). Pending N.C. melody can be harmonized by the next-chord suggestions.
 - **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop) with several hats,
   kicks, toms, crash/splash, ride/bell, and rim. Pitched voices lock to the session key/mode
-  (kick=1, mid tom=3, high tom/ride bell=5, etc.) with FluidR3 steel-drum / taiko sample colour.
+  (kick=1, mid tom=3, high tom/ride bell=5, etc.). Acoustic / Fusion kits play real FluidR3 GM one-shots.
   Rhythm tension strip teaches build & release. Guide + Artist Lens (TOOL) go deep on how to play.
 - Chord palette, typed chords (`F#m7`, `Bb/D`, …), and a tap piano for melody.
 - Suggestions grouped and coloured by mood. Each card shows the roman numeral, 1–3 mood tags, a
@@ -47,6 +55,9 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
     *chains* across a recent stretch, and next-note ranking prefers CoF neighbours)
   - Tonnetz with the P/L/R path
 - Mood journey: pick a start and end mood and get a generated 4–8 chord progression.
+- Under high-tension moods (ominous, dramatic…), Best fit soft-lifts a few grounding
+  “breathe” chords — options that sound good without chasing the mood — marked with a
+  light chip so phrases have somewhere to land.
 - Lore mode, clearly labelled "LORE, NOT SCIENCE": Schubart key characters, the Scriabin mystic chord, etc.
 - 👂 Listen (live mic): the mic stays open while it's on.
   - Melody mode: a stable sung or played note (held ≥250 ms, passes an RMS gate) is added and the
@@ -74,8 +85,11 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
     Lerdahl's model over-rates their tension
   - melody-vs-chord dissonance folded into each chord's tension
 - **Effect on suggestions:** each one gets a ranking adjustment (`TENSION_GAIN × adjust`) and reason
-  chips such as "resolves built-up tension" or "adds colour after a settled stretch". The model's level
-  also refines the mood-map tension axis.
+  chips such as "resolves built-up tension", "adds colour after a settled stretch", or
+  "too early to resolve — keep the build going". Best fit shares the Tension curve’s recent stretch
+  (chords + per-bar melody): while status is still building, authentic cadences and tonic landings
+  are soft-gated so the phrase doesn’t resolve before debt earns it. The model's level also refines
+  the mood-map tension axis.
 - **UI:** a tension curve under the progression shows:
   - status, coloured too-static / sweet / building / resolve-soon / over-budget
   - the green sweet-spot band and the orange unresolved-tension area
@@ -118,7 +132,7 @@ the research worker; `research/artists/` has the build and validation.
 - Live input: **Mic** (YIN notes / chroma chords) or **MIDI** keyboard (Web MIDI). Same hold-to-add behaviour; MIDI does not touch the mic AudioSession.
 - iPhone: audio starts on the first tap, and the AudioSession is set to `playback`. If you hear nothing,
   check the ring/silent switch and the volume. The app shows this tip.
-- `scripts/fetch-samples.sh` reproduces the sample set.
+- `scripts/fetch-samples.sh` reproduces the pitched instrument sample set; `scripts/fetch-drums.sh` rebuilds the GM drum one-shots.
 - `audio-previews/` has rendered previews of C–Am–F–G for each instrument. They are made with the same
   engine in an `OfflineAudioContext` (`?render-preview` hook, `src/ui/renderPreview.ts`).
 
@@ -127,7 +141,10 @@ the research worker; `research/artists/` has the build and validation.
   (https://creativecommons.org/licenses/by/3.0/), via https://github.com/Tonejs/audio (salamander/).
 - **Nylon & steel acoustic guitar, acoustic bass, Rhodes (Electric Piano 1), Warm Pad, Electronic (lead_2_sawtooth), steel drums, taiko:** FluidR3_GM
   soundfont by Frank Wen. MP3 renders come from https://github.com/gleitz/midi-js-soundfonts (CC BY 3.0).
-  Steel drums + taiko colour the key-tuned drum voices (toms / ride bell / kick body).
+  Steel drums + taiko can still colour melodic drum accents.
+- **Acoustic / Fusion drum kit:** FluidR3_GM Power-kit percussion one-shots (CC BY 3.0), extracted from
+  https://github.com/surikov/webaudiofontdata renders into `public/samples/drums/<gmNote>.mp3`
+  (`scripts/fetch-drums.sh`). The Electronic kit remains synthesised on purpose.
 - **Metal guitar:** MusyngKite `electric_guitar_clean` samples (same midi-js-soundfonts pack, CC BY 3.0)
   through a live high-gain amp + speaker-cab path in `src/ui/audio.ts` — clean electric guitar into an
   amp, not FluidR3’s synth-like `distortion_guitar`.

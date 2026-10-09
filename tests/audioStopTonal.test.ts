@@ -1,0 +1,52 @@
+// stopTonal must leave kit voices scheduled while silencing pitched parts —
+// the contract that keeps a drum loop alive while auditioning chords.
+import { afterEach, describe, expect, it } from 'vitest';
+import { AudioEngine } from '../src/ui/audio';
+
+type VoiceKind = 'tonal' | 'drum';
+type EnginePriv = {
+  voices: Array<{ kind: VoiceKind; stop: (t: number) => void; end: number }>;
+  ctx: BaseAudioContext | null;
+};
+
+function kinds(eng: AudioEngine): VoiceKind[] {
+  return (eng as unknown as EnginePriv).voices.map((v) => v.kind);
+}
+
+describe('AudioEngine.stopTonal', () => {
+  let eng: AudioEngine;
+
+  afterEach(() => {
+    eng?.stopAll();
+  });
+
+  it('keeps drum voices when stopTonal runs; stopAll clears both', () => {
+    const Offline = (globalThis as unknown as {
+      OfflineAudioContext?: new (c: number, l: number, sr: number) => OfflineAudioContext;
+      webkitOfflineAudioContext?: new (c: number, l: number, sr: number) => OfflineAudioContext;
+    }).OfflineAudioContext
+      ?? (globalThis as unknown as { webkitOfflineAudioContext: new (c: number, l: number, sr: number) => OfflineAudioContext })
+        .webkitOfflineAudioContext;
+    if (!Offline) return; // skip in environments without Web Audio
+
+    eng = new AudioEngine({ remember: false, seed: 1 });
+    const ctx = new Offline(1, 44100, 44100);
+    eng.attach(ctx);
+
+    // Schedule pitched + kit hits into the future so they stay in the voice list.
+    eng.playNotes([60, 64, 67], { at: 0.2, dur: 0.5 });
+    eng.playDrum('BD', { at: 0.25, vel: 0.8 });
+    eng.playDrum('SD', { at: 0.5, vel: 0.7 });
+    eng.playDrum('HH', { at: 0.1, vel: 0.5 });
+
+    const before = kinds(eng);
+    expect(before.filter((k) => k === 'tonal').length).toBeGreaterThan(0);
+    expect(before.filter((k) => k === 'drum')).toEqual(['drum', 'drum', 'drum']);
+
+    eng.stopTonal();
+    expect(kinds(eng)).toEqual(['drum', 'drum', 'drum']);
+
+    eng.stopAll();
+    expect(kinds(eng)).toEqual([]);
+  });
+});

@@ -1,6 +1,6 @@
 # Muse handoff
 
-Live: https://nmpy7knjd8-code.github.io/muse/ (GitHub Pages; every push to `main` runs tests, builds, and deploys via `.github/workflows/pages.yml`).
+Live: https://nmpy7knjd8-code.github.io/muse/ (GitHub Pages; every push to `main` runs tests, builds, and deploys via `.github/workflows/pages.yml` with `BASE_PATH=/muse/`).
 
 ## What it is
 Mobile-first PWA (Vite + React + TypeScript) that suggests the next chord or melody note and labels each option by mood. All music logic lives in `src/core/` (no DOM imports) so it can be ported to Swift later. Data files in `public/`: `theory_kb.json`, `mood_lexicon.json`, `lore.json`, `artists.json` (tension model still used for ranking, not shown as a graph).
@@ -13,6 +13,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 ## Drum percussion tab (this branch)
 - Fourth writing lane **Drums**: kit grid (CC/Rd/HH/HO/SD/toms/BD/Hf), 16th-default part meter, ASCII tab, starter grooves with percussion theory (pocket, ghosts, linear, additive, 4-over-3).
 - ▶ Play schedules drum one-shots with chords/melody/bass; same subdivision = simultaneous; Loop unchanged.
+- While Loop is running, chord/note audition uses `stopTonal()` so kit hits keep playing (practice harmony over the groove).
 - Guide: Drums section + percussion theory group; TOOL Artist Lens deepened (Carey pocket technique, listening how-to, try-its with `drumPatternId`).
 - **Rhythm tension (build & release):** `drumTension.ts` — tonic beat pattern / density / syncopation / fill → leaky debt (shared `stepDebt`); Drums tab strip + build-fill / release-crash patterns; Guide “Drum tension” theory. Parallel to harmony TensionCurve (does not rewrite chord ranking).
 - **Kit quality + key tones:** multi-variant hats/kicks/toms/crash/splash/ride/bell/rim (`drumKit.ts`); `drumTuning.ts` pairs pitched voices to the session key/mode; FluidR3 steeldrum + taiko samples under `public/samples/`.

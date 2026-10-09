@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadKB } from './helpers';
 import {
-  Chord, Key, SuggestionEngine, key, candidateTension, idiomDiscount, melodyDissonance, parseChord, progressionTension, toChordIn, toKeyCtx, tensionModel as T,
+  Chord, Key, SuggestionEngine, key, candidateTension, idiomDiscount, melodyDissonance, parseChord, progressionTension, toChordIn, toKeyCtx, tooEarlyToResolve, tensionModel as T,
 } from '../src/core';
 
 const C: Key = key('C');
@@ -38,6 +38,44 @@ describe('tension bridge', () => {
     const top = sugg.slice(0, 4).map((x) => x.symbol);
     expect(top.some((x) => ['C', 'Am', 'G', 'G7', 'Cmaj7'].includes(x))).toBe(true);
     expect(sugg.find((x) => x.symbol === 'C')?.tension?.reasons).toContain('resolves built-up tension');
+  });
+
+  it('withholds an early cadence home while the recent stretch is still building', () => {
+    // I→V has barely left home — Best fit should not shove tonic back to #1 yet.
+    const short = P('C G');
+    const building = progressionTension(short, C, pop);
+    expect(building.budget.status).toBe('building');
+    const earlyHome = candidateTension(building, short[1], P('C')[0], C);
+    const continueColour = candidateTension(building, short[1], P('Am')[0], C);
+    expect(earlyHome.reasons).toContain('too early to resolve — keep the build going');
+    expect(earlyHome.adjust).toBeLessThan(continueColour.adjust);
+    const sugg = eng.suggestChords({ key: C, progression: short, adventure: 0.35 });
+    expect(sugg[0]?.symbol).not.toBe('C');
+    expect(sugg.find((x) => x.symbol === 'C')?.tension?.reasons)
+      .toContain('too early to resolve — keep the build going');
+  });
+
+  it('still prefers home after a long earned stretch (resolve-soon)', () => {
+    const prog = P('C E7 Ab Bb Db Bdim7');
+    const s = progressionTension(prog, C, pop);
+    expect(tooEarlyToResolve(s)).toBe(false);
+    const res = candidateTension(s, prog[prog.length - 1], P('C')[0], C);
+    expect(res.reasons).toContain('resolves built-up tension');
+    expect(res.reasons.join(' ')).not.toMatch(/too early/);
+  });
+
+  it('folds recent melody notes into Best-fit tension (same stretch as the curve)', () => {
+    const prog = P('C Am F');
+    const calm = progressionTension(prog.map((chord) => ({ chord, melody: [60, 64] })), C, pop);
+    const tenseMel = progressionTension(prog.map((chord) => ({ chord, melody: [61, 66, 68] })), C, pop);
+    expect(tenseMel.points[tenseMel.points.length - 1]!.debt)
+      .toBeGreaterThanOrEqual(calm.points[calm.points.length - 1]!.debt);
+    // Engine path: dissonant recent notes raise the shared curve used for ranking.
+    const withMel = eng.suggestChords({
+      key: C, progression: prog, adventure: 0.35,
+      tensionMelody: [[61, 66], [61, 68], [66, 70]],
+    });
+    expect(withMel.some((x) => x.tension != null)).toBe(true);
   });
 
   it('calls a settled loop too static and rewards colour', () => {

@@ -40,7 +40,9 @@ fetch synth    $FL/lead_2_sawtooth-mp3       flat 36 90 3 2.8 0.8 80k 1
 fetch bass     $FL/acoustic_bass-mp3         flat 28 55 3 2.5 0.8 80k 1
 # Melodic percussion for key-paired drum tones (toms / ride bell / steel accents).
 fetch steeldrum $FL/steel_drums-mp3 flat 48 84 1 2.2 0.7 80k 1
-# Taiko body for kick fundamentals.
+# Taiko body for kick fundamentals (legacy colour layer).
 fetch taiko     $FL/taiko_drum-mp3  flat 36 60 3 2.0 0.6 80k 1
 rm -rf "$TMP"
+# Real GM drum kit one-shots (Acoustic / Fusion kits) — FluidR3 Power bank via webaudiofontdata.
+bash scripts/fetch-drums.sh
 du -sh "$OUT" "$OUT"/*
