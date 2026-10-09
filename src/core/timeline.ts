@@ -196,10 +196,45 @@ export function pruneEmpty(slots: TimelineSlot[]): TimelineSlot[] {
   return slots.filter((s) => s.chord || s.notes.length > 0 || slotBass(s).length > 0 || slotDrums(s).length > 0 || s.locked);
 }
 
-/** Where a new chord goes: the first chordless slot that already has melody (harmonize it), else a new slot. */
+/** Where a new chord goes: pending melody first, else an open chordless bar (drums-only / empty), else append.
+ *  Preferring open bars keeps chords from landing chronologically after a drums-only practice cell. */
 export function chordTargetIndex(slots: TimelineSlot[]): number {
-  const i = slots.findIndex((s) => !s.chord && s.notes.some(isSounding));
-  return i >= 0 ? i : slots.length;
+  const withMel = slots.findIndex((s) => !s.chord && s.notes.some(isSounding));
+  if (withMel >= 0) return withMel;
+  const open = slots.findIndex((s) => !s.chord);
+  if (open >= 0) return open;
+  return slots.length;
+}
+
+/** Stamp a one-bar groove under existing notes/chords (every bar). Empty timeline → one N.C. drums bar. */
+export function applyGrooveToSlots(slots: TimelineSlot[], groove: DrumHit[]): TimelineSlot[] {
+  const hits = groove.map((h) => ({ ...h }));
+  if (!hits.length) return slots;
+  if (!slots.length) {
+    return [{ chord: null, notes: [], bass: [], drums: hits }];
+  }
+  return slots.map((s) => ({
+    ...s,
+    notes: s.notes.map((n) => ({ ...n })),
+    bass: slotBass(s).map((n) => ({ ...n })),
+    drums: hits.map((h) => ({ ...h })),
+  }));
+}
+
+/** One-bar drum-only events for practicing a session groove without chords/melody. */
+export function grooveEvents(
+  hits: DrumHit[],
+  o: {
+    beatSec?: number;
+    bpm?: number;
+    timeSig?: TimeSig;
+    partMeters?: PartMeters;
+  } = {},
+): TimelineEvents {
+  return timelineEvents(
+    [{ chord: null, notes: [], bass: [], drums: hits.map((h) => ({ ...h })) }],
+    o,
+  );
 }
 
 /** Beat the next melody note will land on in the active slot. */

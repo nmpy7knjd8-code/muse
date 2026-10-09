@@ -18,10 +18,16 @@ interface Props {
   /** Sound character — independent of the written groove (mix & match). */
   kit?: DrumKitId;
   playBeat?: number | null;
+  /** True while the drums-only session groove loop is running. */
+  grooveLooping?: boolean;
   onChange: (hits: DrumHit[]) => void;
   onPreview: (voice: DrumVoiceId, artic?: DrumArtic, midi?: number) => void;
   onLoadPattern: (hits: DrumHit[], beats: number, subdiv: 1 | 2 | 4) => void;
   onChooseKit?: (id: DrumKitId) => void;
+  /** Practice the pad groove alone (no chords/melody). */
+  onLoopGroove?: () => void;
+  /** Stamp the pad groove under timeline notes/chords. */
+  onApplyToNotes?: () => void;
   /** Melodic steel accent preview (scale degree) — Key tones strip is hidden. */
   onPreviewTone?: (midi: number, label: string) => void;
 }
@@ -45,8 +51,8 @@ function hitMark(voice: DrumVoiceId, artic: DrumArtic): string {
 }
 
 export function DrumPad({
-  hits, beats, subdiv, keyInfo, kit = DEFAULT_DRUM_KIT, playBeat,
-  onChange, onPreview, onLoadPattern, onChooseKit,
+  hits, beats, subdiv, keyInfo, kit = DEFAULT_DRUM_KIT, playBeat, grooveLooping = false,
+  onChange, onPreview, onLoadPattern, onChooseKit, onLoopGroove, onApplyToNotes,
 }: Props): ReactNode {
   const step = 1 / subdiv;
   const cols = Math.round(beats * subdiv);
@@ -63,6 +69,7 @@ export function DrumPad({
           <b>Percussion theory.</b> Columns are time; rows are kit voices (several hats, kicks, toms, crash/splash, ride/bell).
           Stacked marks sound together. Pitched voices — kick, toms, ride bell — lock to <b>{keyName(keyInfo, true)}</b>.
           Kits change sound colour; patterns change the groove — mix freely.
+          Practice with <b>Loop groove</b> (drums alone), then <b>Add to notes</b> to layer under your chords and melody.
         </p>
         <ul className="drum-pillars">
           {DRUM_THEORY_PILLARS.filter((p) => ['Simultaneous columns', 'Ostinato first', 'Backbeat vs foundation', 'Build & release'].includes(p.name)).map((p) => (
@@ -194,11 +201,30 @@ export function DrumPad({
 
       <div className="drum-footer">
         <div className="drum-actions">
+          <button
+            type="button"
+            className={'pill' + (grooveLooping ? ' on' : '')}
+            aria-pressed={grooveLooping}
+            disabled={!hits.length && !grooveLooping}
+            title={grooveLooping ? 'Stop the drums-only groove loop' : 'Loop this groove without chords or melody'}
+            onClick={() => onLoopGroove?.()}
+          >
+            {grooveLooping ? '■ Stop groove' : '▶ Loop groove'}
+          </button>
+          <button
+            type="button"
+            className="add"
+            disabled={!hits.length}
+            title="Stamp this groove under every timeline bar (chords & melody stay in place)"
+            onClick={() => onApplyToNotes?.()}
+          >
+            Add to notes
+          </button>
           <button type="button" className="pill quiet" onClick={() => onChange([])} disabled={!hits.length}>
-            Clear bar
+            Clear pad
           </button>
           <span className="small muted">
-            Hats · kicks · toms · crash/splash · ride/bell · rim — stacked cells play together · pitched rows follow the key
+            Session pad · loop alone, then add under notes · stacked cells play together
           </span>
         </div>
         {hits.length > 0 && (

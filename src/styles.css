@@ -1388,6 +1388,7 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 }
 .drum-footer { display: flex; flex-direction: column; gap: 6px; }
 .drum-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.drum-actions .add { padding: 6px 12px; font-size: 12px; }
 .drum-ascii {
   margin: 0; padding: 8px 10px; border-radius: 8px;
   background: #14110f; color: #cbb8a8; font-size: 11px; line-height: 1.35;
