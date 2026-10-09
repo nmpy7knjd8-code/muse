@@ -17,8 +17,8 @@ import {
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
   type ChordBridge, activeAt, type TimelineEvents,
-  type DrumHit, type DrumArtic, type DrumVoiceId, drumPatternById, progressionDrumTension,
-  drumTuningForKey, defaultMidiForVoice,
+  type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById, progressionDrumTension,
+  drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
 } from '../core';
 import { applyKeyTuning } from './DrumPad';
 import { loadData, type LoadedData } from './data';
@@ -440,6 +440,24 @@ function Composer({ data }: { data: LoadedData }) {
     } catch { /* private mode */ }
     return 'off';
   });
+  const [drumKit, setDrumKit] = useState<DrumKitId>(() => {
+    try {
+      const v = localStorage.getItem('muse.drumKit');
+      if (v && isDrumKitId(v)) return v;
+    } catch { /* private mode */ }
+    return synth.drumKit || DEFAULT_DRUM_KIT;
+  });
+  const chooseDrumKit = (id: DrumKitId) => {
+    setDrumKit(id);
+    synth.unlock();
+    synth.setDrumKit(id);
+    // Quick A/B of the kit colour: kick + snare + hat stack.
+    const tune = drumTuningForKey(k);
+    synth.playDrum('BD', { vel: 0.9, artic: 'accent', midi: defaultMidiForVoice('BD', tune) });
+    synth.playDrum('SD', { at: 0.12, vel: 0.85, artic: 'accent' });
+    synth.playDrum('HH', { at: 0.12, vel: 0.55 });
+    flash(`Kit · ${id}`);
+  };
   const activeParts = useMemo(() => {
     const ids: InstrumentId[] = [chordInst, melodyInst];
     if (bassInst !== 'off') ids.push(bassInst);
@@ -2031,6 +2049,7 @@ function Composer({ data }: { data: LoadedData }) {
             subdiv={drumMeter.subdiv}
             meter={drumMeter}
             keyInfo={k}
+            kit={drumKit}
             prevHits={drumEditIndex > 0 ? slotDrums(slots[drumEditIndex - 1]!) : undefined}
             progression={drumTension}
             barIndex={drumEditIndex}
@@ -2042,6 +2061,7 @@ function Composer({ data }: { data: LoadedData }) {
             onChange={(hits) => writeDrums(hits, drumEditIndex)}
             onPreview={previewDrum}
             onLoadPattern={loadDrumPattern}
+            onChooseKit={chooseDrumKit}
             onPreviewTone={previewDrumTone}
           />
         )}

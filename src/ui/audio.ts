@@ -2,7 +2,10 @@
 // velocity, humanized strums, a generated convolution reverb, and a compressor + limiter master bus.
 // Works on any BaseAudioContext, so the offline preview renderer uses exactly the same code.
 // Realtime use must be unlocked from a user gesture (iOS Safari autoplay rules).
-import { INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument, nearestSample, rng, sampleNotes, type DrumVoiceId } from '../core';
+import {
+  DEFAULT_DRUM_KIT, INSTRUMENTS, InstrumentDef, InstrumentId, chordEvents, fitMidiToInstrument,
+  nearestSample, rng, sampleNotes, type DrumKitId, type DrumVoiceId,
+} from '../core';
 import { drumBanks, scheduleDrumHit } from './drumKit';
 
 type AudioSessionNav = Navigator & { audioSession?: { type: string } };
@@ -173,6 +176,8 @@ export class AudioEngine {
   private busyUntil = 0;
   private rand: () => number = Math.random;
   instrument: InstrumentId = 'piano';
+  /** Active drum kit sound character (mix & match with any groove pattern). */
+  drumKit: DrumKitId = DEFAULT_DRUM_KIT;
   unlocked = false;
 
   constructor(opts: { remember?: boolean; seed?: number } = {}) {
@@ -180,6 +185,8 @@ export class AudioEngine {
     if (opts.remember && typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY) as InstrumentId | null;
       if (saved && saved in INSTRUMENTS) this.instrument = saved;
+      const kit = localStorage.getItem('muse.drumKit');
+      if (kit === 'acoustic' || kit === 'electronic' || kit === 'fusion') this.drumKit = kit;
     }
     this.remember = !!opts.remember;
   }
@@ -251,6 +258,13 @@ export class AudioEngine {
     if (this.wet && this.ctx) this.wet.gain.setTargetAtTime(this.def.reverb, this.ctx.currentTime, 0.05);
     this.emit();
     if (this.ctx) void this.ensureLoaded(id);
+  }
+
+  /** Switch drum kit sound character without changing the written groove. */
+  setDrumKit(id: DrumKitId): void {
+    this.drumKit = id;
+    if (this.remember) try { localStorage.setItem('muse.drumKit', id); } catch { /* private mode */ }
+    this.emit();
   }
 
   /** Lazy-load (fetch + decode) an instrument's samples; resolves when ready (or failed → synth fallback). */
@@ -497,7 +511,9 @@ export class AudioEngine {
    */
   playDrum(
     voice: DrumVoiceId,
-    opts: { at?: number; vel?: number; artic?: string; midi?: number; melodic?: boolean } = {},
+    opts: {
+      at?: number; vel?: number; artic?: string; midi?: number; melodic?: boolean; kit?: DrumKitId;
+    } = {},
   ): void {
     const ctx = this.ctx, input = this.input;
     if (!ctx || !input) return;
@@ -509,6 +525,7 @@ export class AudioEngine {
       artic: opts.artic,
       midi: opts.midi,
       melodic: opts.melodic,
+      kit: opts.kit ?? this.drumKit,
     });
     this.voices.push({ end, stop });
     this.markBusy(end);

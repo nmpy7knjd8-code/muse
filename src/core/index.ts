@@ -32,5 +32,6 @@ export * from './paths';
 export * from './connections';
 export * from './playbackCursor';
 export * from './drums';
+export * from './drumKits';
 export * from './drumTension';
 export * from './drumTuning';
