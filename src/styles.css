@@ -1367,3 +1367,64 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   text-transform: uppercase; color: #e8a87c; margin-bottom: 4px;
 }
 .tryit-howto p { margin: 0; line-height: 1.4; }
+
+/* ---- Drum tension build / release ---- */
+.drum-tension {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background:
+    radial-gradient(100% 80% at 100% 0%, rgba(255, 213, 79, 0.08), transparent 50%),
+    linear-gradient(165deg, #262018 0%, #181410 100%);
+  border: 1px solid rgba(255, 213, 79, 0.22);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.drum-tension-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px;
+}
+.drum-tension-kicker {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: #e8c984; margin-right: 8px;
+}
+.drum-budget {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 650; color: #121117;
+}
+.drum-tension-msg { margin: 0; font-size: 13px; line-height: 1.35; color: #f0e6d4; }
+.drum-t-meters { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.drum-t-meter { display: grid; grid-template-columns: 52px 1fr 32px; align-items: center; gap: 6px; font-size: 11px; }
+.drum-t-meter-label { color: #a89484; }
+.drum-t-meter-track {
+  display: block; height: 6px; border-radius: 4px; background: #2a241c; overflow: hidden;
+}
+.drum-t-meter-track i {
+  display: block; height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #6fb0a8, #e8a87c 55%, #ffd54f);
+}
+.drum-t-meter-val { font-variant-numeric: tabular-nums; color: #cbb8a8; text-align: right; }
+.drum-t-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
+.drum-t-chip {
+  font-size: 10px; padding: 2px 7px; border-radius: 8px;
+  background: rgba(232, 168, 124, 0.12); border: 1px solid rgba(232, 168, 124, 0.35); color: #f0d2b8;
+}
+.drum-t-curve-label { margin-bottom: 4px; }
+.drum-t-bars { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
+.drum-t-bar {
+  flex: 1; min-width: 18px; max-width: 40px; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  position: relative; gap: 2px;
+}
+.drum-t-bar i {
+  display: block; width: 100%; border-radius: 4px 4px 2px 2px; min-height: 4px;
+  opacity: 0.85;
+}
+.drum-t-bar.on i { outline: 2px solid rgba(255, 213, 79, 0.7); opacity: 1; }
+.drum-t-bar em { font-size: 9px; font-style: normal; color: #9a8b7c; }
+.drum-t-rel { position: absolute; top: 0; font-size: 11px; color: #ffd54f; }
+.drum-t-levers summary {
+  cursor: pointer; font-size: 12px; color: #e8c984; font-weight: 600;
+}
+.drum-t-levers ul {
+  margin: 6px 0 0; padding-left: 1.1em; font-size: 12px; color: #cbb8a8; line-height: 1.35;
+}
+.drum-t-theory { margin-top: 8px; display: grid; gap: 4px; }
+.drum-t-theory p { margin: 0; color: #a89484; }

@@ -216,6 +216,34 @@ export const DRUM_PATTERNS: DrumPatternMeta[] = [
       hit('BD', 0), hit('BD', 2),
     ],
   },
+  {
+    id: 'build-fill',
+    name: 'Build fill (departure)',
+    theory: 'Leave the tonic pocket: toms + crash raise fill energy and density. Stack this bar before a pocket bar to feel build → release.',
+    tags: ['build', 'fill', 'departure', 'tension'],
+    beats: 4,
+    subdiv: 4,
+    hits: [
+      hit('HH', 0), hit('T1', 0.5), hit('T1', 0.75), hit('T2', 1), hit('T2', 1.25),
+      hit('FT', 1.5), hit('FT', 1.75), hit('SD', 2, 'accent'), hit('T1', 2.5), hit('T2', 2.75),
+      hit('FT', 3), hit('SD', 3.25, 'ghost'), hit('BD', 3.5), hit('CC', 3.75, 'accent'),
+      hit('BD', 0), hit('BD', 2),
+    ],
+  },
+  {
+    id: 'release-crash-one',
+    name: 'Release crash on 1',
+    theory: 'Arrival marker: crash + kick on beat 1, backbeat restored, density down. Spends the debt a fill bar stacked.',
+    tags: ['release', 'arrival', 'crash', 'pocket'],
+    beats: 4,
+    subdiv: 2,
+    hits: [
+      hit('CC', 0, 'accent'), hit('HH', 0.5), hit('HH', 1), hit('HH', 1.5),
+      hit('HH', 2), hit('HH', 2.5), hit('HH', 3), hit('HH', 3.5),
+      hit('SD', 1, 'accent'), hit('SD', 3, 'accent'),
+      hit('BD', 0, 'accent'), hit('BD', 2),
+    ],
+  },
 ];
 
 export function drumPatternById(id: string): DrumPatternMeta | undefined {
@@ -337,5 +365,9 @@ export const DRUM_THEORY_PILLARS: Array<{ name: string; detail: string }> = [
   {
     name: 'Loop the cell',
     detail: 'If a one-bar groove does not feel good looping, it is not ready to expand. Muse Loop is the practice room.',
+  },
+  {
+    name: 'Build & release',
+    detail: 'The pocket is a rhythmic tonic. Fills, syncopation, and density leave home (build); crash-on-1, half-time, or a clean backbeat return (release).',
   },
 ];

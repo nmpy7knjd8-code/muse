@@ -14,6 +14,7 @@ v1 suggestions + mood bar + safe/adventurous slider; piano/guitar/voice-leading/
 - Fourth writing lane **Drums**: kit grid (CC/Rd/HH/HO/SD/toms/BD/Hf), 16th-default part meter, ASCII tab, starter grooves with percussion theory (pocket, ghosts, linear, additive, 4-over-3).
 - ▶ Play schedules drum one-shots with chords/melody/bass; same subdivision = simultaneous; Loop unchanged.
 - Guide: Drums section + percussion theory group; TOOL Artist Lens deepened (Carey pocket technique, listening how-to, try-its with `drumPatternId`).
+- **Rhythm tension (build & release):** `drumTension.ts` — tonic beat pattern / density / syncopation / fill → leaky debt (shared `stepDebt`); Drums tab strip + build-fill / release-crash patterns; Guide “Drum tension” theory. Parallel to harmony TensionCurve (does not rewrite chord ranking).
 
 ## Chord ↔ melody link (this branch)
 - Hear a suggested chord under a pending N.C. melody plays chord + that bar’s notes together (`harmPreviewEvents`).
