@@ -1,11 +1,11 @@
 // Drum percussion grid: kit rows × subdivision columns. Same column = play simultaneously.
-// Key/mode strip shows which notes the pitched voices (kick, toms, ride bell) lock to.
+// Pitched voices (kick, toms, ride bell) still lock to the session key/mode when played.
 import type { ReactNode } from 'react';
 import {
   DEFAULT_DRUM_KIT, DRUM_KITS, DRUM_PATTERNS, DRUM_THEORY_PILLARS, DRUM_VOICES,
   DrumArtic, DrumHit, DrumKitId, DrumVoiceId,
   cycleDrumArtic, defaultMidiForVoice, drumRoleHint, drumTabAscii, drumTuningForKey, drumVel,
-  keyName, noteName, spellInKey, toggleDrumHit, voiceTuneLabel,
+  keyName, toggleDrumHit, voiceTuneLabel,
   type DrumKeyTuning, type Key,
 } from '../core';
 
@@ -22,7 +22,7 @@ interface Props {
   onPreview: (voice: DrumVoiceId, artic?: DrumArtic, midi?: number) => void;
   onLoadPattern: (hits: DrumHit[], beats: number, subdiv: 1 | 2 | 4) => void;
   onChooseKit?: (id: DrumKitId) => void;
-  /** Place a melodic steel accent (scale degree) on the next empty tom/steel slot. */
+  /** Melodic steel accent preview (scale degree) — Key tones strip is hidden. */
   onPreviewTone?: (midi: number, label: string) => void;
 }
 
@@ -44,72 +44,9 @@ function hitMark(voice: DrumVoiceId, artic: DrumArtic): string {
   return artic === 'accent' ? 'O' : 'o';
 }
 
-function KeyToneStrip({
-  tuning, onPreviewVoice, onPreviewTone,
-}: {
-  tuning: DrumKeyTuning;
-  onPreviewVoice: (voice: DrumVoiceId, midi?: number) => void;
-  onPreviewTone?: (midi: number, label: string) => void;
-}): ReactNode {
-  const pairs: Array<{ voice: DrumVoiceId; tip: string }> = [
-    { voice: 'BD', tip: 'Kick · tonic' },
-    { voice: 'BDp', tip: 'Punch kick · 5th' },
-    { voice: 'FT', tip: 'Floor tom · tonic' },
-    { voice: 'T2', tip: 'Mid tom · 3rd' },
-    { voice: 'T1', tip: 'High tom · 5th' },
-    { voice: 'Rb', tip: 'Ride bell · 5th' },
-    { voice: 'Cs', tip: 'Splash · ♭7 / colour' },
-  ];
-  return (
-    <div className="drum-keytones" aria-label="Key and mode drum tones">
-      <div className="drum-keytones-head">
-        <span className="drum-keytones-kicker">Key tones</span>
-        <b>{keyName(tuning.key, true)}</b>
-        <span className="small muted">Pitched kit voices lock to this mode so drums agree with chords / melody / bass.</span>
-      </div>
-      <div className="drum-keytones-pairs">
-        {pairs.map(({ voice, tip }) => {
-          const label = voiceTuneLabel(voice, tuning);
-          const midi = defaultMidiForVoice(voice, tuning);
-          if (!label || midi == null) return null;
-          return (
-            <button
-              key={voice}
-              type="button"
-              className="drum-keytone-chip"
-              title={`${tip} — ${label}`}
-              onClick={() => onPreviewVoice(voice, midi)}
-            >
-              <span className="drum-keytone-voice">{voice}</span>
-              <span className="drum-keytone-note">{label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="drum-scale-tones" aria-label="Melodic steel scale degrees">
-        <span className="small muted">Melodic steel (in mode)</span>
-        <div className="drum-scale-row">
-          {tuning.scaleTones.map((t) => (
-            <button
-              key={`${t.degree}-${t.midi}`}
-              type="button"
-              className="drum-scale-chip"
-              title={`${t.why} · MIDI ${t.midi}`}
-              onClick={() => onPreviewTone?.(t.midi, t.label)}
-            >
-              <b>{t.label}</b>
-              <span>{noteName(spellInKey(tuning.key, t.midi), true)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function DrumPad({
   hits, beats, subdiv, keyInfo, kit = DEFAULT_DRUM_KIT, playBeat,
-  onChange, onPreview, onLoadPattern, onChooseKit, onPreviewTone,
+  onChange, onPreview, onLoadPattern, onChooseKit,
 }: Props): ReactNode {
   const step = 1 / subdiv;
   const cols = Math.round(beats * subdiv);
@@ -133,12 +70,6 @@ export function DrumPad({
           ))}
         </ul>
       </div>
-
-      <KeyToneStrip
-        tuning={tuning}
-        onPreviewVoice={(voice, midi) => onPreview(voice, 'normal', midi)}
-        onPreviewTone={onPreviewTone}
-      />
 
       <div className="drum-kits" role="radiogroup" aria-label="Drum kit sound">
         <div className="drum-kits-head">

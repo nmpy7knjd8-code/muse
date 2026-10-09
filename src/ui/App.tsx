@@ -816,12 +816,6 @@ function Composer({ data }: { data: LoadedData }) {
       melodic: true,
     });
   };
-  const previewDrumTone = (midi: number, label: string) => {
-    synth.unlock();
-    // Melodic steel accent — hear the scale degree that toms/bells pair with.
-    synth.playDrum('T1', { vel: 0.8, midi, melodic: true });
-    flash(`Mode tone ${label}`);
-  };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
   const clearAll = () => { stopPlayback(); synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
   const addNote = (m: number) => {
@@ -1824,19 +1818,6 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
         )}
-        <ChordConnections
-          slots={slots}
-          keyInfo={k}
-          kb={data.kb}
-          beats={beats}
-          spell={spellMidi}
-          focusIndex={tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? null) : null}
-          onFocusBar={(si) => {
-            const ci = chordedSlotIndices.indexOf(si);
-            if (ci >= 0) setTensionPick(ci);
-          }}
-          onHearBridge={playBridge}
-        />
         <div className="row gap play-row">
           <button onClick={togglePlay} disabled={!slots.length} aria-pressed={!!transport}>
             {transport ? '■ Stop' : '▶ Play'}
@@ -2112,7 +2093,6 @@ function Composer({ data }: { data: LoadedData }) {
             onPreview={previewDrum}
             onLoadPattern={loadDrumPattern}
             onChooseKit={chooseDrumKit}
-            onPreviewTone={previewDrumTone}
           />
         )}
         </>
@@ -2358,6 +2338,21 @@ function Composer({ data }: { data: LoadedData }) {
           ghost={tab === 'chords' && selChord?.tension ? { level: selChord.tension.level, debtAfter: selChord.tension.debtAfter, label: selChord.symbol, color: lex.color(selChord.primaryMood) } : null}
         />
       )}
+
+      {/* Voice-leading / within-bar joins — kept at the bottom so the write + play strip stays primary */}
+      <ChordConnections
+        slots={slots}
+        keyInfo={k}
+        kb={data.kb}
+        beats={beats}
+        spell={spellMidi}
+        focusIndex={tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? null) : null}
+        onFocusBar={(si) => {
+          const ci = chordedSlotIndices.indexOf(si);
+          if (ci >= 0) setTensionPick(ci);
+        }}
+        onHearBridge={playBridge}
+      />
 
       <div className="center" style={{ marginTop: 14 }}>
         <button className={'pill' + (loreOn ? ' on' : '')} onClick={() => setLoreOn((x) => !x)}>Lore mode {loreOn ? 'on' : 'off'}</button>
