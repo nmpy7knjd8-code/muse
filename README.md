@@ -38,7 +38,7 @@ and Settings → Pages → Custom domain shows `museio.io` verified with HTTPS. 
   (drums render as ASCII tab in Copy). Pending N.C. melody can be harmonized by the next-chord suggestions.
 - **Drums tab:** kit×subdivision percussion grid (simultaneous columns + Loop) with several hats,
   kicks, toms, crash/splash, ride/bell, and rim. Pitched voices lock to the session key/mode
-  (kick=1, mid tom=3, high tom/ride bell=5, etc.) with FluidR3 steel-drum / taiko sample colour.
+  (kick=1, mid tom=3, high tom/ride bell=5, etc.). Acoustic / Fusion kits play real FluidR3 GM one-shots.
   Rhythm tension strip teaches build & release. Guide + Artist Lens (TOOL) go deep on how to play.
 - Chord palette, typed chords (`F#m7`, `Bb/D`, …), and a tap piano for melody.
 - Suggestions grouped and coloured by mood. Each card shows the roman numeral, 1–3 mood tags, a
