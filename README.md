@@ -43,7 +43,8 @@ worker) are relative to that base. Local `npm run preview` serves at http://loca
   - guitar diagrams (curated open/E/A shapes plus a generator that never returns an unplayable shape)
   - voice-leading lines
   - mood map (dark↔bright × calm↔tense)
-  - circle of fifths with a mood-coloured arrow
+  - circle of fifths with a mood-coloured arrow (Best fit also scores falling-fifths
+    *chains* across a recent stretch, and next-note ranking prefers CoF neighbours)
   - Tonnetz with the P/L/R path
 - Mood journey: pick a start and end mood and get a generated 4–8 chord progression.
 - Lore mode, clearly labelled "LORE, NOT SCIENCE": Schubart key characters, the Scriabin mystic chord, etc.

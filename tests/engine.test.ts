@@ -147,6 +147,14 @@ describe.each([['research KB', real], ['seed KB', seed]])('chord suggestions (%s
     expect(bVII).toBeGreaterThanOrEqual(0);
     expect(bVII).toBeLessThan(8);
   });
+  it('rewards continuing a falling-fifths chain across a chord sequence', () => {
+    // Am → Dm → G is two falling-fifth links; C continues the chain (advanced CoF).
+    const s = eng.suggestChords({ key: key('C'), progression: prog('Am Dm G'), adventure: 0.3, limit: 12 });
+    const c = s.find((x) => x.id === 'C' || x.id === 'Cmaj7');
+    expect(c).toBeDefined();
+    expect(s.findIndex((x) => x.id === c!.id)).toBeLessThan(4);
+    expect(c!.why.toLowerCase()).toMatch(/falling-fifths chain|cadence home|circle fifths/);
+  });
 });
 
 describe('melody suggestions', () => {
@@ -233,6 +241,53 @@ describe('melody suggestions', () => {
     const rank = (list: typeof withStretch, pc: number) => list.findIndex((n) => n.midi % 12 === pc);
     expect(rank(withStretch, 11)).toBeLessThanOrEqual(rank(alone, 11) + 1);
     expect(withStretch.slice(0, 5).some((n) => n.isChordTone)).toBe(true);
+  });
+
+  it('prefers circle-of-fifths neighbours of the last melody note', () => {
+    // Last note G4 (67): C and D are 1 step on the CoF; F#/Gb is farther / less neighbourly.
+    const s = eng.suggestNotes({
+      key: key('C'),
+      melody: [67],
+      chord: ch('G'),
+      beat: 0,
+      limit: 20,
+    });
+    const rank = (pc: number) => s.findIndex((n) => n.midi % 12 === pc);
+    const cRank = rank(0); // C — one step left of G on the circle
+    const dRank = rank(2); // D — one step right
+    expect(cRank).toBeGreaterThanOrEqual(0);
+    expect(dRank).toBeGreaterThanOrEqual(0);
+    // At least one CoF neighbour should land in the top half of the list.
+    expect(Math.min(cRank, dRank)).toBeLessThan(10);
+    const neighbour = s.find((n) => n.midi % 12 === 0 || n.midi % 12 === 2);
+    expect(neighbour?.why).toMatch(/Brighter|Opens|pulls toward home|feels relaxed|circle|fifths|chord/i);
+  });
+
+  it('aims melody along a falling-fifths chord sequence', () => {
+    // Am→Dm→G chain: next expected root is C. Chord tones of G still lead; the chain should
+    // lift tonic vs the same under-chord with no sequence context.
+    const withChain = eng.suggestNotes({
+      key: key('C'),
+      melody: [71], // B — leading tone into C, plus chain aim
+      chord: ch('G'),
+      progression: [ch('Am'), ch('Dm'), ch('G')],
+      beat: 0,
+      limit: 20,
+    });
+    const alone = eng.suggestNotes({
+      key: key('C'),
+      melody: [71],
+      chord: ch('G'),
+      beat: 0,
+      limit: 20,
+    });
+    const cChain = withChain.find((n) => n.midi % 12 === 0)!;
+    const cAlone = alone.find((n) => n.midi % 12 === 0)!;
+    expect(cChain).toBeDefined();
+    expect(cAlone).toBeDefined();
+    expect(cChain.score).toBeGreaterThan(cAlone.score);
+    expect(withChain.findIndex((n) => n.midi % 12 === 0)).toBeLessThan(6);
+    expect(cChain.why.toLowerCase()).toMatch(/falling-fifths|resolves|tendency|home/);
   });
 });
 
