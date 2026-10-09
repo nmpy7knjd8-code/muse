@@ -191,7 +191,13 @@ export class DrumSampleBanks {
     src.stop(start + dur + 0.05);
     return {
       end: start + dur,
-      stop: (t) => { try { src.stop(t); } catch { /* ok */ } },
+      stop: (t) => {
+        try {
+          g.gain.cancelScheduledValues(t);
+          g.gain.setValueAtTime(0, t);
+        } catch { /* ok */ }
+        try { src.stop(t); } catch { /* ok */ }
+      },
     };
   }
 
@@ -306,7 +312,7 @@ function scheduleSampledHit(
       stoppers.forEach((s) => s(t));
       try {
         out.gain.cancelScheduledValues(t);
-        out.gain.setTargetAtTime(0, t, 0.02);
+        out.gain.setValueAtTime(0, t);
       } catch { /* ok */ }
     },
   };
@@ -460,7 +466,7 @@ export function scheduleDrumHit(
       stoppers.forEach((s) => s(t));
       try {
         out.gain.cancelScheduledValues(t);
-        out.gain.setTargetAtTime(0, t, 0.02);
+        out.gain.setValueAtTime(0, t);
       } catch { /* ok */ }
     },
   };

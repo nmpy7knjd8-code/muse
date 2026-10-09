@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { loadKB } from './helpers';
 import {
   SuggestionEngine, parseChord, key, noteRelation, melodyFit, REL_FIT,
-  insertNote, insertBassNote, insertRest, setSlotChord, chordTargetIndex, activeSlotIndex, activeBassSlotIndex,
-  nextNoteBeat, nextBassBeat, labelSlot, labelBassSlot, timelineEvents, harmPreviewEvents,
+  insertNote, insertBassNote, insertRest, setSlotChord, setSlotDrums, applyGrooveToSlots, chordTargetIndex,
+  activeSlotIndex, activeBassSlotIndex,
+  nextNoteBeat, nextBassBeat, labelSlot, labelBassSlot, timelineEvents, harmPreviewEvents, grooveEvents,
   melodyOf, bassOf, chordsOf, removeNoteAt, removeBassAt, clearSlotChord,
-  toMidiTimeline, timelineText, noteDurations, slotBass, isRest, isSounding,
+  toMidiTimeline, timelineText, noteDurations, slotBass, slotDrums, isRest, isSounding,
   defaultPartMeters, clampSlotsToPartMeters, pulseStep, slotsPerPartBar, partPulseSec,
 } from '../src/core';
 
@@ -56,6 +57,30 @@ describe('timeline slots', () => {
     slots = setSlotChord(slots, 0, ch('C'));
     expect(chordTargetIndex(slots)).toBe(1);
     expect(chordsOf(slots).map((c) => c.quality)).toEqual(['maj']);
+  });
+  it('chordTargetIndex prefers a drums-only bar over appending after it', () => {
+    let slots = setSlotDrums([], 0, [{ voice: 'BD', beat: 0 }, { voice: 'SD', beat: 1 }]);
+    expect(chordTargetIndex(slots)).toBe(0);
+    slots = setSlotChord(slots, 0, ch('C'));
+    expect(chordTargetIndex(slots)).toBe(1);
+  });
+  it('applyGrooveToSlots layers a groove under existing chords without shifting them', () => {
+    let slots = setSlotChord([], 0, ch('C'));
+    slots = setSlotChord(slots, 1, ch('G'));
+    slots = applyGrooveToSlots(slots, [{ voice: 'BD', beat: 0 }, { voice: 'HH', beat: 0 }]);
+    expect(slots).toHaveLength(2);
+    expect(slots[0]!.chord?.quality).toBe('maj');
+    expect(slots[1]!.chord?.quality).toBe('maj');
+    expect(slotDrums(slots[0]!)).toHaveLength(2);
+    expect(slotDrums(slots[1]!)).toHaveLength(2);
+    expect(chordTargetIndex(slots)).toBe(2);
+  });
+  it('grooveEvents is drums-only (no chord/melody lane)', () => {
+    const ev = grooveEvents([{ voice: 'BD', beat: 0 }, { voice: 'SD', beat: 1 }], { beatSec: 0.5 });
+    expect(ev.chords).toHaveLength(0);
+    expect(ev.notes).toHaveLength(0);
+    expect(ev.drums.map((d) => d.voice)).toEqual(['BD', 'SD']);
+    expect(ev.total).toBe(2); // one 4/4 bar at beatSec 0.5
   });
   it('labels notes against the chord under them', () => {
     let slots = setSlotChord([], 0, ch('G7'));

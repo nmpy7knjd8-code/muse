@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  activeAt, loopPlayhead, nextLoopOrigin, shouldPrimeLoop, timelineEvents,
-  setSlotChord, insertNote, parseChord, LOOP_PRE_SCHEDULE_SEC,
+  activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, shouldPrimeLoop, timelineEvents,
+  setSlotChord, insertNote, parseChord, LOOP_LOOKAHEAD_SEC, LOOP_PRE_SCHEDULE_SEC,
 } from '../src/core';
 
 const ch = (s: string) => parseChord(s)!;
@@ -42,5 +42,13 @@ describe('seamless loop timing', () => {
     expect(loopPlayhead(0.25, 2)).toBeCloseTo(0.25);
     expect(loopPlayhead(2.25, 2)).toBeCloseTo(0.25);
     expect(loopPlayhead(-0.1, 2)).toBeCloseTo(1.9);
+  });
+  it('primes every cycle needed to stay at least one period ahead of the audio clock', () => {
+    // At t=0.1, next cycle at 2 covers the upcoming seam; until = now+period+lookahead ≈ 2.35.
+    expect(loopOriginsToPrime(2, 2, 0.1, LOOP_LOOKAHEAD_SEC)).toEqual([2]);
+    // Near the seam with nothing queued yet → catch up both the imminent and following cycle.
+    expect(loopOriginsToPrime(2, 2, 1.9, LOOP_LOOKAHEAD_SEC)).toEqual([2, 4]);
+    // Already far enough ahead → nothing to queue.
+    expect(loopOriginsToPrime(10, 2, 0.1, LOOP_LOOKAHEAD_SEC)).toEqual([]);
   });
 });

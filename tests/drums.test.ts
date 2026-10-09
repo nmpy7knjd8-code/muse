@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_DRUM_KIT, DRUM_KITS, DRUM_PATTERNS, cycleDrumArtic, defaultPartMeters,
   drumKitById, drumPatternById, drumTabAscii, drumVel, isDrumKitId, parseChord,
-  setSlotChord, setSlotDrums, slotDrums, timelineEvents, toggleDrumHit,
+  setSlotChord, setSlotDrums, slotDrums, timelineEvents, grooveEvents, toggleDrumHit,
   activeAt, normalizeArtists,
 } from '../src/core';
 import { DRUM_GM_NOTE, DRUM_SAMPLE_NOTES } from '../src/ui/drumKit';
@@ -111,6 +111,15 @@ describe('drums on the timeline', () => {
     const pm = defaultPartMeters();
     expect(pm.drums.subdiv).toBe(4);
     expect(pm.drums.timeSig).toEqual({ num: 4, den: 4 });
+  });
+
+  it('grooveEvents schedules drums alone for a one-bar practice loop', () => {
+    const rock = drumPatternById('backbeat-rock')!;
+    const ev = grooveEvents(rock.hits, { bpm: 120, partMeters: defaultPartMeters() });
+    expect(ev.chords).toHaveLength(0);
+    expect(ev.notes).toHaveLength(0);
+    expect(ev.drums.length).toBe(rock.hits.length);
+    expect(ev.total).toBeGreaterThan(0);
   });
 });
 

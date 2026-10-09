@@ -329,6 +329,14 @@ export class AudioEngine {
     this.busyUntil = Math.max(this.busyUntil, performance.now() + ms);
   }
 
+  /** Track a voice; drop only finished ones so queued loop hits stay stoppable (Clear / Stop). */
+  private trackVoice(v: Voice): void {
+    this.voices.push(v);
+    if (this.voices.length < 96 || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.voices = this.voices.filter((x) => x.end > t);
+  }
+
   stopAll(): void {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
@@ -404,9 +412,8 @@ export class AudioEngine {
     } else {
       v = this.fallbackVoice(midi, start, vel, out, off, def);
     }
-    this.voices.push(v);
+    this.trackVoice(v);
     this.markBusy(v.end);
-    if (this.voices.length > 64) this.voices.splice(0, this.voices.length - 64);
   }
 
   /** Improved synth used until samples load: FM e-piano/pluck, or detuned saws through a filter envelope for the pad. */
@@ -565,7 +572,7 @@ export class AudioEngine {
       melodic: opts.melodic,
       kit: opts.kit ?? this.drumKit,
     });
-    this.voices.push({ end, stop, kind: 'drum' });
+    this.trackVoice({ end, stop, kind: 'drum' });
     this.markBusy(end);
   }
 }

@@ -6,9 +6,10 @@ import {
   spellInKey, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
   INSTRUMENTS, INSTRUMENT_IDS, bassLineMidi, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
-  TimelineSlot, activeBassSlotIndex, activeSlotIndex, bassOf, chordTargetIndex, chordsOf, clearSlotChord, insertBassNote, insertNote,
+  TimelineSlot, activeBassSlotIndex, activeSlotIndex, applyGrooveToSlots, bassOf, chordTargetIndex, chordsOf, clearSlotChord,
+  insertBassNote, insertNote,
   insertRest, isSounding, labelBassSlot, labelSlot, melodyOf, nextBassBeat, nextNoteBeat, noteDurations, removeBassAt, removeNoteAt, removeSlot,
-  setSlotChord, setSlotDrums, slotBass, slotDrums, timelineEvents, timelineText, toMidiTimeline,
+  setSlotChord, slotBass, slotDrums, timelineEvents, grooveEvents, timelineText, toMidiTimeline,
   harmPreviewEvents, clampSlotsToPartMeters,
   REL_COLORS, REL_LABEL, type RelKind,
   colourPaletteChords, degreeRole, isDiatonicTriadClone, nrtPathLabel, nrtTag, openPaletteChords, rootMotion, secondaryPaletteChords,
@@ -16,7 +17,7 @@ import {
   beatsPerBar, parseMeter, defaultPartMeters, timeSigEqual,
   timeSigLabel, type PartMeter, type PartMeters, type PartId,
   suggestChordPaths, suggestNotePaths, formatChordPath, formatNotePath, type ChordPath, type NotePath,
-  type ChordBridge, activeAt, nextLoopOrigin, shouldPrimeLoop, type TimelineEvents,
+  type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
 } from '../core';
@@ -195,6 +196,12 @@ function Composer({ data }: { data: LoadedData }) {
   const transportRef = useRef(transport);
   transportRef.current = transport;
   const [playSec, setPlaySec] = useState(0);
+  /** Session practice groove — edited on the Drums pad; independent of timeline until Add to notes. */
+  const [grooveHits, setGrooveHits] = useState<DrumHit[]>([]);
+  /** `groove` = drums-only Loop; `timeline` = full ▶ Play (chords/melody/bass/drums). */
+  const [playMode, setPlayMode] = useState<'timeline' | 'groove' | null>(null);
+  const playModeRef = useRef(playMode);
+  playModeRef.current = playMode;
   /** Loop ▶ Play when the timeline ends (default on). */
   const [loopPlay, setLoopPlay] = useState(() => {
     try {
@@ -210,9 +217,17 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const loopPlayRef = useRef(loopPlay);
   loopPlayRef.current = loopPlay;
-  /** Absolute AudioContext time through which loop cycles are already queued (zero-gap seams). */
-  const primedThroughRef = useRef(0);
+  /**
+   * Next loop-cycle origin still to queue on the audio clock.
+   * Priming stays ahead of `audioTime()` so seams never wait on React/rAF.
+   */
+  const nextPrimeOriginRef = useRef(0);
   const schedulePassRef = useRef<(origin: number) => void>(() => {});
+  /** Fixed audio-clock origin for the current ▶ Play / Loop groove (does not advance each cycle). */
+  const playOriginRef = useRef(0);
+  /** Bumped on Stop/Clear so an in-flight rAF cannot re-prime audio after stopAll. */
+  const playbackEpochRef = useRef(0);
+  const playRafRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const barRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
@@ -336,15 +351,6 @@ function Composer({ data }: { data: LoadedData }) {
     }));
     return steps.length ? progressionTension(steps, k, { style: tStyle, adventure, target: moodTarget(profile) }) : null;
   }, [k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
-  /** Bar currently edited on the Drums tab (selected tension bar, else last). */
-  const drumEditIndex = useMemo(() => {
-    if (!slots.length) return 0;
-    if (tensionPick !== null) {
-      const si = chordedSlotIndices[tensionPick];
-      if (si != null) return si;
-    }
-    return slots.length - 1;
-  }, [slots.length, tensionPick, chordedSlotIndices]);
   const tensionMelodyNotes: TensionMelNote[][] = useMemo(
     () => slots.filter((s) => s.chord).map((s) => {
       const out: TensionMelNote[] = [];
@@ -628,13 +634,38 @@ function Composer({ data }: { data: LoadedData }) {
     flash(`${b.fromSymbol} → ${b.toSymbol} · ${b.commonToneCount} held · ${b.totalMotion} st`);
   };
   const stopPlayback = () => {
+    // Invalidate first so any in-flight rAF/prime cannot schedule after stopAll.
+    playbackEpochRef.current += 1;
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    schedulePassRef.current = () => {};
+    nextPrimeOriginRef.current = 0;
+    playOriginRef.current = 0;
     synth.stopAll();
-    primedThroughRef.current = 0;
     setTransport(null);
     setPlaySec(0);
+    setPlayMode(null);
+  };
+  /** Queue every cycle still needed so the audio thread stays ahead of the playhead. */
+  const primeLoopAhead = (now: number, period: number, epoch: number) => {
+    if (period <= 0 || playbackEpochRef.current !== epoch) return;
+    for (const o of loopOriginsToPrime(nextPrimeOriginRef.current, period, now)) {
+      if (playbackEpochRef.current !== epoch) return;
+      schedulePassRef.current(o);
+      nextPrimeOriginRef.current = nextLoopOrigin(o, period);
+    }
   };
   const playAll = () => {
     synth.unlock();
+    // New epoch for this run (also disarms any prior rAF via stopPlayback semantics).
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    const epoch = playbackEpochRef.current + 1;
+    playbackEpochRef.current = epoch;
     synth.stopAll();
     for (const id of activeParts) void synth.ensureLoaded(id);
     // ▶ Play from the selected bar (if any); otherwise from the start.
@@ -649,11 +680,13 @@ function Composer({ data }: { data: LoadedData }) {
     const drumTune = drumTuningForKey(k);
     /** Queue one full pass at a fixed audio-clock origin (shared by playhead + every voice). */
     const schedulePass = (origin: number) => {
+      if (playbackEpochRef.current !== epoch) return;
       ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
         at: c.at, dur: c.dur, vel: 0.7, origin,
         // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
         autoBass: !composedBassBars.has(c.index),
       }));
+      if (playbackEpochRef.current !== epoch) return;
       ev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], {
         at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85, instrument: melodyInst, origin,
       }));
@@ -674,14 +707,50 @@ function Composer({ data }: { data: LoadedData }) {
     };
     schedulePassRef.current = schedulePass;
     const origin = synth.scheduleOrigin();
+    playOriginRef.current = origin;
     schedulePass(origin);
-    // With Loop on, prime the next cycle immediately so the seam has zero lag.
+    nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
+    // With Loop on, keep ≥1 extra cycle in the AudioContext queue before the first seam.
     if (loopPlayRef.current && ev.total > 0) {
-      schedulePass(nextLoopOrigin(origin, ev.total));
-      primedThroughRef.current = origin + 2 * ev.total;
-    } else {
-      primedThroughRef.current = origin + ev.total;
+      primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
     }
+    setPlayMode('timeline');
+    setTransport({ origin, events: ev });
+    setPlaySec(0);
+  };
+  /** Practice the session groove alone (no chords/melody); always loops until Stop. */
+  const playGrooveLoop = () => {
+    if (!grooveHits.length) return;
+    synth.unlock();
+    if (playRafRef.current) {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    }
+    const epoch = playbackEpochRef.current + 1;
+    playbackEpochRef.current = epoch;
+    synth.stopAll();
+    const drumTune = drumTuningForKey(k);
+    const ev = grooveEvents(grooveHits, { timeSig, beatSec, partMeters });
+    const schedulePass = (origin: number) => {
+      if (playbackEpochRef.current !== epoch) return;
+      ev.drums.forEach((d) => synth.playDrum(d.voice, {
+        at: d.at,
+        vel: d.vel,
+        artic: d.artic,
+        midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune),
+        melodic: true,
+        origin,
+      }));
+    };
+    schedulePassRef.current = schedulePass;
+    const origin = synth.scheduleOrigin();
+    playOriginRef.current = origin;
+    schedulePass(origin);
+    nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
+    // Groove practice always loops; keep the Loop control in sync and prime ahead of the seam.
+    if (!loopPlayRef.current) chooseLoop(true);
+    if (ev.total > 0) primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
+    setPlayMode('groove');
     setTransport({ origin, events: ev });
     setPlaySec(0);
   };
@@ -689,62 +758,54 @@ function Composer({ data }: { data: LoadedData }) {
     if (transport) stopPlayback();
     else playAll();
   };
+  const toggleGrooveLoop = () => {
+    if (transport && playMode === 'groove') stopPlayback();
+    else playGrooveLoop();
+  };
 
-  // If Loop is turned on mid-play, prime the next cycle so the upcoming seam stays gapless.
+  // If Loop is turned on mid-play, catch the queue up immediately (rAF also primes each frame).
   useEffect(() => {
     if (!transport || !loopPlay) return;
     const period = transport.events.total;
     if (period <= 0) return;
-    if (primedThroughRef.current < transport.origin + 2 * period - 1e-9) {
-      schedulePassRef.current(nextLoopOrigin(transport.origin, period));
-      primedThroughRef.current = transport.origin + 2 * period;
-    }
+    primeLoopAhead(synth.audioTime() ?? playOriginRef.current, period, playbackEpochRef.current);
   }, [loopPlay, transport]);
 
-  // Drive playhead from the audio clock; scroll the timeline to the sounding bar.
-  // Loop advances the origin at the exact seam; the next cycle’s notes were primed earlier.
+  // Drive playhead from the audio clock. Origin stays fixed; playhead wraps each period.
+  // Loop cycles are primed continuously against the audio clock (not via React state at the seam).
   useEffect(() => {
     if (!transport) return;
-    let raf = 0;
+    const period = transport.events.total;
+    const epoch = playbackEpochRef.current;
     const tick = () => {
+      if (playbackEpochRef.current !== epoch) return;
       const now = synth.audioTime();
       if (now === null) {
-        raf = requestAnimationFrame(tick);
+        playRafRef.current = requestAnimationFrame(tick);
         return;
       }
-      const elapsed = now - transport.origin;
-      const period = transport.events.total;
-      if (loopPlayRef.current && period > 0) {
-        if (elapsed >= period) {
-          const next = nextLoopOrigin(transport.origin, period);
-          // Queue the cycle after the one that’s about to start (already primed through next+period).
-          if (primedThroughRef.current < next + period - 1e-9) {
-            schedulePassRef.current(nextLoopOrigin(next, period));
-            primedThroughRef.current = next + 2 * period;
-          }
-          setTransport({ origin: next, events: transport.events });
-          setPlaySec(Math.max(0, now - next));
-          return;
-        }
-        // Safety prime if somehow behind (e.g. Loop toggled on mid-play).
-        if (shouldPrimeLoop(elapsed, period) && primedThroughRef.current < transport.origin + 2 * period - 1e-9) {
-          schedulePassRef.current(nextLoopOrigin(transport.origin, period));
-          primedThroughRef.current = transport.origin + 2 * period;
-        }
-        setPlaySec(elapsed);
-        raf = requestAnimationFrame(tick);
+      const elapsed = now - playOriginRef.current;
+      // Groove practice always loops; timeline respects the Loop toggle.
+      const looping = playModeRef.current === 'groove' || loopPlayRef.current;
+      if (looping && period > 0) {
+        primeLoopAhead(now, period, epoch);
+        if (playbackEpochRef.current !== epoch) return;
+        setPlaySec(loopPlayhead(elapsed, period));
+        playRafRef.current = requestAnimationFrame(tick);
         return;
       }
       if (elapsed >= period) {
-        setTransport(null);
-        setPlaySec(0);
+        stopPlayback();
         return;
       }
       setPlaySec(elapsed);
-      raf = requestAnimationFrame(tick);
+      playRafRef.current = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    playRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(playRafRef.current);
+      playRafRef.current = 0;
+    };
   }, [transport]);
 
   const playActive = transport ? activeAt(transport.events, playSec) : null;
@@ -778,23 +839,17 @@ function Composer({ data }: { data: LoadedData }) {
   const removeAt = (i: number) => { if (slots[i]?.locked) return flash('Unlock the chord first'); snapshot(); setSlots((s) => removeSlot(s, i)); };
   const dropNote = (si: number, ni: number) => { snapshot(); setSlots((s) => removeNoteAt(s, si, ni)); };
   const dropBass = (si: number, ni: number) => { snapshot(); setSlots((s) => removeBassAt(s, si, ni)); };
-  const writeDrums = (hits: DrumHit[], index?: number) => {
-    snapshot();
-    setSlots((s) => {
-      const idx = Math.max(0, Math.min(index ?? drumEditIndex, Math.max(0, s.length - 1)));
-      return setSlotDrums(s, s.length ? idx : 0, hits);
-    });
+  const writeGroove = (hits: DrumHit[]) => {
+    setGrooveHits(hits.map((h) => ({ ...h })));
   };
   const loadDrumPattern = (hits: DrumHit[], beats: number, subdiv: 1 | 2 | 4) => {
     synth.unlock();
-    // Align drum part meter to the pattern grid, then write onto the active/last bar.
+    // Align drum part meter to the pattern grid; keep the groove off the timeline until Add to notes.
     if (beats !== drumBeats || subdiv !== drumMeter.subdiv) {
       choosePartMeter('drums', { timeSig: { num: beats, den: drumMeter.timeSig.den }, subdiv });
     }
     const tuned = applyKeyTuning(hits, drumTuningForKey(k));
-    const target = slots.length ? slots.length - 1 : 0;
-    snapshot();
-    setSlots((s) => setSlotDrums(s.length ? s : [{ chord: null, notes: [], bass: [], drums: [] }], Math.max(0, target), tuned));
+    setGrooveHits(tuned.map((h) => ({ ...h })));
     // Preview one bar of the pattern immediately (key-tuned pitched voices).
     const pulse = beatSec * (beatsPerBar(timeSig) / beats);
     tuned.forEach((h) => synth.playDrum(h.voice, {
@@ -804,7 +859,17 @@ function Composer({ data }: { data: LoadedData }) {
       midi: h.midi,
       melodic: true,
     }));
-    flash(`Loaded groove · ${hits.length} hits in ${keyName(k)} — ▶ Loop to practice`);
+    flash(`Loaded groove · ${hits.length} hits in ${keyName(k)} — Loop groove to practice, then Add to notes`);
+  };
+  const applyGrooveToNotes = () => {
+    if (!grooveHits.length) return flash('Build or load a groove first');
+    snapshot();
+    const tuned = applyKeyTuning(grooveHits, drumTuningForKey(k));
+    const barCount = slots.length;
+    setSlots((s) => applyGrooveToSlots(s, tuned));
+    flash(barCount
+      ? `Groove added under ${barCount} bar${barCount === 1 ? '' : 's'} — ▶ Play with chords & melody`
+      : 'Groove on the timeline — add chords anytime (they land on this bar)');
   };
   const previewDrum = (voice: DrumVoiceId, artic: DrumArtic = 'normal', midi?: number) => {
     synth.unlock();
@@ -817,7 +882,15 @@ function Composer({ data }: { data: LoadedData }) {
     });
   };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
-  const clearAll = () => { stopPlayback(); synth.unlock(); snapshot(); setSlots((s) => s.filter((x) => x.locked)); setMeterNote(null); setSelectedId(null); };
+  const clearAll = () => {
+    // Always kill Play / Loop groove first so cleared notes can’t keep sounding.
+    stopPlayback();
+    synth.unlock();
+    snapshot();
+    setSlots((s) => s.filter((x) => x.locked));
+    setMeterNote(null);
+    setSelectedId(null);
+  };
   const addNote = (m: number) => {
     synth.unlock();
     synth.playNotes([fitMidi(m)], { dur: 0.6, instrument: melodyInst });
@@ -1010,11 +1083,13 @@ function Composer({ data }: { data: LoadedData }) {
     chooseTonic(l.tonic); chooseMode(l.mode);
     const pat = t.drumPatternId ? drumPatternById(t.drumPatternId) : undefined;
     const tunedPatHits = pat ? applyKeyTuning(pat.hits, drumTuningForKey(l.key)) : [];
-    const nextSlots = l.chords.map((chord, i) => ({
+    if (pat) setGrooveHits(tunedPatHits.map((h) => ({ ...h })));
+    const nextSlots = l.chords.map((chord) => ({
       chord,
       notes: [] as TimelineSlot['notes'],
       bass: [] as TimelineSlot['notes'],
-      drums: pat && i === 0 ? tunedPatHits.map((h) => ({ ...h })) : [],
+      // Layer the try-it groove under every chord bar (not a drums-only bar before them).
+      drums: pat ? tunedPatHits.map((h) => ({ ...h })) : [],
       locked: false,
     }));
     if (l.timeSig) {
@@ -2079,7 +2154,7 @@ function Composer({ data }: { data: LoadedData }) {
           </div>
         ) : (
           <DrumPad
-            hits={slotDrums(slots[drumEditIndex] ?? { chord: null, notes: [] })}
+            hits={grooveHits}
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
             keyInfo={k}
@@ -2089,10 +2164,13 @@ function Composer({ data }: { data: LoadedData }) {
                 ? playActive.drums[0]!.beat
                 : null)
               : null}
-            onChange={(hits) => writeDrums(hits, drumEditIndex)}
+            grooveLooping={playMode === 'groove' && !!transport}
+            onChange={writeGroove}
             onPreview={previewDrum}
             onLoadPattern={loadDrumPattern}
             onChooseKit={chooseDrumKit}
+            onLoopGroove={toggleGrooveLoop}
+            onApplyToNotes={applyGrooveToNotes}
           />
         )}
         </>
