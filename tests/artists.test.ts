@@ -55,4 +55,23 @@ describe('Artist Lens data', () => {
     for (const [i, c] of l.chords.entries()) if (t.pedal!.chordIndices.includes(i)) expect(pc(c.bass ?? c.root)).toBe(2);
     expect(chordPcs(l.chords[1])).toContain(3);
   });
+
+  it('every artist polarity has a continuum lean in [0,1] (no numeric UI; position only)', () => {
+    let n = 0;
+    for (const a of file.artists) {
+      expect(a.polarities.length).toBeGreaterThan(0);
+      for (const p of a.polarities) {
+        expect(p.lean, `${a.id}/${p.id}`).toBeGreaterThanOrEqual(0);
+        expect(p.lean, `${a.id}/${p.id}`).toBeLessThanOrEqual(1);
+        n++;
+      }
+    }
+    expect(n).toBeGreaterThan(50);
+    // Steely Dan was stuck at 0 under the old technique-count bars.
+    const sd = file.artists.find((a) => a.id === 'steely-dan')!;
+    expect(sd.polarities.map((p) => p.id)).toEqual(['light_dark', 'consonance_dissonance', 'simple_complex']);
+    expect(sd.polarities.every((p) => p.lean > 0 && p.lean < 1)).toBe(true);
+    expect(sd.polarities.find((p) => p.id === 'light_dark')!.lean).toBeLessThan(0.5);
+    expect(sd.polarities.find((p) => p.id === 'simple_complex')!.lean).toBeGreaterThan(0.5);
+  });
 });

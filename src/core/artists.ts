@@ -24,7 +24,7 @@ export interface ArtistTryIt {
 }
 export interface Artist {
   id: string; name: string; era?: string; origin?: string; genres: string[]; documentation?: string; hook: string; aestheticSummary: string;
-  polarities: Array<{ id: string; how: string }>; techniques: ArtistTechnique[]; works: ArtistWork[];
+  polarities: Array<{ id: string; how: string; lean: number }>; techniques: ArtistTechnique[]; works: ArtistWork[];
   moodProfile: Array<{ mood: string; weight: number }>; tryIt: ArtistTryIt[]; listeningGuide: Array<{ step: number; title: string; what: string }>;
   relatedArtists: string[]; notes?: string[]; sources: ArtistSource[];
 }
@@ -36,6 +36,8 @@ export interface ArtistsFile {
 }
 
 const arr = (v: Json): Json[] => (Array.isArray(v) ? v : []);
+/** Map artist polarity lean onto [0,1]; missing/invalid → center (balanced). */
+const clamp01 = (v: Json): number => (typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.5);
 const strs = (v: Json): string[] => arr(v).filter((x) => typeof x === 'string');
 const str = (v: Json): string => (typeof v === 'string' ? v : '');
 
@@ -45,7 +47,7 @@ export function normalizeArtists(raw: Json): ArtistsFile | null {
   const artists: Artist[] = raw.artists.filter((a: Json) => a && a.id && a.name).map((a: Json) => ({
     id: str(a.id), name: str(a.name), era: str(a.era), origin: str(a.origin), genres: strs(a.genres), documentation: str(a.documentation),
     hook: str(a.hook), aestheticSummary: str(a.aestheticSummary),
-    polarities: arr(a.polarities).filter((p) => p && p.id).map((p) => ({ id: str(p.id), how: str(p.how) })),
+    polarities: arr(a.polarities).filter((p) => p && p.id).map((p) => ({ id: str(p.id), how: str(p.how), lean: clamp01(p.lean) })),
     techniques: arr(a.techniques).filter((t) => t && t.id).map((t) => ({
       id: str(t.id), category: str(t.category) || 'other', name: str(t.name), description: str(t.description), kbRefs: refs(t.kbRefs),
       moods: strs(t.moods), evidence: str(t.evidence), sourceIds: strs(t.sourceIds), tryInMuse: t.tryInMuse ? str(t.tryInMuse) : undefined, polarities: strs(t.polarities),

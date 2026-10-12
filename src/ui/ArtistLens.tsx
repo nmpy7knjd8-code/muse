@@ -26,29 +26,45 @@ function MoodChips({ moods, lex, max = 6 }: { moods: Array<{ mood: string; weigh
   );
 }
 
-/** Polarity bars: each polarity the artist plays with; bar length = how many of their techniques use it. */
+/** Wordy lean for a11y — no numbers spoken or shown. */
+function leanWords(lean: number, left: string, right: string): string {
+  if (lean <= 0.2) return `near ${left}`;
+  if (lean < 0.4) return `toward ${left}`;
+  if (lean <= 0.6) return `between ${left} and ${right}`;
+  if (lean < 0.8) return `toward ${right}`;
+  return `near ${right}`;
+}
+
+/** Polarity continuum: marker on a gradient between the two poles (lean 0 = left, 1 = right). */
 function PolarityBars({ artist, data, compact }: { artist: Artist; data: ArtistsFile; compact?: boolean }) {
   const byId = new Map(data.polarities.map((p) => [p.id, p]));
-  const count = (id: string) => artist.techniques.filter((t) => t.polarities?.includes(id)).length;
-  const max = Math.max(1, ...artist.polarities.map((p) => count(p.id)));
   return (
     <div className="polbars">
       {artist.polarities.map((p) => {
         const def = byId.get(p.id);
         if (!def) return null;
-        const n = count(p.id);
+        const [left, right] = def.poles;
+        const lean = p.lean;
+        const pct = `${Math.round(lean * 100)}%`;
+        const words = leanWords(lean, left, right);
         return (
           <div key={p.id} className="polbar">
             <div className="polhead">
-              <span className="pl">{def.poles[0]} ↔ {def.poles[1]}</span>
-              <span className="track"><i style={{ width: `${Math.round(18 + 82 * (n / max))}%` }} /></span>
-              <span className="n">{n}</span>
+              <span className="pole left" aria-hidden="true">{left}</span>
+              <span
+                className="track"
+                role="img"
+                aria-label={`${left} to ${right} continuum, ${words}`}
+              >
+                <i className="marker" style={{ left: pct }} />
+              </span>
+              <span className="pole right" aria-hidden="true">{right}</span>
             </div>
             {!compact && <p className="small muted">{p.how}</p>}
           </div>
         );
       })}
-      {compact && <div className="small muted">bars: share of techniques that work each polarity</div>}
+      {compact && <div className="small muted">marker: where the artist sits between each pair of poles</div>}
     </div>
   );
 }

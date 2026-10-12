@@ -128,22 +128,27 @@
    "polarities": [
     {
      "id": "tension_release",
+     "lean": 0.28,
      "how": "Long, repetitive builds on a pedal tone hold tension for minutes; release comes when meters and parts finally lock onto a shared downbeat, or when a new climactic section appears at the end."
     },
     {
      "id": "stable_unstable",
+     "lean": 0.55,
      "how": "A fixed low drone (very stable pitch) under shifting, uneven meters (unstable time). The ear holds onto the drone while the rhythm keeps moving."
     },
     {
      "id": "simple_complex",
+     "lean": 0.55,
      "how": "Adam Jones says his riffs often start as plain 4/4 blues-scale ideas that later 'morph'. The pitch material is simple. The complexity comes from rhythm and layering."
     },
     {
      "id": "loud_quiet",
+     "lean": 0.48,
      "how": "Clean, sparse intros and interludes (7empest opens with about 80 seconds of clean guitar) set up crushing distorted sections."
     },
     {
      "id": "light_dark",
+     "lean": 0.72,
      "how": "Phrygian-dominant riffs mix a dark ♭2 with a bright major 3rd, so the sound is menacing and exotic at once instead of plainly minor."
     }
    ],
@@ -1202,18 +1207,22 @@
    "polarities": [
     {
      "id": "consonance_dissonance",
+     "lean": 0.62,
      "how": "Lush triads and suspended chords sit beside quarter-tone clusters and dissonant noise; warm chord colors rarely last long without being undercut."
     },
     {
      "id": "stable_unstable",
+     "lean": 0.74,
      "how": "Some loops never state their tonic ('Everything in Its Right Place'), so the music feels unmoored even when every chord is consonant."
     },
     {
      "id": "human_machine",
+     "lean": 0.52,
      "how": "The band set out to explore the tension between human and machine-made music (Hail to the Thief era). Glitchy electronics run alongside a fragile falsetto."
     },
     {
      "id": "expectation_surprise",
+     "lean": 0.68,
      "how": "Osborn frames their forms as a 'sweet spot' between expectation and surprise: a strong expectation of a final chorus, then a new climax in its place."
     }
    ],
@@ -1794,14 +1803,17 @@
    "polarities": [
     {
      "id": "consonance_dissonance",
+     "lean": 0.55,
      "how": "The band repeatedly juxtaposed ornate tunes and ballads with dissonant noise (for example 'Cirkus', 'Ladies of the Road')."
     },
     {
      "id": "tension_release",
+     "lean": 0.38,
      "how": "Polyrhythmic lines wander out of synchronization and resolve when they all finish together. Slowly building ostinatos ('The Talking Drum') release into full-band themes."
     },
     {
      "id": "simple_complex",
+     "lean": 0.68,
      "how": "Fripp on 'Red': 'why would it have a five into a four? The answer is, because that's the way you play it, no intellectual analysis.'"
     }
    ],
@@ -2283,14 +2295,17 @@
    "polarities": [
     {
      "id": "stable_unstable",
+     "lean": 0.66,
      "how": "A rigidly regular 4/4 cymbal and phrase grid versus riffs that seem to start 'in the middle' and keep shifting against it."
     },
     {
      "id": "human_machine",
+     "lean": 0.78,
      "how": "Machine-precise, staccato riffing and 'robotic' vocals versus fluid, improvisatory jazz-fusion leads."
     },
     {
      "id": "tension_release",
+     "lean": 0.34,
      "how": "Riffs fight the grid for a whole section; the release comes at the hypermeasure boundary when everything resets together."
     }
    ],
@@ -2624,14 +2639,17 @@
    "polarities": [
     {
      "id": "light_dark",
+     "lean": 0.5,
      "how": "Two companion albums, one heavy (Deliverance) and one 'ballady and calm' (Damnation), plus constant acoustic/heavy and clean/growl switching inside songs."
     },
     {
      "id": "loud_quiet",
+     "lean": 0.5,
      "how": "Acoustic guitar is 'almost 50 per cent' of Åkerfeldt's playing. Quiet fingerpicked sections set up the heavy ones."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.58,
      "how": "Ninth chords and open-string shimmer versus chromatic, one-fret-at-a-time riffs that 'create a lot of tension and dissonance'."
     }
    ],
@@ -3073,14 +3091,17 @@
    "polarities": [
     {
      "id": "light_dark",
+     "lean": 0.55,
      "how": "A soulful, opaque croon against pile-driving riffs (Guardian)."
     },
     {
      "id": "loud_quiet",
+     "lean": 0.5,
      "how": "'Ebb-and-flow dynamics': palm-muted walls of distortion opening into 'mellifluous' choruses (Diamond Eyes title track)."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.7,
      "how": "Ringing open strings and dissonant voicings blur riffs into texture."
     }
    ],
@@ -3417,14 +3438,17 @@
    "polarities": [
     {
      "id": "consonance_dissonance",
+     "lean": 0.74,
      "how": "Simple chord shapes made unbearable by one dissonant interval (the B/E♯ tritone in 'Hurt')."
     },
     {
      "id": "loud_quiet",
+     "lean": 0.5,
      "how": "Industrial walls of noise against whispered intimacy. 'March of the Pigs' even cuts to a cheerful piano jingle."
     },
     {
      "id": "human_machine",
+     "lean": 0.62,
      "how": "Processed, sampled, quantized textures against raw vocals."
     }
    ],
@@ -3810,14 +3834,17 @@
    "polarities": [
     {
      "id": "organic_synthetic",
+     "lean": 0.5,
      "how": "Strings as 'the old fashioned atmosphere, the colouring', and electronic beats as 'the rhythm, the heartbeat' (on 'Jóga')."
     },
     {
      "id": "loud_quiet",
+     "lean": 0.45,
      "how": "'Pagan Poetry' builds over swelling keyboards, then at about four minutes all the music drops away and leaves her voice exposed."
     },
     {
      "id": "simple_complex",
+     "lean": 0.62,
      "how": "Childlike timbres (music boxes, celesta) carrying sophisticated meters (17/8, 7/4) and structures."
     }
    ],
@@ -4220,14 +4247,17 @@
    "polarities": [
     {
      "id": "light_dark",
+     "lean": 0.32,
      "how": "Bright, glossy major-seventh surfaces against cryptic, ironic lyrics."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.42,
      "how": "A whole-tone 'rub' (2 against 3) built into otherwise consonant major chords. Sweetness with grit."
     },
     {
      "id": "simple_complex",
+     "lean": 0.7,
      "how": "Blues at the core ('an altered blues that doesn't sound like a blues'), dressed in complex chords."
     }
    ],
@@ -4565,14 +4595,17 @@
    "polarities": [
     {
      "id": "loud_quiet",
+     "lean": 0.52,
      "how": "Long crescendos from near-silence to a 'crashing storm' ( )'s closing track)."
     },
     {
      "id": "light_dark",
+     "lean": 0.45,
      "how": "( )'s first half is light and keyboard-led; the second half is more melancholic."
     },
     {
      "id": "tension_release",
+     "lean": 0.4,
      "how": "Slow accumulation over a stable drone, then euphoric release (the 'Festival' climax used in 127 Hours)."
     }
    ],
@@ -4904,14 +4937,17 @@
    "polarities": [
     {
      "id": "organic_synthetic",
+     "lean": 0.55,
      "how": "Live-played parts turned into 'samples' by pressing them to vinyl and degrading them."
     },
     {
      "id": "warm_cold",
+     "lean": 0.68,
      "how": "A warm croon in a chilly mix. Critics call the album 'as musically compelling as it is emotionally chilly'."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.66,
      "how": "Pitch-shifted samples sit slightly out of tune against the band ('hip-hop tuning')."
     }
    ],
@@ -5247,14 +5283,17 @@
    "polarities": [
     {
      "id": "stable_unstable",
+     "lean": 0.7,
      "how": "Symmetrical scales (whole-tone) with no leading tone versus pentatonic or diatonic islands of clarity."
     },
     {
      "id": "tension_release",
+     "lean": 0.36,
      "how": "Tension comes from ambiguity rather than dissonance, and release from a sudden clear, consonant color ('Voiles' B section)."
     },
     {
      "id": "light_dark",
+     "lean": 0.55,
      "how": "Half-lights and veiled sounds. Contemporaries described him as 'the lover of vague outlines, of half-lights, of mysterious consonances and dissonances of colour'."
     }
    ],
@@ -5748,14 +5787,17 @@
    "polarities": [
     {
      "id": "stable_unstable",
+     "lean": 0.55,
      "how": "Symmetrical modes and palindromes are perfectly ordered, but because they have no goal they feel timeless rather than stable."
     },
     {
      "id": "tension_release",
+     "lean": 0.4,
      "how": "Dense octatonic chords (rich in tritones) resolve into radiant major sonorities in slow, ecstatic movements."
     },
     {
      "id": "simple_complex",
+     "lean": 0.82,
      "how": "Rigorous rhythmic and pitch systems produce music meant to be heard as rapture and stillness."
     }
    ],
@@ -6122,14 +6164,17 @@
    "polarities": [
     {
      "id": "tension_release",
+     "lean": 0.18,
      "how": "Ostinatos and unresolved chords sustain tension through scenes in which nothing happens yet. Hitchcock said '33% of the effect of Psycho was due to the music'."
     },
     {
      "id": "light_dark",
+     "lean": 0.86,
      "how": "Psycho's 'black-and-white sound': one timbre family, muted, to match monochrome photography."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.76,
      "how": "A minor triad made unstable by one added note (the major 7th), and close dissonances such as D against E♭."
     }
    ],
@@ -6536,14 +6581,17 @@
    "polarities": [
     {
      "id": "simple_complex",
+     "lean": 0.5,
      "how": "The most feared changes in jazz ('Giant Steps') versus one-chord modal vamps."
     },
     {
      "id": "stable_unstable",
+     "lean": 0.55,
      "how": "A held pedal or vamp (stable) under wildly searching improvisation (unstable)."
     },
     {
      "id": "tension_release",
+     "lean": 0.32,
      "how": "Long modal intensification and release. In 'My Favorite Things', the switch between E minor and E major vamps is itself a light/dark pivot."
     }
    ],
@@ -7025,18 +7073,22 @@
    "polarities": [
     {
      "id": "simple_complex",
+     "lean": 0.76,
      "how": "Riffs can be a single power-chord idea; the complexity is meter changes, sectional forms, and dense middle voices."
     },
     {
      "id": "tension_release",
+     "lean": 0.32,
      "how": "Long developmental stretches hold unresolved motion; big chorus or final tonic hits release the debt."
     },
     {
      "id": "stable_unstable",
+     "lean": 0.55,
      "how": "A clear tonal center under constantly shifting bar lengths."
     },
     {
      "id": "expectation_surprise",
+     "lean": 0.62,
      "how": "You expect a 4/4 chorus; the band lands it after an odd-meter bridge."
     }
    ],
@@ -7271,18 +7323,22 @@
    "polarities": [
     {
      "id": "simple_complex",
+     "lean": 0.55,
      "how": "A one-chord vamp can carry a whole section while inner horns stack dense extensions."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.3,
      "how": "Maj7 and ♯11 colours sparkle without sounding 'out'; tension resolves into groove."
     },
     {
      "id": "loud_quiet",
+     "lean": 0.5,
      "how": "Arrangements swell from sparse Rhodes to full-horn peaks."
     },
     {
      "id": "organic_synthetic",
+     "lean": 0.38,
      "how": "Acoustic and electric voices blend in a live-take aesthetic."
     }
    ],
@@ -7507,18 +7563,22 @@
    "polarities": [
     {
      "id": "simple_complex",
+     "lean": 0.66,
      "how": "A repeating low cell can be simple while upper voices outline a different grouping."
     },
     {
      "id": "light_dark",
+     "lean": 0.55,
      "how": "Dark Phrygian / low chromatic riffs contrast with bright clean tapping passages."
     },
     {
      "id": "human_machine",
+     "lean": 0.5,
      "how": "Tight quantized grooves sit next to fluid tapped lines that feel almost vocal."
     },
     {
      "id": "tension_release",
+     "lean": 0.4,
      "how": "Dissonant low stacks release into open fifths or clean major colour."
     }
    ],
@@ -7738,18 +7798,22 @@
    "polarities": [
     {
      "id": "loud_quiet",
+     "lean": 0.45,
      "how": "Acoustic or clean verses set up crushing electric choruses and riff returns."
     },
     {
      "id": "light_dark",
+     "lean": 0.5,
      "how": "Bright Mixolydian major colour against darker blues / minor pentatonic riffs."
     },
     {
      "id": "simple_complex",
+     "lean": 0.28,
      "how": "Many riffs are one-chord or I–♭VII cells; arrangement and dynamics carry the drama."
     },
     {
      "id": "organic_synthetic",
+     "lean": 0.22,
      "how": "Analog tape, room mics, and acoustic instruments keep the heavy parts human."
     }
    ],
@@ -7976,18 +8040,22 @@
    "polarities": [
     {
      "id": "expectation_surprise",
+     "lean": 0.64,
      "how": "Familiar verse progressions pivot with a borrowed chord or sudden key colour."
     },
     {
      "id": "simple_complex",
+     "lean": 0.42,
      "how": "Triadic songs hide crafty bass lines and secondary dominants."
     },
     {
      "id": "light_dark",
+     "lean": 0.42,
      "how": "Major choruses against minor verses, or a bright ♭VII in a major key."
     },
     {
      "id": "consonance_dissonance",
+     "lean": 0.26,
      "how": "Mostly consonant pop harmony with carefully placed colourful chords."
     }
    ],
@@ -8217,18 +8285,22 @@
    "polarities": [
     {
      "id": "simple_complex",
+     "lean": 0.72,
      "how": "Triadic riffs sit under intricate meters and long instrumental forms."
     },
     {
      "id": "stable_unstable",
+     "lean": 0.55,
      "how": "A clear tonal center under shifting bar lengths and sectional jumps."
     },
     {
      "id": "tension_release",
+     "lean": 0.4,
      "how": "Instrumental builds release into big chorus landings on I or V–I."
     },
     {
      "id": "expectation_surprise",
+     "lean": 0.66,
      "how": "You expect 4/4; the groove lands in 7 or 5 and still feels singable."
     }
    ],
@@ -8455,18 +8527,22 @@
    "polarities": [
     {
      "id": "loud_quiet",
+     "lean": 0.45,
      "how": "Soft piano or a cappella verses explode into stadium choruses."
     },
     {
      "id": "simple_complex",
+     "lean": 0.55,
      "how": "Three-chord stomps sit next to multi-section suite forms."
     },
     {
      "id": "light_dark",
+     "lean": 0.4,
      "how": "Bright major choruses against darker bluesy or minor bridges."
     },
     {
      "id": "expectation_surprise",
+     "lean": 0.7,
      "how": "Sudden tempo or key-colour shifts keep verses from settling."
     }
    ],
@@ -8693,18 +8769,22 @@
    "polarities": [
     {
      "id": "loud_quiet",
+     "lean": 0.5,
      "how": "Whispered verses and long intros bloom into stadium climaxes."
     },
     {
      "id": "stable_unstable",
+     "lean": 0.45,
      "how": "Pedal drones keep home present while upper chords drift."
     },
     {
      "id": "light_dark",
+     "lean": 0.45,
      "how": "Open Mixolydian major colour against darker minor / blues turns."
     },
     {
      "id": "organic_synthetic",
+     "lean": 0.55,
      "how": "Analog synths and tape effects sit inside a rock band frame."
     }
    ],
