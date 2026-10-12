@@ -1,7 +1,7 @@
 // Artist Lens: how artists use musical polarities, with technique chips linked to Muse's theory KB
 // and "Try it" exercises that load into the progression (pedal / held bass applied).
 import { useState, type FormEvent } from 'react';
-import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, artistLensPromptDeeplink, loadTryIt, timeSigLabel, tryItText } from '../core';
+import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, MUSE_REQUEST_MAX, buildMuseRequest, loadTryIt, sendMuseRequest, timeSigLabel, tryItText } from '../core';
 import type { KbItemInfo } from './data';
 
 interface Props {
@@ -179,136 +179,42 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
   );
 }
 
-const REQUEST_ISSUE = 'https://github.com/nmpy7knjd8-code/muse/issues/new';
-/** Use a label that exists on the repo — unknown labels are dropped and can confuse the new-issue form. */
-const REQUEST_LABEL = 'enhancement';
-const REQUEST_STORAGE = 'muse.bandRequests';
-type BandRequest = { band: string; note: string; song?: string; at: number; taskUrl?: string };
-
-function loadRequests(): BandRequest[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(REQUEST_STORAGE) || '[]') as BandRequest[];
-    return Array.isArray(raw) ? raw.slice(0, 20) : [];
-  } catch { return []; }
-}
-
-/** Prefill payload for the GitHub new-issue form (exported for tests). */
-export function buildRequestIssue(band: string, songReq: string): { title: string; body: string; taskUrl: string } {
-  const title = `Artist Lens request: ${band}`;
-  const body = [
-    '## Band / artist request',
-    '',
-    `**Name:** ${band}`,
-    '',
-    '## Song to include in analysis (optional)',
-    songReq || '(none)',
-    '',
-    '_Submitted from Muse Artist Lens — please add this artist to `public/artists.json`, and if a song is named, include it in the Artist Lens analysis / try-it material._',
-    '',
-    '### Checklist',
-    '- [ ] Research techniques + sources',
-    '- [ ] Add artist entry with try-it exercise',
-    '- [ ] Update `tests/artists.test.ts` counts',
-    songReq ? '- [ ] Include the requested song in the analysis' : '',
-  ].filter(Boolean).join('\n');
-  const taskUrl = `${REQUEST_ISSUE}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(REQUEST_LABEL)}`;
-  return { title, body, taskUrl };
-}
-
 function BandRequestBox() {
-  const [name, setName] = useState('');
-  const [song, setSong] = useState('');
-  const [sent, setSent] = useState<string | null>(null);
-  const [copied, setCopied] = useState<'request' | 'export' | null>(null);
-  const [recent, setRecent] = useState<BandRequest[]>(() => loadRequests());
-  const submit = (e: FormEvent) => {
+  const [text, setText] = useState('');
+  const [honey, setHoney] = useState('');
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const band = name.trim();
-    if (!band) return;
-    const songReq = song.trim();
-    const { taskUrl } = buildRequestIssue(band, songReq);
-    const entry: BandRequest = { band, note: '', song: songReq || undefined, at: Date.now(), taskUrl };
-    const next = [entry, ...loadRequests().filter((r) => r.band.toLowerCase() !== band.toLowerCase())].slice(0, 20);
-    try { localStorage.setItem(REQUEST_STORAGE, JSON.stringify(next)); } catch { /* private mode */ }
-    setRecent(next);
-    // Prefill a GitHub issue — user must tap Create issue so the agent can see it.
-    const win = window.open(taskUrl, '_blank', 'noopener,noreferrer');
-    if (!win) window.location.assign(taskUrl);
-    setSent(band);
-    setCopied(null);
-    setName('');
-    setSong('');
+    if (state === 'sending') return;
+    if (honey.trim()) { setState('sent'); setText(''); return; }
+    const payload = buildMuseRequest(text, honey);
+    if (!payload) return;
+    setState('sending');
+    const ok = await sendMuseRequest(payload);
+    setState(ok ? 'sent' : 'error');
+    if (ok) setText('');
   };
-  const copyLatest = async () => {
-    const r = recent[0];
-    if (!r) return;
-    const { title, body } = buildRequestIssue(r.band, r.song ?? '');
-    const text = `${title}\n\n${body}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied('request');
-    } catch { /* ignore */ }
-  };
-  const exportPending = async () => {
-    const payload = loadRequests();
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      setCopied('export');
-    } catch { /* ignore */ }
-  };
-  const cursorLinkFor = (band: string, songReq?: string) =>
-    artistLensPromptDeeplink({ band, song: songReq?.trim() || null });
   return (
-    <form className="band-request-stack" onSubmit={submit} aria-label="Request a band for Artist Lens">
+    <form className="band-request-stack" onSubmit={(e) => void submit(e)} aria-label="Send a request">
       <div className="band-request">
-        <h4>Request a band</h4>
-        <p className="small muted">Missing someone? Open a GitHub issue (tap Create) or Ask Cursor — either path queues a research add to Artist Lens.</p>
-        <input aria-label="Band or artist name" placeholder="Band or artist name" value={name} onChange={(e) => setName(e.target.value)} required />
-      </div>
-      <div className="band-request band-request-songbox">
-        <h4>Song to analyze <span className="muted" style={{ fontWeight: 500 }}>(optional)</span></h4>
-        <p className="small muted">Name a particular song to include in the Artist Lens analysis for this artist.</p>
+        <h4>Request something</h4>
+        <p className="small muted">Missing an artist, song, technique or feature? Describe it in your own words. No account needed.</p>
         <textarea
-          aria-label="Song to include in analysis"
+          aria-label="Your request"
           className="band-request-song"
-          placeholder="e.g. Bohemian Rhapsody — focus on the ballad→opera→rock section changes"
-          value={song}
-          onChange={(e) => setSong(e.target.value)}
+          placeholder="Request anything: an artist, a song, a technique, a feature…"
+          value={text}
+          maxLength={MUSE_REQUEST_MAX}
+          onChange={(e) => { setText(e.target.value); if (state !== 'sending') setState('idle'); }}
           rows={3}
+          required
         />
+        <input type="text" name="_honey" value={honey} onChange={(e) => setHoney(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
       </div>
       <div className="band-request-actions">
-        <button type="submit" className="add" disabled={!name.trim()}>Open GitHub add-band issue</button>
-        {sent && (
-          <p className="small" role="status">
-            Prefill opened for <b>{sent}</b> — tap <b>Create</b> on GitHub to finish.
-            {' '}<button type="button" className="linkish" onClick={() => void copyLatest()}>{copied === 'request' ? 'Copied' : 'Copy request text'}</button>
-            {' · '}
-            <a className="linkish" href={cursorLinkFor(sent, recent[0]?.song)} target="_blank" rel="noreferrer">Ask Cursor</a>
-          </p>
-        )}
-        {recent.length > 0 && (
-          <div className="band-request-recent">
-            <div className="small muted">Recent requests on this device</div>
-            <ul className="small">
-              {recent.slice(0, 5).map((r) => (
-                <li key={`${r.band}-${r.at}`}>
-                  {r.taskUrl ? <a href={r.taskUrl} target="_blank" rel="noreferrer">{r.band}</a> : r.band}
-                  {r.song ? <span className="muted"> · song requested</span> : null}
-                  {' · '}
-                  <a className="linkish" href={cursorLinkFor(r.band, r.song)} target="_blank" rel="noreferrer">Ask Cursor</a>
-                </li>
-              ))}
-            </ul>
-            <p className="small muted" style={{ marginTop: 6 }}>
-              Device queue stays local until an issue exists.
-              {' '}<button type="button" className="linkish" onClick={() => void exportPending()}>
-                {copied === 'export' ? 'Copied muse.bandRequests JSON' : 'Copy muse.bandRequests JSON'}
-              </button>
-              {' '}for the agent.
-            </p>
-          </div>
-        )}
+        <button type="submit" className="add" disabled={!text.trim() || state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send request'}</button>
+        {state === 'sent' && <p className="small" role="status">Thanks! Your request was sent.</p>}
+        {state === 'error' && <p className="small" role="alert">Sorry, that didn't go through. Please try again in a moment.</p>}
       </div>
     </form>
   );

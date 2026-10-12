@@ -22,6 +22,7 @@ export * from './chroma';
 export * from './playback';
 export * from './artists';
 export * from './artistRequest';
+export * from './museRequest';
 export * from './harmonyTension';
 export * as tensionModel from './tension';
 export * from './noteRelation';
