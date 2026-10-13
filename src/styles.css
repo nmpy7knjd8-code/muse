@@ -1573,3 +1573,10 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .t-mini:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); border-color: var(--accent); }
 @media (pointer: coarse) { .t-mini { width: 44px; height: 44px; min-width: 44px; } }
 @media (max-width: 360px) { .transport { gap: 8px; padding: 8px; } .transport-side { gap: 6px; } }
+
+/* Brand wordmark options */
+.brand .brand-mark { filter: none; }
+.brand-v1 .brand-name { font-family: 'Inter Tight Variable', sans-serif; font-weight: 650; font-size: 23px; letter-spacing: -0.035em; background: none; -webkit-text-fill-color: #f4f0ff; color: #f4f0ff; animation: none; }
+.brand-v2 .brand-name { font-family: 'Fraunces Variable', serif; font-weight: 560; font-style: italic; font-variation-settings: 'SOFT' 100, 'WONK' 1; font-size: 26px; letter-spacing: -0.01em; background: linear-gradient(100deg, #f4f0ff 30%, #b9a4ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: none; }
+.brand-v3 .brand-name { font-family: 'Nunito Variable', sans-serif; font-weight: 800; font-size: 25px; letter-spacing: -0.02em; background: none; -webkit-text-fill-color: #e9e2ff; color: #e9e2ff; animation: none; }
+.brand-v4 .brand-name { font-family: 'Outfit Variable', sans-serif; font-weight: 300; font-size: 19px; letter-spacing: 0.32em; text-transform: uppercase; background: linear-gradient(90deg, #f4f0ff, #b9a4ff 60%, #8a6cf0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: none; margin-right: -0.32em; }

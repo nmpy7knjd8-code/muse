@@ -1574,9 +1574,9 @@ function Composer({ data }: { data: LoadedData }) {
           >
             <MenuIcon />
           </button>
-          <div className="brand" aria-label="Muse">
+          <div className={'brand brand-v' + (new URLSearchParams(location.search).get('brand') || '1')} aria-label="Muse">
             <BrandMark />
-            <span className="brand-name">Muse</span>
+            <span className="brand-name">{(new URLSearchParams(location.search).get('brand') || '1') === '3' ? 'muse' : 'Muse'}</span>
             {kbBadge && <small>{kbBadge}</small>}
           </div>
         </div>

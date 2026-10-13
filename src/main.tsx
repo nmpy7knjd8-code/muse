@@ -1,6 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App';
+import '@fontsource-variable/inter-tight';
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/nunito';
+import '@fontsource-variable/outfit';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(

@@ -62,22 +62,14 @@ export function BackIcon({ className }: IconProps) {
   );
 }
 
-/** Tiny staff flourish for the Muse wordmark. */
+/** Chord-stack mark (matches the app icon). */
 export function BrandMark({ className }: IconProps) {
   return (
-    <svg className={'brand-mark' + (className ? ` ${className}` : '')} viewBox="0 0 28 28" width="22" height="22" aria-hidden focusable="false">
-      <defs>
-        <linearGradient id="museMark" x1="4" y1="4" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#c4b0ff" />
-          <stop offset="1" stopColor="#7fd0a8" />
-        </linearGradient>
-      </defs>
-      <circle cx="14" cy="14" r="12.5" fill="none" stroke="url(#museMark)" strokeWidth="1.4" opacity="0.85" />
-      {/* Three short staff lines */}
-      <path d="M7 10.5h14M7 14h14M7 17.5h14" stroke="url(#museMark)" strokeWidth="1.35" strokeLinecap="round" opacity="0.9" />
-      {/* Note head + stem */}
-      <ellipse cx="12.2" cy="17.2" rx="2.4" ry="1.85" fill="url(#museMark)" transform="rotate(-18 12.2 17.2)" />
-      <path d="M14.4 16.6V8.4c0-.2.2-.4.5-.35l3.2.7" fill="none" stroke="url(#museMark)" strokeWidth="1.35" strokeLinecap="round" />
+    <svg className={'brand-mark' + (className ? ` ${className}` : '')} viewBox="0 0 28 28" width="24" height="24" aria-hidden focusable="false">
+      <rect width="28" height="28" rx="7" fill="#2b1f4d" />
+      <rect x="4.5" y="7.2" width="19" height="3.6" rx="1.8" fill="#f4f0ff" />
+      <rect x="6.7" y="12.2" width="14.6" height="3.6" rx="1.8" fill="#b9a4ff" />
+      <rect x="8.9" y="17.2" width="10.2" height="3.6" rx="1.8" fill="#8a6cf0" />
     </svg>
   );
 }
