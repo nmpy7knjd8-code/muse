@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import App from './ui/App';
 import '@fontsource-variable/inter-tight';
 import './styles.css';
-{ const v = new URLSearchParams(location.search).get('play'); if (v) document.documentElement.classList.add('play-' + v); }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1592,23 +1592,13 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   background: var(--panel2); border: 1px solid var(--line); color: #f4f2fa;
 }
 .t-mini:hover:not(:disabled) { background: #2b2836; border-color: #4a4560; }
-@media (pointer: coarse) { .t-mini { width: 44px; height: 44px; min-width: 44px; } }
 @media (max-width: 360px) { .transport { gap: 8px; padding: 8px; } .transport-side { gap: 6px; } }
 
-/* Small play button options (preview: ?play=A|B|C) */
-.t-mini { position: relative; }
-.t-mini::before { content: ''; position: absolute; inset: -6px; }
-.play-A .t-mini { width: 32px; height: 32px; min-width: 32px; border-radius: 9px; }
-.play-A .t-mini svg { width: 12px; height: 12px; }
-.play-B .t-mini { width: 28px; height: 28px; min-width: 28px; border-radius: 8px; background: transparent; border-color: transparent; }
-.play-B .t-mini svg { width: 16px; height: 16px; }
-.play-B .t-mini:hover:not(:disabled) { background: rgba(255,255,255,.07); border-color: transparent; }
-.play-C .t-mini { width: 30px; height: 30px; min-width: 30px; border-radius: 50%; background: #f4f2fa; border-color: #f4f2fa; color: #121117; }
-.play-C .t-mini svg { width: 12px; height: 12px; }
-.play-C .t-mini:hover:not(:disabled) { background: #fff; border-color: #fff; }
-@media (pointer: coarse) {
-  .play-A .t-mini { width: 32px; height: 32px; min-width: 32px; }
-  .play-B .t-mini { width: 28px; height: 28px; min-width: 28px; }
-  .play-C .t-mini { width: 30px; height: 30px; min-width: 30px; }
-  .t-mini::before { inset: -8px; }
-}
+/* Small play buttons: bare white triangle, invisible enlarged tap area */
+.t-mini { position: relative; width: 28px; height: 28px; min-width: 28px; border-radius: 8px; background: transparent; border-color: transparent; }
+.t-mini svg { width: 16px; height: 16px; }
+.t-mini:hover:not(:disabled) { background: rgba(255,255,255,.07); border-color: transparent; }
+.t-mini::before { content: ''; position: absolute; inset: -8px; }
+@media (pointer: coarse) { .t-mini { width: 28px; height: 28px; min-width: 28px; } }
+.card-actions { align-items: center; }
+.card-actions button.t-mini { width: 28px; height: 28px; }
