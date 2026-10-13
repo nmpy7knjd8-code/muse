@@ -81,3 +81,66 @@ export function BrandMark({ className }: IconProps) {
     </svg>
   );
 }
+
+/* ---- Transport icons: optically centered in a 24×24 box ---- */
+const tIcon = (cls?: string) => 'ui-icon t-icon' + (cls ? ` ${cls}` : '');
+
+export function PlayIcon({ className, size = 18 }: IconProps & { size?: number }) {
+  // Triangle centroid nudged right so it reads centered in a circle.
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width={size} height={size} aria-hidden focusable="false">
+      <path d="M8.5 5.6v12.8a.9.9 0 0 0 1.37.77l10.2-6.4a.9.9 0 0 0 0-1.54L9.87 4.83A.9.9 0 0 0 8.5 5.6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function StopIcon({ className, size = 18 }: IconProps & { size?: number }) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width={size} height={size} aria-hidden focusable="false">
+      <rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function LoopIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+      <path d="M4.5 11V9.5a3 3 0 0 1 3-3h11M19.5 13v1.5a3 3 0 0 1-3 3h-11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M15.5 3.5l3 3-3 3M8.5 20.5l-3-3 3-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function UndoIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+      <path d="M9 14L4.5 9.5 9 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.5 9.5h9.5a5.5 5.5 0 0 1 0 11H10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+      <path d="M4.5 7h15M9.5 7V4.8h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function CopyIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M15.5 8.5V6.7a2.2 2.2 0 0 0-2.2-2.2H6.7a2.2 2.2 0 0 0-2.2 2.2v6.6a2.2 2.2 0 0 0 2.2 2.2h1.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function DownloadIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <path d="M12 4.5v10M7.5 10.5l4.5 4.5 4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

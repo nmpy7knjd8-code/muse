@@ -38,7 +38,7 @@ import { DrumPad } from './DrumPad';
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BackIcon, BrandMark, CloseIcon, LockIcon, MenuIcon, ReharmIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, StopIcon, TrashIcon, UndoIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
@@ -1374,7 +1374,7 @@ function Composer({ data }: { data: LoadedData }) {
               )}
             </div>
             <div className="card-actions">
-              <button aria-label="Play" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>▶</button>
+              <button aria-label="Play" className="t-mini" onClick={(e) => { e.stopPropagation(); setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}><PlayIcon size={14} /></button>
               <button aria-label="Add" className="add" onClick={(e) => { e.stopPropagation(); if (isChord) addChord((s as ChordSuggestion).chord); else if (tab === 'bass') addBass((s as NoteSuggestion).midi); else addNote((s as NoteSuggestion).midi); }}>＋</button>
             </div>
           </div>
@@ -1893,38 +1893,57 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
         )}
-        <div className="row gap play-row">
-          <button onClick={togglePlay} disabled={!slots.length} aria-pressed={!!transport}>
-            {transport ? '■ Stop' : '▶ Play'}
-          </button>
+        <div className="transport" role="group" aria-label="Player">
+          <div className="transport-side transport-left">
+            <button type="button" className="t-btn" onClick={undo} disabled={!history.length} aria-label="Undo" title="Undo">
+              <UndoIcon />
+            </button>
+            <button
+              type="button"
+              className={'t-btn' + (loopPlay ? ' on' : '')}
+              aria-pressed={loopPlay}
+              aria-label="Loop"
+              title={loopPlay ? 'Loop on — Play repeats until you stop' : 'Loop off — Play stops at the end'}
+              onClick={() => chooseLoop(!loopPlay)}
+            >
+              <LoopIcon />
+            </button>
+          </div>
           <button
             type="button"
-            className={'pill' + (loopPlay ? ' on' : '')}
-            aria-pressed={loopPlay}
-            title={loopPlay ? 'Loop on — Play repeats until you stop' : 'Loop off — Play stops at the end'}
-            onClick={() => chooseLoop(!loopPlay)}
+            className={'t-play' + (transport ? ' playing' : '')}
+            onClick={togglePlay}
+            disabled={!slots.length}
+            aria-pressed={!!transport}
+            aria-label={transport ? 'Stop' : 'Play'}
+            title={transport ? 'Stop' : 'Play'}
           >
-            Loop
+            {transport ? <StopIcon size={22} /> : <PlayIcon size={24} />}
           </button>
-          <label className="meter-pick bpm-inline">
-            <span className="muted">BPM</span>
-            <select
-              aria-label="Playback tempo"
-              value={bpm}
-              onChange={(e) => chooseBpm(Number(e.target.value))}
-            >
-              {!(BPM_PRESETS as readonly number[]).includes(bpm) && (
-                <option value={bpm}>{bpm}</option>
-              )}
-              {BPM_PRESETS.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </label>
-          <button onClick={undo} disabled={!history.length}>↶ Undo</button>
-          <button onClick={clearAll} disabled={!slots.length}>Clear</button>
-          <button onClick={copyText} disabled={!slots.length}>Copy</button>
-          <button onClick={downloadMidi} disabled={!slots.length}>MIDI</button>
+          <div className="transport-side transport-right">
+            <label className="t-btn t-bpm" title="Playback tempo">
+              <select
+                aria-label="Playback tempo"
+                value={bpm}
+                onChange={(e) => chooseBpm(Number(e.target.value))}
+              >
+                {!(BPM_PRESETS as readonly number[]).includes(bpm) && (
+                  <option value={bpm}>{bpm}</option>
+                )}
+                {BPM_PRESETS.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+              <span className="t-bpm-unit" aria-hidden>BPM</span>
+            </label>
+            <button type="button" className="t-btn" onClick={clearAll} disabled={!slots.length} aria-label="Clear" title="Clear">
+              <TrashIcon />
+            </button>
+          </div>
+        </div>
+        <div className="transport-export">
+          <button type="button" className="t-chip" onClick={copyText} disabled={!slots.length}><CopyIcon /> Copy</button>
+          <button type="button" className="t-chip" onClick={downloadMidi} disabled={!slots.length}><DownloadIcon /> MIDI</button>
         </div>
         {slots.length === 0 ? (
           <details className="instr-collapsed">
@@ -2382,7 +2401,7 @@ function Composer({ data }: { data: LoadedData }) {
                     {p.why && <div className="path-why">{p.why}</div>}
                   </div>
                   <div className="path-actions">
-                    <button type="button" aria-label="Hear this progression" onClick={() => playChordPath(p)}>▶</button>
+                    <button type="button" aria-label="Hear this progression" className="t-mini" onClick={() => playChordPath(p)}><PlayIcon size={14} /></button>
                     <button type="button" className="add" aria-label="Add this progression" onClick={() => addChordPath(p)}>＋</button>
                   </div>
                 </div>
@@ -2393,7 +2412,7 @@ function Composer({ data }: { data: LoadedData }) {
                     {p.why && <div className="path-why">{p.why}</div>}
                   </div>
                   <div className="path-actions">
-                    <button type="button" aria-label={tab === 'bass' ? 'Hear this bass run' : 'Hear this melody run'} onClick={() => playNotePath(p)}>▶</button>
+                    <button type="button" aria-label={tab === 'bass' ? 'Hear this bass run' : 'Hear this melody run'} className="t-mini" onClick={() => playNotePath(p)}><PlayIcon size={14} /></button>
                     <button type="button" className="add" aria-label={tab === 'bass' ? 'Add this bass run' : 'Add this melody run'} onClick={() => addNotePath(p)}>＋</button>
                   </div>
                 </div>

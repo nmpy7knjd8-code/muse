@@ -1515,3 +1515,61 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .drum-voice-tune {
   font-size: 9px; color: #6fb0a8; font-weight: 600; letter-spacing: 0.02em;
 }
+
+/* ===== Player transport (symmetric) ===== */
+.transport {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px;
+  margin: 10px 0 6px; padding: 10px 12px;
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line); border-radius: 18px;
+}
+.transport-side { display: flex; gap: 10px; align-items: center; }
+.transport-left { justify-content: flex-end; }
+.transport-right { justify-content: flex-start; }
+.t-icon { display: block; flex: none; }
+.t-btn, .t-play, .t-mini, .t-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; line-height: 1; color: var(--text);
+  transition: background .15s, border-color .15s, color .15s, transform .08s, box-shadow .15s;
+}
+.t-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--panel2); border: 1px solid var(--line);
+}
+.t-btn:hover:not(:disabled) { border-color: #4a4560; background: #2b2836; }
+.t-btn.on { background: color-mix(in srgb, var(--accent) 22%, var(--panel2)); border-color: var(--accent); color: var(--accent); }
+.t-play {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--accent); border: none; color: #15121f;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.t-play:hover:not(:disabled) { filter: brightness(1.08); }
+.t-play.playing { background: var(--text); box-shadow: 0 4px 18px rgba(236,234,244,.22); }
+.t-btn:active:not(:disabled), .t-play:active:not(:disabled), .t-mini:active:not(:disabled), .t-chip:active:not(:disabled) { transform: scale(.94); }
+.t-btn:disabled, .t-play:disabled, .t-mini:disabled, .t-chip:disabled { opacity: .38; cursor: default; box-shadow: none; }
+.t-btn:focus-visible, .t-play:focus-visible, .t-mini:focus-visible, .t-chip:focus-visible, .t-bpm:focus-within {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* Tempo: same circle, number stacked over a tiny unit */
+.t-bpm { position: relative; flex-direction: column; gap: 1px; cursor: pointer; }
+.t-bpm select {
+  appearance: none; -webkit-appearance: none; background: transparent; border: 0; padding: 0;
+  width: 100%; text-align: center; text-align-last: center; color: var(--text);
+  font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; cursor: pointer;
+}
+.t-bpm select:focus { outline: none; }
+.t-bpm-unit { font-size: 8.5px; letter-spacing: .08em; color: var(--muted); pointer-events: none; }
+.transport-export { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
+.t-chip {
+  gap: 6px; min-width: 96px; height: 36px; padding: 0 14px; border-radius: 999px;
+  font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--line);
+}
+.t-chip:hover:not(:disabled) { color: var(--text); border-color: #4a4560; }
+/* Small play buttons on cards / path rows */
+.t-mini {
+  width: 36px; height: 36px; min-width: 36px; border-radius: 50%;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--accent);
+}
+.t-mini:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); border-color: var(--accent); }
+@media (pointer: coarse) { .t-mini { width: 44px; height: 44px; min-width: 44px; } }
+@media (max-width: 360px) { .transport { gap: 8px; padding: 8px; } .transport-side { gap: 6px; } }
