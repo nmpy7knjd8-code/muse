@@ -1588,10 +1588,10 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .t-chip:hover:not(:disabled) { color: var(--text); border-color: #4a4560; }
 /* Small play buttons on cards / path rows */
 .t-mini {
-  width: 36px; height: 36px; min-width: 36px; border-radius: 50%;
-  background: var(--panel2); border: 1px solid var(--line); color: var(--accent);
+  width: 36px; height: 36px; min-width: 36px; border-radius: 10px;
+  background: var(--panel2); border: 1px solid var(--line); color: #f4f2fa;
 }
-.t-mini:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); border-color: var(--accent); }
+.t-mini:hover:not(:disabled) { background: #2b2836; border-color: #4a4560; }
 @media (pointer: coarse) { .t-mini { width: 44px; height: 44px; min-width: 44px; } }
 @media (max-width: 360px) { .transport { gap: 8px; padding: 8px; } .transport-side { gap: 6px; } }
 

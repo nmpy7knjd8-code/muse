@@ -132,7 +132,7 @@ function ArtistDetail({ artist, props, onBack }: { artist: Artist; props: Props;
                 </div>
               </div>
               <div className="row gap">
-                <button onClick={() => onPreview(t)} aria-label="Preview">▶</button>
+                <button className="t-mini" onClick={() => onPreview(t)} aria-label="Preview"><PlayIcon size={14} /></button>
                 <button className="add" onClick={() => onTryIt(t, artist)}>Try it</button>
               </div>
             </div>
