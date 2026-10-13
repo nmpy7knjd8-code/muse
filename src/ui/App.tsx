@@ -550,6 +550,24 @@ function Composer({ data }: { data: LoadedData }) {
     if (!synth.unlocked && !synth.ctx) return;
     for (const id of activeParts) void synth.ensureLoaded(id);
   }, [activeParts, loadKey]);
+  // Instant first chord: download active samples at startup, and create/resume the AudioContext
+  // + decode on the very first pointerdown (before the click fires), not inside the click.
+  useEffect(() => {
+    for (const id of activeParts) synth.prefetch(id);
+    const warm = () => {
+      synth.unlock();
+      for (const id of activeParts) void synth.ensureLoaded(id);
+    };
+    const opts = { capture: true, passive: true } as const;
+    window.addEventListener('pointerdown', warm, opts);
+    window.addEventListener('touchstart', warm, opts);
+    window.addEventListener('keydown', warm, { capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', warm, opts);
+      window.removeEventListener('touchstart', warm, opts);
+      window.removeEventListener('keydown', warm, { capture: true });
+    };
+  }, [activeParts]); // eslint-disable-line react-hooks/exhaustive-deps
   // iOS: the ring/silent switch can mute Web Audio — hint once, and whenever audio is not running after a tap
   useEffect(() => {
     const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);

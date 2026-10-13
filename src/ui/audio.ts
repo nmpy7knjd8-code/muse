@@ -268,6 +268,12 @@ export class AudioEngine {
     this.emit();
   }
 
+  /** Download (not decode) an instrument's sample bytes ahead of any gesture, so the first tap only has to decode. */
+  prefetch(id: InstrumentId = this.instrument): void {
+    if (typeof fetch === 'undefined') return;
+    for (const m of sampleNotes(INSTRUMENTS[id])) fetchBytes(sampleUrl(id, m)).catch(() => { /* retried on load */ });
+  }
+
   /** Lazy-load (fetch + decode) an instrument's samples; resolves when ready (or failed → synth fallback). */
   ensureLoaded(id: InstrumentId = this.instrument): Promise<void> {
     if (!this.ctx) return Promise.resolve();
@@ -321,7 +327,8 @@ export class AudioEngine {
 
   /** Absolute AudioContext time for `at` seconds after `origin` (or after `now()` when omitted). */
   private absTime(at: number, origin?: number): number {
-    return (origin ?? this.now()) + at;
+    // One-shots (chord taps) start right now; only sequences use the lookahead origin.
+    return (origin ?? this.immediate()) + at;
   }
   private markBusy(endCtxTime: number) {
     if (!this.ctx) return;
@@ -362,6 +369,8 @@ export class AudioEngine {
     if (!keep.length) this.busyUntil = Math.min(this.busyUntil, performance.now() + 450);
   }
 
+  /** Earliest safe start for a tap: the current audio clock (plus a hair so the attack ramp isn't in the past). */
+  immediate(): number { return this.ctx ? this.ctx.currentTime + 0.003 : 0; }
   private now() { return this.ctx ? this.ctx.currentTime + 0.03 : 0; }
 
   /** One note: sampled when the instrument is loaded, otherwise the fallback synth. */
