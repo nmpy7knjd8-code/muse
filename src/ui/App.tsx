@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
@@ -188,7 +188,28 @@ function Composer({ data }: { data: LoadedData }) {
   const melBeats = beatsPerBar(melMeter.timeSig);
   const bassBeats = beatsPerBar(bassMeter.timeSig);
   const drumBeats = beatsPerBar(drumMeter.timeSig);
-  const [drawer, setDrawer] = useState<DrawerPage | null>(null);
+  const [drawer, setDrawerRaw] = useState<DrawerPage | null>(null);
+  const [drawerClosing, setDrawerClosing] = useState(false);
+  const drawerTimer = useRef<number | undefined>(undefined);
+  const drawerRef = useRef<HTMLElement | null>(null);
+  const menuBtnRef = useRef<HTMLButtonElement | null>(null);
+  /** Opening is immediate; closing plays the slide-out before unmounting. */
+  const drawerCur = useRef<DrawerPage | null>(null);
+  drawerCur.current = drawer;
+  const setDrawer = useCallback((next: DrawerPage | null | ((d: DrawerPage | null) => DrawerPage | null)) => {
+    const cur = drawerCur.current;
+    const v = typeof next === 'function' ? next(cur) : next;
+    window.clearTimeout(drawerTimer.current);
+    if (v == null) {
+      if (cur == null) return;
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      setDrawerClosing(true);
+      drawerTimer.current = window.setTimeout(() => { setDrawerRaw(null); setDrawerClosing(false); menuBtnRef.current?.focus(); }, reduce ? 0 : 260);
+      return;
+    }
+    setDrawerClosing(false);
+    setDrawerRaw(v);
+  }, []);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const openTutorial = () => { setDrawer(null); setTutorialOpen(true); };
   /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
@@ -262,6 +283,31 @@ function Composer({ data }: { data: LoadedData }) {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
+  useEffect(() => {
+    if (!drawer || drawerClosing) return;
+    const el = drawerRef.current;
+    const focusables = () => Array.from(el?.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') ?? []).filter((n) => !n.hasAttribute('disabled'));
+    if (el && !el.contains(document.activeElement)) (focusables()[0] ?? el).focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); setDrawer(null); return; }
+      if (e.key !== 'Tab') return;
+      const f = focusables(); if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [drawer, drawerClosing, setDrawer]);
+  // Swipe left on the open drawer closes it.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const onDrawerTouchStart = (e: import('react').TouchEvent) => { const t = e.touches[0]; swipe.current = t ? { x: t.clientX, y: t.clientY } : null; };
+  const onDrawerTouchMove = (e: import('react').TouchEvent) => {
+    const s0 = swipe.current, t = e.touches[0]; if (!s0 || !t) return;
+    const dx = t.clientX - s0.x, dy = t.clientY - s0.y;
+    if (Math.abs(dy) > 50) { swipe.current = null; return; }
+    if (dx < -60) { swipe.current = null; setDrawer(null); }
+  };
   const [visTab, setVisTab] = useState<VisTab>('piano');
   /** Timeline chord graphic: piano keys (default) or staff. */
   const [noteViz, setNoteViz] = useState<NoteViz>(() => {
@@ -1588,7 +1634,8 @@ function Composer({ data }: { data: LoadedData }) {
             className="menu-btn"
             aria-label="Open menu"
             aria-expanded={drawer != null}
-            onClick={() => setDrawer((d) => (d ? null : 'menu'))}
+            ref={menuBtnRef}
+            onClick={() => setDrawer((d) => (d && !drawerClosing ? null : 'menu'))}
           >
             <MenuIcon />
           </button>
@@ -2491,49 +2538,55 @@ function Composer({ data }: { data: LoadedData }) {
 
       {drawer && (
         <div
-          className="drawer-root"
+          className={'drawer-root' + (drawerClosing ? ' closing' : '')}
           role="dialog"
           aria-modal="true"
           aria-label="Menu"
           onClick={(e) => { if (e.target === e.currentTarget) setDrawer(null); }}
         >
-          <aside className={'drawer' + (drawer === 'menu' ? ' menu-only' : '')} onClick={(e) => e.stopPropagation()}>
+          <aside
+            ref={drawerRef}
+            tabIndex={-1}
+            className={'drawer' + (drawer === 'menu' ? ' menu-only' : '')}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={onDrawerTouchStart}
+            onTouchMove={onDrawerTouchMove}
+          >
             <div className="drawer-head">
               {drawer !== 'menu' ? (
                 <button type="button" className="ticon" aria-label="Back to menu" onClick={() => setDrawer('menu')}><BackIcon /></button>
               ) : (
-                <span className="drawer-title">Menu</span>
+                <span className="drawer-brand"><BrandMark /><span className="brand-name">Muse</span></span>
               )}
-              <button type="button" className="ticon danger" aria-label="Close menu" onClick={() => setDrawer(null)}><CloseIcon /></button>
+              <button type="button" className="ticon drawer-close" aria-label="Close menu" onClick={() => setDrawer(null)}><CloseIcon /></button>
             </div>
             {drawer === 'menu' && (
-              <nav className="drawer-nav" aria-label="More">
-                <button type="button" className="drawer-link" onClick={openTutorial}>
-                  <b>Tutorial</b>
-                  <span className="muted">Short video intro to Muse’s main features</span>
+              <nav className="drawer-nav" aria-label="Menu">
+                <div className="drawer-section">Write</div>
+                <button type="button" className="drawer-row active" onClick={() => { setDrawer(null); setTab('chords'); setSelectedId(null); }} aria-current="page">
+                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
+                  <span className="drawer-row-text"><b>Writing</b><span>Chords &amp; melody</span></span>
                 </button>
-                <button type="button" className="drawer-link" onClick={() => setDrawer('moods')}>
-                  <b>Moods &amp; chords</b>
-                  <span className="muted">Every mood tag and the chord moves that carry it</span>
+                <div className="drawer-section">Learn</div>
+                <button type="button" className="drawer-row" onClick={openTutorial}>
+                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg>
+                  <span className="drawer-row-text"><b>Tutorial</b><span>Short video intro</span></span>
                 </button>
-                <button type="button" className="drawer-link" onClick={() => setDrawer('guide')}>
-                  <b>Guide</b>
-                  <span className="muted">How to use Muse — what to tap and why</span>
+                <button type="button" className="drawer-row" onClick={() => setDrawer('guide')}>
+                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M9 9h6M9 13h6"/></svg>
+                  <span className="drawer-row-text"><b>Guide</b><span>What to tap and why</span></span>
                 </button>
-                {data.artists && (
-                  <button type="button" className="drawer-link" onClick={() => setDrawer('artists')}>
-                    <b>Artist Lens</b>
-                    <span className="muted">Styles, techniques, and Try-it exercises</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="drawer-link"
-                  onClick={() => { setDrawer(null); setTab('chords'); setSelectedId(null); }}
-                >
-                  <b>Back to writing</b>
-                  <span className="muted">Chords &amp; melody</span>
+                <button type="button" className="drawer-row" onClick={() => setDrawer('moods')}>
+                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+                  <span className="drawer-row-text"><b>Moods &amp; chords</b><span>Every mood and its moves</span></span>
                 </button>
+                {data.artists && (<>
+                <div className="drawer-section">Explore</div>
+                <button type="button" className="drawer-row" onClick={() => setDrawer('artists')}>
+                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/></svg>
+                  <span className="drawer-row-text"><b>Artist Lens</b><span>Styles, techniques, Try-its</span></span>
+                </button>
+                </>)}
               </nav>
             )}
             {drawer === 'moods' && (

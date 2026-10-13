@@ -1121,21 +1121,44 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 /* Left drawer — Guide, Artist Lens, Moods & chords */
 .drawer-root {
   position: fixed; inset: 0; z-index: 40;
-  background: rgba(8, 7, 12, 0.55);
+  background: rgba(8, 7, 12, 0.6);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
   display: flex; justify-content: flex-start;
-  animation: drawer-fade 0.18s ease-out;
+  touch-action: none;
+  animation: drawer-fade 0.28s ease-out both;
 }
 .drawer {
   width: min(100%, 420px);
   height: 100%;
   background: var(--bg);
   border-right: 1px solid var(--line);
-  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  border-radius: 0 18px 18px 0;
+  box-shadow: 16px 0 48px rgba(0, 0, 0, 0.45);
   display: flex; flex-direction: column;
-  animation: drawer-slide 0.22s ease-out;
+  outline: none;
+  will-change: transform;
+  touch-action: pan-y;
+  animation: drawer-slide 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
+.drawer.menu-only { width: min(74vw, 320px); }
+.drawer-brand { display: inline-flex; align-items: center; gap: 9px; padding-left: 4px; }
+.drawer-brand .brand-name { font-size: 20px; animation: none; }
+.drawer.menu-only .drawer-head { border-bottom: none; padding: 14px 12px 6px; }
+.drawer-close { color: var(--muted); }
+.drawer-section { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); opacity: 0.75; padding: 16px 12px 6px; }
+.drawer-row { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; background: none; border: none; box-shadow: none; color: var(--text); transition: background 0.15s; }
+.drawer-row:hover, .drawer-row:focus-visible { background: rgba(255, 255, 255, 0.05); }
+.drawer-row:active { background: rgba(255, 255, 255, 0.08); }
+.drawer-row.active { background: rgba(165, 139, 245, 0.14); }
+.drawer-row.active .drawer-ico, .drawer-row.active b { color: #c9b8ff; }
+.drawer-ico { flex: 0 0 auto; color: var(--muted); }
+.drawer-row-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.drawer-row-text b { font-size: 15px; font-weight: 550; }
+.drawer-row-text span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drawer-root.closing { animation: drawer-fade-out 0.26s ease-in both; pointer-events: none; }
+.drawer-root.closing .drawer { animation: drawer-slide-out 0.26s cubic-bezier(0.4, 0, 1, 1) both; }
 .drawer-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line);
@@ -1146,7 +1169,7 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   font-weight: 700; font-size: 18px;
   letter-spacing: 0.01em;
 }
-.drawer-nav { display: flex; flex-direction: column; gap: 6px; padding: 12px; overflow-y: auto; }
+.drawer-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 12px; overflow-y: auto; }
 .drawer-link {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
   text-align: left; width: 100%;
@@ -1164,9 +1187,11 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   -webkit-overflow-scrolling: touch;
 }
 @keyframes drawer-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes drawer-slide { from { transform: translateX(-12px); opacity: 0.85; } to { transform: none; opacity: 1; } }
+@keyframes drawer-slide { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes drawer-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes drawer-slide-out { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-100%, 0, 0); } }
 @media (prefers-reduced-motion: reduce) {
-  .drawer-root, .drawer { animation: none; }
+  .drawer-root, .drawer, .drawer-root.closing, .drawer-root.closing .drawer { animation: none; }
 }
 
 /* Tutorial video popup */
