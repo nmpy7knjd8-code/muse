@@ -1,3 +1,4 @@
+import { PlayIcon } from './icons';
 // Artist Lens: how artists use musical polarities, with technique chips linked to Muse's theory KB
 // and "Try it" exercises that load into the progression (pedal / held bass applied).
 import { useState, type FormEvent } from 'react';
