@@ -3,7 +3,7 @@
 // Hashed static assets: cache-first.
 // All paths are relative to the service worker's own location, so the app works under any sub-path
 // (e.g. GitHub Pages: https://<user>.github.io/<repo>/).
-const CACHE = 'muse-v5';
+const CACHE = 'muse-v6';
 const BASE = new URL('./', self.location.href).href;
 const at = (p) => new URL(p, BASE).href;
 const INDEX = at('index.html');
