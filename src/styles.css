@@ -45,19 +45,15 @@ section { margin-top: 10px; }
   flex: 0 0 auto;
   user-select: none;
 }
-.brand-mark { flex: 0 0 auto; display: block; filter: drop-shadow(0 0 10px rgba(156, 124, 244, 0.25)); }
+.brand-mark { flex: 0 0 auto; display: block; }
 .brand-name {
-  font-family: 'Fraunces', 'Times New Roman', serif;
-  font-optical-sizing: auto;
-  font-weight: 700;
+  font-family: 'Inter Tight Variable', -apple-system, sans-serif;
+  font-weight: 650;
   font-size: 23px;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.035em;
   line-height: 1;
-  background: linear-gradient(115deg, #f4f0ff 10%, #c4b0ff 48%, #8fd9b8 95%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: brand-in 0.65s ease-out both;
+  color: #f4f0ff;
+  animation: brand-in 0.5s ease-out both;
 }
 .brand small {
   font-family: inherit;
@@ -66,8 +62,8 @@ section { margin-top: 10px; }
   border: 1px solid var(--line); background: var(--panel2);
 }
 @keyframes brand-in {
-  from { opacity: 0; transform: translateY(3px); letter-spacing: 0.08em; }
-  to { opacity: 1; transform: none; letter-spacing: 0.01em; }
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .brand-name { animation: none; }
@@ -1146,7 +1142,7 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   flex: 0 0 auto;
 }
 .drawer-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: 'Inter Tight Variable', -apple-system, sans-serif; letter-spacing: -0.02em;
   font-weight: 700; font-size: 18px;
   letter-spacing: 0.01em;
 }
@@ -1202,7 +1198,7 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
 }
 .tutorial-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: 'Inter Tight Variable', -apple-system, sans-serif; letter-spacing: -0.02em;
   font-weight: 700; font-size: 20px; line-height: 1.1;
 }
 .tutorial-sub { margin: 4px 0 0; }
@@ -1224,7 +1220,7 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 /* Mood ↔ chord reference */
 .mref { padding-bottom: 12px; }
 .mref-hero h2 {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: 'Inter Tight Variable', -apple-system, sans-serif; letter-spacing: -0.02em;
   font-size: 22px; margin: 10px 0 4px; font-weight: 700;
 }
 .mref-hero p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.4; }
@@ -1574,9 +1570,3 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 @media (pointer: coarse) { .t-mini { width: 44px; height: 44px; min-width: 44px; } }
 @media (max-width: 360px) { .transport { gap: 8px; padding: 8px; } .transport-side { gap: 6px; } }
 
-/* Brand wordmark options */
-.brand .brand-mark { filter: none; }
-.brand-v1 .brand-name { font-family: 'Inter Tight Variable', sans-serif; font-weight: 650; font-size: 23px; letter-spacing: -0.035em; background: none; -webkit-text-fill-color: #f4f0ff; color: #f4f0ff; animation: none; }
-.brand-v2 .brand-name { font-family: 'Fraunces Variable', serif; font-weight: 560; font-style: italic; font-variation-settings: 'SOFT' 100, 'WONK' 1; font-size: 26px; letter-spacing: -0.01em; background: linear-gradient(100deg, #f4f0ff 30%, #b9a4ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: none; }
-.brand-v3 .brand-name { font-family: 'Nunito Variable', sans-serif; font-weight: 800; font-size: 25px; letter-spacing: -0.02em; background: none; -webkit-text-fill-color: #e9e2ff; color: #e9e2ff; animation: none; }
-.brand-v4 .brand-name { font-family: 'Outfit Variable', sans-serif; font-weight: 300; font-size: 19px; letter-spacing: 0.32em; text-transform: uppercase; background: linear-gradient(90deg, #f4f0ff, #b9a4ff 60%, #8a6cf0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: none; margin-right: -0.32em; }
