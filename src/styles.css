@@ -1738,6 +1738,11 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
   }
   .t-chip { border-color: transparent; background: #262432; color: #d8d3e6; }
   .nextpick .nplabel, .nextpick .nplabel.on { font-size: 13px; }
+  /* Full piano keys are wide enough for a 12px name. Card pianos stay micro — keys are 9–14px wide. */
+  svg.piano:not(.piano-card) .kname,
+  svg.piano:not(.piano-card) .kname.on,
+  svg.piano:not(.piano-card) .kname.black,
+  svg.piano:not(.piano-card) .kname.black.on { font-size: 12px; }
 
   /* (d) solid grey disabled player + hint */
   .play-hint {
