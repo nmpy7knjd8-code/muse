@@ -65,7 +65,7 @@ function PolarityBars({ artist, data, compact }: { artist: Artist; data: Artists
           </div>
         );
       })}
-      {compact && <div className="small muted">marker: where the artist sits between each pair of poles</div>}
+      {compact && <div className="pol-each small muted">marker: where the artist sits between each pair of poles</div>}
     </div>
   );
 }
@@ -245,6 +245,7 @@ export function ArtistLens(props: Props) {
   return (
     <div className="artists">
       <p className="small muted">How artists use tension, darkness, stability and surprise — with techniques you can try in Muse.</p>
+      <p className="pol-legend small muted">marker: where the artist sits between each pair of poles</p>
       {data.artists.map((a) => (
         <button key={a.id} className="artist-card" data-artist={a.id} onClick={() => { setSel(a.id); window.scrollTo({ top: 0 }); }}>
           <div className="ac-head"><b>{a.name}</b><span className="small muted">{a.genres.slice(0, 2).join(' · ')}</span></div>

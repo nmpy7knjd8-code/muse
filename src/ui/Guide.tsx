@@ -367,6 +367,27 @@ function tocLabel(s: Section): string {
   return s.toc ?? s.title.replace(/ — .*| \(.*/, '');
 }
 
+function JumpMenu({ label, options }: { label: string; options: Array<{ id: string; text: string }> }) {
+  return (
+    <label className="guide-jump">
+      <span>Jump to…</span>
+      <select
+        aria-label={label}
+        defaultValue=""
+        onChange={(e) => {
+          const id = e.target.value;
+          if (!id) return;
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          e.currentTarget.value = '';
+        }}
+      >
+        <option value="">Jump to…</option>
+        {options.map((o) => <option key={o.id} value={o.id}>{o.text}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function Block({ s, onJump }: { s: Section; onJump: (t: GuideJump) => void }) {
   return (
     <article className="guide-card" id={`guide-${s.id}`}>
@@ -393,6 +414,13 @@ export function Guide({ onJump }: Props): ReactNode {
         </p>
       </header>
 
+      <JumpMenu
+        label="Jump to a guide section"
+        options={[
+          ...SECTIONS.map((s) => ({ id: `guide-${s.id}`, text: tocLabel(s) })),
+          { id: 'guide-theory', text: 'Theory tips' },
+        ]}
+      />
       <nav className="guide-toc" aria-label="Guide sections">
         {SECTIONS.map((s) => (
           <a key={s.id} href={`#guide-${s.id}`}>{tocLabel(s)}</a>
@@ -419,6 +447,10 @@ export function Guide({ onJump }: Props): ReactNode {
             Use them as lenses, not laws; your ear still decides.
           </p>
         </header>
+        <JumpMenu
+          label="Jump to a theory topic"
+          options={THEORY.map((g) => ({ id: `theory-${g.id}`, text: g.title }))}
+        />
         <nav className="guide-theory-toc" aria-label="Theory topics">
           {THEORY.map((g) => (
             <a key={g.id} href={`#theory-${g.id}`}>{g.title}</a>

@@ -1602,3 +1602,210 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 @media (pointer: coarse) { .t-mini { width: 28px; height: 28px; min-width: 28px; } }
 .card-actions { align-items: center; }
 .card-actions button.t-mini { width: 28px; height: 28px; }
+
+/* Desktop-only extras stay out of the mobile flow. */
+.stage, .stage-main { display: contents; }
+.suggest-rail { display: none; }
+.play-hint { display: none; }
+.listen-ico { display: none; }
+.guide-jump { display: none; }
+.pol-legend { display: none; }
+
+@media (min-width: 1024px) {
+  .app {
+    max-width: 1180px;
+    padding: 16px 28px 64px;
+    --muted: #d0cbdf;
+  }
+
+  /* (a) palette + player | suggestion list */
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(320px, 420px);
+    column-gap: 22px;
+    align-items: start;
+  }
+  .stage-main { display: block; min-width: 0; }
+  .suggest-rail {
+    display: block;
+    position: sticky;
+    top: 72px;
+    align-self: start;
+    min-width: 0;
+    max-height: calc(100vh - 88px);
+    overflow: auto;
+    padding: 12px 12px 8px;
+    border-radius: 16px;
+    background: #1c1b24;
+    scrollbar-width: thin;
+  }
+  .suggest-rail-title {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #f4f1fb;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .suggest-rail .best-fit-under-cof { margin-top: 0; padding-top: 0; border-top: none; }
+  .visuals .best-fit-under-cof { display: none; }
+
+  /* (b) tone steps instead of nested 1px lines */
+  .strip, .input, .mood, .visuals, .journey, .lore, .tension, .connections,
+  .nextpick, .path-block, .guide-card, .guide-workflow, .guide-theory,
+  .band-request, .transport, .instr-collapsed, .play-ribbon, .part-meter,
+  .fit-explainer, .drum-theory-strip, .drum-kits, .drum-keytones, .drum-tension,
+  .tutorial-panel, .harm-banner, .tryit-howto {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .strip { background: #1b1a22; }
+  .transport { background: #262432; }
+  .input, .mood, .visuals, .journey, .lore, .tension, .path-block, .nextpick,
+  .guide-card, .guide-workflow { background: #1b1a22; }
+  .play-ribbon { background: #241f30; }
+  .part-meter, .instr-collapsed, .fit-explainer { background: #262432; }
+  .tchord, .chip, .pal, .path-chip, .conn-bridge, .conn-within-bar,
+  .guide-theory-group, .tryit, .nprank, .tnote, .recent-chord, .drum-hit,
+  .drum-kit-chip, .drum-pattern-chip, .pm-cell {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .tchord { background: #2c2936; }
+  .pal, .path-chip, .chip, .tryit { background: #2a2836; }
+  .suggest-rail .card, .visuals .card {
+    background: #262432;
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+  }
+  .card.sel { background: #302c3e; }
+  .tchord .chip-actions { border-top-color: transparent; background: #221f2b; }
+  .tchord-piano, .tchord-staff { border-bottom-color: transparent; background: #1a1822; }
+  .guide-theory { border-color: transparent; background: #1b1a22; }
+  .guide-theory-group { background: #262432; }
+  .conn-bridge { background: #221f2c; }
+  .connections { background: #1b1a22; }
+  .nextpick-break { border-top-color: transparent; }
+  .band-request-song, .band-request input, .typed input, .moodbar input {
+    border-color: transparent;
+    background: #262432;
+  }
+
+  /* (c) type floor 13px; brighter explanations */
+  .small { font-size: 14px; line-height: 1.45; }
+  .why, .guide-use, .guide-mus, .guide-theory-intro, .guide-theory-list li,
+  .fit-explainer, .fit-explainer .fit-why, .path-chip .path-why, .about, .about p,
+  .polbar p, .conn-hint, .recent-moves li {
+    color: #efeaf8;
+  }
+  .muted, .small.muted, .why { color: #e4dff2; }
+  .small.muted, .muted { color: #d0cbdf; }
+  .brand small, .meter-badge, .play-ribbon-live, .play-ribbon-chord, .play-ribbon-note,
+  .tnote-play small, .fit-badge, .pal-label, .pal .pal-sym, .pal .pal-mood,
+  .root-badge, .root-badge.tight, .part-meter-meta, .pm-cell, .pm-beat,
+  .recent-chords-label, .recent-chord small, .recent-now, .recent-move-nrt,
+  .card-rank, .rar, .fit, .breathe, .cons, .tmetric, .tmel-chip, .treason,
+  .nprank-i, .nprank-meta, .path-chip .path-mel, .path-chip .path-why,
+  .guide-kicker, .drawer-row-text span, .t-bpm-unit, .chip .rn, .tchord .rn,
+  .ghead, .input-head .input-pane button, .rest-btn, .preset, .dchip,
+  .tutorial-launch, .listen .conf, .listen .added, .instr-status, .cat, .evid,
+  .cite a, .lorebadge, .jchip small, .tdetails-btn, .fit-label, .fit-deg, .fit-chip,
+  .fit-rel, .dim, .legend, .slider, .conn-step, .conn-step small, .conn-seq-label,
+  .conn-tone, .conn-tone small, .conn-subhead, .nplabel, .drum-kits-kicker,
+  .drum-kit-name, .drum-kit-tags, .drum-pattern-name, .drum-pattern-tags,
+  .drum-grid, .drum-voice-id, .drum-voice-name, .drum-voice-role, .drum-ascii,
+  .drum-actions .add, .drum-pillars, .drum-t-meter, .drum-t-chip, .drum-keytones-kicker,
+  .drum-keytone-voice, .drum-keytone-note, .drum-scale-chip b, .drum-scale-chip span,
+  .drum-voice-tune, .drum-t-bar em, .tryit-howto-label, .mref-axis, .card-viz-toggle .pill,
+  .part-meter-actions .pill, .part-meter-sigs .pill, .instr-part-label, .instr .pill,
+  .listen-src button, .cof-instr .pill, .techchip, .shift, .ghead-breathe {
+    font-size: 13px;
+  }
+  .t-bpm-unit { letter-spacing: 0.04em; }
+  .pm-beat { opacity: 1; }
+  .guide-kicker, .recent-chords-label, .instr-part-label, .drum-voice-role,
+  .tryit-howto-label, .drum-kits-kicker, .drum-keytones-kicker { letter-spacing: 0.03em; }
+  svg .cdir, svg .cstep, svg .ceffect, svg .ceffect.soft, svg .cadd, svg .cdot-pill, svg .tname,
+  svg .tcap, svg .cnote, svg .sname, svg .maxis, svg .mlabel, svg .fretno, svg .finger text {
+    font-size: 12px;
+  }
+  .transport .t-btn { border-color: transparent; background: #32303c; }
+  .transport .t-btn.on {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--accent) 28%, #32303c);
+    color: #efe8ff;
+  }
+  .t-chip { border-color: transparent; background: #262432; color: #d8d3e6; }
+  .nextpick .nplabel, .nextpick .nplabel.on { font-size: 13px; }
+
+  /* (d) solid grey disabled player + hint */
+  .play-hint {
+    display: block;
+    margin: 2px 0 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 650;
+    color: #d0cbdf;
+  }
+  .transport.idle :is(.t-btn, .t-play):disabled,
+  .transport-export.idle .t-chip:disabled {
+    opacity: 1;
+    background: #3e3c48;
+    color: #c8c3d4;
+    border-color: transparent;
+    box-shadow: none;
+    filter: none;
+    cursor: default;
+  }
+  .transport.idle .t-play:disabled {
+    background: #4a4758;
+    color: #ddd8ea;
+  }
+
+  /* (e) one polarity caption */
+  .pol-legend { display: block; margin: 2px 0 8px; }
+  .pol-each { display: none; }
+
+  /* (f) Jump to… instead of pill walls */
+  .guide-toc, .guide-theory-toc { display: none; }
+  .guide-jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 650;
+    color: #d0cbdf;
+  }
+  .guide-jump select {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    background: #262432;
+    border: none;
+    border-radius: 10px;
+  }
+
+  /* (g) line icon sits in the button */
+  .listen-emoji { display: none; }
+  .listen-ico { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* (h) drawer sections in sentence case */
+  .drawer-section {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 13px;
+    font-weight: 650;
+    opacity: 1;
+    color: #d0cbdf;
+  }
+
+  /* Keep bare white play triangles centered over + */
+  .card-actions { align-items: center; }
+  .t-mini, .card-actions button.t-mini {
+    background: transparent;
+    border-color: transparent;
+    color: #f7f4ff;
+  }
+}

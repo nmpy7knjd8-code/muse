@@ -38,7 +38,7 @@ import { DrumPad } from './DrumPad';
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, StopIcon, TrashIcon, UndoIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, StopIcon, TrashIcon, UndoIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
@@ -1696,6 +1696,9 @@ function Composer({ data }: { data: LoadedData }) {
         <p className="meter-note small muted" title="From Artist Lens try-it">Meter note: {meterNote}</p>
       )}
 
+      {/* Desktop: palette + player | suggestion list. Wrappers are display:contents below 1024px. */}
+      <div className="stage">
+      <div className="stage-main">
       {/* Unified timeline: melody lane above, chords below (hidden on Guide) */}
       <section className="strip" aria-label="Timeline">
         {slots.length === 0 ? (
@@ -1958,7 +1961,7 @@ function Composer({ data }: { data: LoadedData }) {
             )}
           </div>
         )}
-        <div className="transport" role="group" aria-label="Player">
+        <div className={'transport' + (slots.length ? '' : ' idle')} role="group" aria-label="Player">
           <div className="transport-side transport-left">
             <button type="button" className="t-btn" onClick={undo} disabled={!history.length} aria-label="Undo" title="Undo">
               <UndoIcon />
@@ -2006,7 +2009,8 @@ function Composer({ data }: { data: LoadedData }) {
             </button>
           </div>
         </div>
-        <div className="transport-export">
+        {slots.length === 0 && <p className="play-hint">Add a chord to play</p>}
+        <div className={'transport-export' + (slots.length ? '' : ' idle')}>
           <button type="button" className="t-chip" onClick={copyText} disabled={!slots.length}><CopyIcon /> Copy</button>
           <button type="button" className="t-chip" onClick={downloadMidi} disabled={!slots.length}><DownloadIcon /> MIDI</button>
         </div>
@@ -2139,7 +2143,12 @@ function Composer({ data }: { data: LoadedData }) {
             <button type="button" className={inputSource === 'midi' ? 'on' : ''} onClick={() => chooseInputSource('midi')} aria-pressed={inputSource === 'midi'} title={midiSupported() ? 'USB or Bluetooth MIDI keyboard' : 'Web MIDI not supported in this browser'}>MIDI</button>
           </div>
           <button className={listen ? 'rec' : ''} onClick={() => void toggleListen()} aria-pressed={!!listen}>
-            {listen ? '■ Stop' : (inputSource === 'midi' ? '🎹 MIDI' : '👂 Listen')}
+            {listen ? '■ Stop' : inputSource === 'midi' ? '🎹 MIDI' : (
+              <>
+                <span className="listen-emoji">👂 Listen</span>
+                <span className="listen-ico"><EarIcon /> Listen</span>
+              </>
+            )}
           </button>
           {listen ? (
             <div className="live" aria-live="polite">
@@ -2532,6 +2541,12 @@ function Composer({ data }: { data: LoadedData }) {
         <p><b>No sound on iPhone?</b> Flip off Silent mode (the switch on the side), turn the volume up, and tap again — Safari only starts audio after a tap.</p>
         <p><b>Theory &amp; moods.</b> Mood labels come from the bundled research knowledge base and mood lexicon (sources listed inside the data files). Lore mode notes are folklore, not science.</p>
       </details>
+      </div>
+      <aside className="suggest-rail" aria-label="Suggestions">
+        <h3 className="suggest-rail-title">Suggestions</h3>
+        {bestFitBlock()}
+      </aside>
+      </div>
       <footer className="foot small muted">
         Works offline · no account · theory: {data.kbFile} v{data.kb.meta.version}{data.featureMapping ? ` · feature map (${data.featureMapping.applied} rules)` : ''} · lexicon {textLex.size} terms{data.moodLexicon ? ' (+ research lexicon)' : ''}
       </footer>

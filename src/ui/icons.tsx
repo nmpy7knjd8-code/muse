@@ -46,6 +46,16 @@ export function ReharmIcon({ className }: IconProps) {
   );
 }
 
+/** Line ear — same stroke weight as the drawer icons. */
+export function EarIcon({ className }: IconProps) {
+  return (
+    <svg className={'ui-icon' + (className ? ` ${className}` : '')} viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+      <path d="M7.2 11.2a4.8 4.8 0 0 1 9.6.2c0 2.7-1.3 4-2.5 5.4-1 1.1-1.5 1.9-1.5 3.1v.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 11.4a2.2 2.2 0 0 1 3.7-1.5c.7.7.8 1.6.6 2.6-.3 1.3-.2 2.2-.7 3.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function MenuIcon({ className }: IconProps) {
   return (
     <svg className={'ui-icon' + (className ? ` ${className}` : '')} viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
