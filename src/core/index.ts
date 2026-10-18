@@ -41,3 +41,4 @@ export * from './session';
 export * from './contrast';
 export * from './arc';
 export * from './earTrainer';
+export * from './songAnalysis';

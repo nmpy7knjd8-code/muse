@@ -1504,6 +1504,7 @@ function Composer({ data }: { data: LoadedData }) {
     flash,
     close: () => setDrawer(null),
     openTool: (id) => setDrawer(`tool:${id}`),
+    openArtist: (id) => { setFocusArtist(id); setDrawer('artists'); },
   };
 
   const moodFilterLabel = profile

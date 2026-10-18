@@ -26,6 +26,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><path d="M7 15.5c0-6 2-10 6-10a5 5 0 0 1 5 5c0 3-3 3.5-3 6.5a3 3 0 0 1-6 0" /><path d="M11 11.5a2 2 0 0 1 4 0" /></>),
     load: () => import('./EarTool'),
   },
+  {
+    id: 'song', title: 'Song analysis', sub: 'Paste a chord sheet', group: 'tools',
+    icon: ico(<><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /><path d="M9 13h7M9 17h4" /></>),
+    load: () => import('./SongTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;

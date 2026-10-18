@@ -1910,3 +1910,13 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .ear-stats { display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
 .ear-stats b { color: var(--text); font-size: 15px; margin-left: 4px; }
 .ear-reset { align-self: flex-start; }
+.song-head { gap: 6px; }
+.song-key { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.song-summary { margin: 0; font-size: 15px; line-height: 1.45; }
+.song-curve { width: 100%; height: auto; }
+.song-peak { fill: #F44336; stroke: #121117; stroke-width: 2; }
+.song-peak-name { margin-right: 10px; font-weight: 600; color: var(--text); }
+.song-artist { display: grid; grid-template-columns: 1fr; gap: 3px; text-align: left; padding: 9px 10px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); }
+.song-artist-name { font-weight: 700; font-size: 15px; }
+.song-artist-bar { height: 5px; border-radius: 999px; background: #2a2836; overflow: hidden; }
+.song-artist-bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }

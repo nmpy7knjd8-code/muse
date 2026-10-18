@@ -29,4 +29,6 @@ export interface ToolProps {
   flash: (msg: string) => void;
   close: () => void;
   openTool: (id: ToolId) => void;
+  /** Open Artist Lens focused on one artist. */
+  openArtist: (id: string) => void;
 }
