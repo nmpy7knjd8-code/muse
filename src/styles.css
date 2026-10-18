@@ -737,6 +737,8 @@ svg.staff-card .staff-name {
 .dim .bar { flex: 1; height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; }
 .dim .bar i { display: block; height: 100%; background: var(--accent); }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #333044; padding: 10px 16px; border-radius: 12px; z-index: 30; font-size: 14px; max-width: 90vw; }
+.toast-offer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; width: max-content; }
+.toast-offer .pill { min-height: 36px; }
 .foot { margin-top: 20px; text-align: center; }
 .melody-input svg { width: 100%; height: auto; touch-action: manipulation; }
 .fit-explainer {

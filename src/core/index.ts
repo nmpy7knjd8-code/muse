@@ -37,3 +37,4 @@ export * from './drumKits';
 export * from './drumTension';
 export * from './drumTuning';
 export * from './staff';
+export * from './session';

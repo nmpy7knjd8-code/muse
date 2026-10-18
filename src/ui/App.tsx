@@ -20,6 +20,7 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
+  SESSION_KEY, deserializeSession, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName,
 } from '../core';
 import { applyKeyTuning } from './DrumPad';
 import { loadData, type LoadedData } from './data';
@@ -163,12 +164,17 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const beatSec = beatSecFromBpm(bpm);
   const [meterNote, setMeterNote] = useState<string | null>(null);
-  const [slots, setSlots] = useState<TimelineSlot[]>([]);
+  /** Autosaved progression from the last visit (audit #1). Read once on mount. */
+  const [savedSession] = useState(() => {
+    try { return deserializeSession(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+  });
+  const [slots, setSlots] = useState<TimelineSlot[]>(() => savedSession?.slots ?? []);
   const [history, setHistory] = useState<Snapshot[]>([]);
   const beats = beatsPerBar(timeSig);
   const [tab, setTab] = useState<Tab>('chords');
   const [inputPane, setInputPane] = useState<InputPane>('write');
   const [partMeters, setPartMeters] = useState<PartMeters>(() => {
+    if (savedSession?.partMeters) return savedSession.partMeters;
     const base = defaultPartMeters(timeSig);
     // Ensure drums exists even if older sessions only had three parts.
     return { ...base, drums: base.drums };
@@ -218,7 +224,7 @@ function Composer({ data }: { data: LoadedData }) {
   transportRef.current = transport;
   const [playSec, setPlaySec] = useState(0);
   /** Session practice groove — edited on the Drums pad; independent of timeline until Add to notes. */
-  const [grooveHits, setGrooveHits] = useState<DrumHit[]>([]);
+  const [grooveHits, setGrooveHits] = useState<DrumHit[]>(() => savedSession?.grooveHits ?? []);
   /** `groove` = drums-only Loop; `timeline` = full ▶ Play (chords/melody/bass/drums). */
   const [playMode, setPlayMode] = useState<'timeline' | 'groove' | null>(null);
   const playModeRef = useRef(playMode);
@@ -987,6 +993,53 @@ function Composer({ data }: { data: LoadedData }) {
       melodic: true,
     });
   };
+  // Autosave the session (debounced) so a reload / app switch never loses work.
+  const sessionRef = useRef({ slots, grooveHits, partMeters });
+  sessionRef.current = { slots, grooveHits, partMeters };
+  useEffect(() => {
+    const save = () => { try { localStorage.setItem(SESSION_KEY, serializeSession(sessionRef.current)); } catch { /* private mode / quota */ } };
+    const id = window.setTimeout(save, 400);
+    return () => window.clearTimeout(id);
+  }, [slots, grooveHits, partMeters]);
+  useEffect(() => {
+    const flush = () => { try { localStorage.setItem(SESSION_KEY, serializeSession(sessionRef.current)); } catch { /* ignore */ } };
+    const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onHide);
+    return () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', onHide); };
+  }, []);
+  /** Start a fresh session (everything, locked bars too). Undo brings the bars back. */
+  /** Changing the tonic with chords on the timeline → offer to move them to the new key (audit: bigger UI). */
+  const [transposeOffer, setTransposeOffer] = useState<{ from: NoteName; to: NoteName } | null>(null);
+  const offerTimer = useRef<number | undefined>(undefined);
+  const pickTonic = (t: string) => {
+    const from = k.tonic;
+    const to = parseNote(t);
+    chooseTonic(t);
+    window.clearTimeout(offerTimer.current);
+    if (to && pc(to) !== pc(from) && slots.some((x) => x.chord || x.notes.length || x.bass?.length)) {
+      setTransposeOffer({ from, to });
+      offerTimer.current = window.setTimeout(() => setTransposeOffer(null), 9000);
+    } else setTransposeOffer(null);
+  };
+  const acceptTranspose = () => {
+    if (!transposeOffer) return;
+    snapshot();
+    setSlots((s) => transposeSlots(s, transposeOffer.from, transposeOffer.to));
+    setTransposeOffer(null);
+    flash(`Moved to ${noteName(transposeOffer.to, true)} — undo to go back`);
+  };
+  const newSession = () => {
+    stopPlayback();
+    snapshot();
+    setSlots([]);
+    setGrooveHits([]);
+    setPartMeters(defaultPartMeters(timeSig));
+    setMeterNote(null);
+    setSelectedId(null);
+    setTab('chords');
+    flash('New session — undo to get your bars back');
+  };
   const toggleLock = (i: number) => setSlots((s) => s.map((x, j) => (j === i ? { ...x, locked: !x.locked } : x)));
   const clearAll = () => {
     // Always kill Play / Loop groove first so cleared notes can’t keep sounding.
@@ -1173,11 +1226,12 @@ function Composer({ data }: { data: LoadedData }) {
   const useJourney = () => {
     if (!journey) return;
     snapshot();
-    setSlots(journey.map((x) => ({ chord: x.chord, notes: [], bass: [], locked: false })));
+    const locked = slots.some((x) => x.locked);
+    setSlots(replaceKeepingLocked(slots, journey.map((x) => ({ chord: x.chord, notes: [], bass: [], locked: false }))));
     setMeterNote(null);
     setTab('chords');
     setSelectedId(null);
-    flash('Journey loaded — undo to go back');
+    flash(locked ? 'Journey loaded around your locked bars — undo to go back' : 'Journey loaded — undo to go back');
   };
 
   const [focusArtist, setFocusArtist] = useState<string | null>(null);
@@ -1688,7 +1742,7 @@ function Composer({ data }: { data: LoadedData }) {
           </div>
         </div>
         <div className="keypick">
-          <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => chooseTonic(e.target.value)}>
+          <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => pickTonic(e.target.value)}>
             {tonicChoices(mode).map((t) => <option key={t} value={t}>{t.replace('#', '♯').replace('b', '♭')}</option>)}
           </select>
           <select aria-label="Mode" value={mode} onChange={(e) => chooseMode(e.target.value as ModeId)}>
@@ -2624,6 +2678,10 @@ function Composer({ data }: { data: LoadedData }) {
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
                   <span className="drawer-row-text"><b>Writing</b><span>Chords &amp; melody</span></span>
                 </button>
+                <button type="button" className="drawer-row" onClick={() => { setDrawer(null); newSession(); }}>
+                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg>
+                  <span className="drawer-row-text"><b>New session</b><span>Start over (undo brings it back)</span></span>
+                </button>
                 <div className="drawer-section">Learn</div>
                 <button type="button" className="drawer-row" onClick={openTutorial}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg>
@@ -2734,6 +2792,13 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
+      {transposeOffer && !toast && (
+        <div className="toast toast-offer" role="status">
+          <span>Key is now {noteName(transposeOffer.to, true)}. Move your bars too?</span>
+          <button type="button" className="pill on" onClick={acceptTranspose}>Transpose</button>
+          <button type="button" className="pill" onClick={() => setTransposeOffer(null)}>Keep</button>
+        </div>
+      )}
       <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </div>
   );
