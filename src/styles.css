@@ -1969,3 +1969,12 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .pill.smooth-it { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px 2px 7px; font-size: 12px; font-weight: 600; }
 @media (max-width: 420px) { .card-note-legend { gap: 6px 9px; } .pill.smooth-it { padding: 2px 8px; } .smooth-label { display: none; } }
 .smooth-offer span { min-width: 0; }
+.taste-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.taste-btn { width: 34px; height: 30px; min-width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; color: var(--muted); background: transparent; border: 1px solid var(--line); }
+.taste-btn:hover { color: var(--text); border-color: #4a4560; }
+.taste-btn:active { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); }
+.sheet .taste-row { margin: 4px 0 10px; }
+.taste-sum { margin: 0; font-size: 14px; line-height: 1.45; }
+.taste-like { color: #A5D6A7; } .taste-pass { color: #EF9A9A; }
+.taste-reset { align-self: flex-start; }
+.tool-intro svg { vertical-align: -2px; }

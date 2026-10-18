@@ -51,6 +51,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><circle cx="9" cy="12" r="6" /><circle cx="15" cy="12" r="6" /></>),
     load: () => import('./BlendTool'),
   },
+  {
+    id: 'taste', title: 'Your taste', sub: 'What your thumbs taught Muse', group: 'tools',
+    icon: ico(<><path d="M7 11v9H4v-9z" /><path d="M7 11l4-7a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" /></>),
+    load: () => import('./TasteTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;

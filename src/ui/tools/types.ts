@@ -1,5 +1,5 @@
 // Shared contract between App and the lazy-loaded tool pages in the drawer.
-import type { BeatNote, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
+import type { BeatNote, TasteState, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
 
 export type ToolId =
   | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release';
@@ -43,6 +43,11 @@ export interface ToolProps {
     stop: () => void;
     isPlaying: () => boolean;
   };
+  /** Taste learning state (thumbs on suggestion cards). */
+  taste: TasteState;
+  tasteOn: boolean;
+  setTasteOn: (on: boolean) => void;
+  resetTaste: () => void;
   /** Open Artist Lens focused on one artist. */
   openArtist: (id: string) => void;
 }

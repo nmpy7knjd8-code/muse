@@ -146,3 +146,13 @@ export function DownloadIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** Thumb up (line); `down` flips it for "less like this". */
+export function ThumbIcon({ className, down, size = 16 }: IconProps & { down?: boolean; size?: number }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width={size} height={size} aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      style={down ? { transform: 'scaleY(-1)' } : undefined}>
+      <path d="M7 11v9H4v-9z" /><path d="M7 11l4-7a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" />
+    </svg>
+  );
+}

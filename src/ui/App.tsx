@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, type ReactNode, useCallback, useEffect, useM
 import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
-  midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs, smoothInversions,
+  midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs, smoothInversions, rerankByTaste, recordVote, parseTaste, EMPTY_TASTE, type TasteState,
   spellInKey, spellWithChords, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
   INSTRUMENTS, INSTRUMENT_IDS, bassLineMidi, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
@@ -72,7 +72,7 @@ class LazyBoundary extends Component<{ children: ReactNode }, { failed: boolean 
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, StopIcon, TrashIcon, UndoIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, StopIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
@@ -558,7 +558,13 @@ function Composer({ data }: { data: LoadedData }) {
       beat: tab === 'bass' ? bassBeat : noteBeat,
     });
   }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, pathLen]); // eslint-disable-line react-hooks/exhaustive-deps
-  const selChord = chordSugs.find((s) => s.id === selectedId) ?? chordSugs[0];
+  // Taste learning (idea 9): thumbs on the selected card gently re-rank Best fit. Local only.
+  const [taste, setTaste] = useState<TasteState>(() => { try { return parseTaste(localStorage.getItem('muse.taste')); } catch { return EMPTY_TASTE; } });
+  const [tasteOn, setTasteOnRaw] = useState(() => { try { return localStorage.getItem('muse.tasteOn') !== '0'; } catch { return true; } });
+  const saveTaste = (t: TasteState) => { setTaste(t); try { localStorage.setItem('muse.taste', JSON.stringify(t)); } catch { /* private mode */ } };
+  const setTasteOn = (on: boolean) => { setTasteOnRaw(on); try { localStorage.setItem('muse.tasteOn', on ? '1' : '0'); } catch { /* private mode */ } };
+  const tastedChordSugs = useMemo(() => (tasteOn ? rerankByTaste(chordSugs, taste) : chordSugs), [chordSugs, taste, tasteOn]);
+  const selChord = tastedChordSugs.find((s) => s.id === selectedId) ?? tastedChordSugs[0];
   const selNote = noteSugs.find((s) => s.id === selectedId) ?? noteSugs[0];
   useEffect(() => setShapeIdx(0), [selChord?.id]);
 
@@ -1116,6 +1122,17 @@ function Composer({ data }: { data: LoadedData }) {
     setSmoothOffer({ before: r.before, after: r.after, line: r.bassLine.join(' → '), changed: r.changed.length });
     smoothTimer.current = window.setTimeout(() => setSmoothOffer(null), 6000);
   };
+  const voteTaste = (sg: ChordSuggestion, up: boolean) => {
+    saveTaste(recordVote(taste, sg, up));
+    flash(up ? `More like ${sg.symbol} — Best fit is learning your taste` : `Less like ${sg.symbol} — noted`);
+  };
+  const tasteRow = (sg: ChordSuggestion) => (
+    <div className="taste-row" onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="taste-btn" aria-label={`More like ${sg.symbol}`} title="More like this" onClick={() => voteTaste(sg, true)}><ThumbIcon /></button>
+      <button type="button" className="taste-btn" aria-label={`Less like ${sg.symbol}`} title="Less like this" onClick={() => voteTaste(sg, false)}><ThumbIcon down /></button>
+      {taste.votes > 0 && tasteOn && <span className="taste-note small muted">tuned to your taste</span>}
+    </div>
+  );
   const offerTimer = useRef<number | undefined>(undefined);
   const pickTonic = (t: string) => {
     const from = k.tonic;
@@ -1489,8 +1506,8 @@ function Composer({ data }: { data: LoadedData }) {
 
   // Ranked suggestions: engine order is score-desc — show that flat list (mood stays as tags).
   const ranked = useMemo(
-    () => (tab === 'chords' ? chordSugs : noteSugs),
-    [tab, chordSugs, noteSugs],
+    () => (tab === 'chords' ? tastedChordSugs : noteSugs),
+    [tab, tastedChordSugs, noteSugs],
   );
 
   const selColor = lex.color(tab === 'chords' ? selChord?.primaryMood ?? 'floating' : selNote?.primaryMood ?? 'floating');
@@ -1525,6 +1542,7 @@ function Composer({ data }: { data: LoadedData }) {
     close: () => setDrawer(null),
     openTool: (id) => setDrawer(`tool:${id}`),
     openArtist: (id) => { setFocusArtist(id); setDrawer('artists'); },
+    taste, tasteOn, setTasteOn, resetTaste: () => saveTaste(EMPTY_TASTE),
     melody: slots.flatMap((s, i) => s.notes.filter(isSounding).map((n) => ({
       midi: n.midi, beat: i * melBeats + n.beat / melMeter.subdiv, dur: (n.dur ?? melMeter.subdiv) / melMeter.subdiv,
     }))),
@@ -1687,6 +1705,7 @@ function Composer({ data }: { data: LoadedData }) {
                 {cs?.tension?.reasons.slice(0, 1).map((r) => <span key={r} className={'treason' + (r.startsWith('pushes') ? ' warn' : '')}>{r}</span>)}
               </div>
               <div className="why">{s.why}</div>
+              {selected && cs && tasteRow(cs)}
               {midis.length > 0 && (
                 <div className="card-piano" aria-label={cs ? `Piano notes for ${cs.symbol}` : `Piano note ${(ns as NoteSuggestion).name}`}>
                   <PianoViz
@@ -2972,6 +2991,7 @@ function Composer({ data }: { data: LoadedData }) {
               </div>
               <button className="ghost" ref={detailCloseRef} onClick={() => setDetail(false)}>Close</button>
             </div>
+            {tasteRow(selChord)}
             <div className="tags">
               {selChord.moods.slice(0, 5).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id), color: inkOn(lex.color(m.id))  }}>{lex.label(m.id).toLowerCase()}</span>)}
               {selChord.moodShift && <span className="shift">{selChord.moodShift.arrow} {selChord.moodShift.text}</span>}
