@@ -2862,6 +2862,7 @@ function Composer({ data }: { data: LoadedData }) {
           onStyle={chooseTStyle}
           selectedIndex={tensionPick}
           onSelect={setTensionPick}
+          onFindRelease={() => setDrawer('tool:release')}
           ghost={tab === 'chords' && selChord?.tension ? { level: selChord.tension.level, debtAfter: selChord.tension.debtAfter, label: selChord.symbol, color: lex.color(selChord.primaryMood) } : null}
         />
       )}

@@ -1998,3 +1998,18 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .practice-split-row { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; }
 .practice-stack { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #2a2836; }
 .practice-stack i { display: block; height: 100%; }
+/* Idea 12 — Release finder */
+.release-msg { margin: 0; font-size: 14px; line-height: 1.45; }
+.release-scroll { overflow-x: auto; }
+.release-scroll svg { display: block; }
+.release-tag { font-size: 11px; font-weight: 600; }
+.release-legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); }
+.release-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.release-options { display: flex; flex-direction: column; gap: 10px; }
+.release-option { border-left: 3px solid var(--line); }
+.release-option-head { display: flex; align-items: baseline; gap: 10px; }
+.release-option-head h4 { text-transform: none; letter-spacing: 0; font-size: 15px; min-width: 84px; }
+.release-sym { font-size: 22px; letter-spacing: -0.01em; }
+.release-tool .tool-card h4 { text-transform: none; letter-spacing: 0; }
+.release-link { background: none; border: 0; padding: 0; min-height: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
+.release-link:hover { text-decoration: underline; }

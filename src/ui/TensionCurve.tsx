@@ -25,6 +25,8 @@ interface Props {
   /** Controlled pick among chorded bars (null = latest). */
   selectedIndex?: number | null;
   onSelect?: (index: number) => void;
+  /** Opens the Release finder tool (idea 12). */
+  onFindRelease?: () => void;
 }
 
 const H = 112, PAD_T = 8, PAD_B = 20, PAD_L = 4;
@@ -60,7 +62,7 @@ function MelChip({ n }: { n: TensionMelNote }) {
   );
 }
 
-export function TensionCurve({ state, labels, melodyNotes, ghost, style, onStyle, selectedIndex, onSelect }: Props) {
+export function TensionCurve({ state, labels, melodyNotes, ghost, style, onStyle, selectedIndex, onSelect, onFindRelease }: Props) {
   const { points, limits: L, budget } = state;
   const [localPick, setLocalPick] = useState<number | null>(null);
   const [details, setDetails] = useState(false);
@@ -101,7 +103,7 @@ export function TensionCurve({ state, labels, melodyNotes, ghost, style, onStyle
           {TENSION_STYLES.map((s) => <option key={s} value={s}>{tensionStyleLabel(s)}</option>)}
         </select>
       </div>
-      <p className="small tmsg">{STATUS_TIP[budget.status] ?? budget.message}</p>
+      <p className="small tmsg">{STATUS_TIP[budget.status] ?? budget.message}{onFindRelease && labels.length >= 3 && <> <button type="button" className="link-btn release-link" onClick={onFindRelease}>Find the release →</button></>}</p>
       <div className="tension-scroll" ref={scroller}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tension curve">
           <rect x={0} y={y(L.bandHigh)} width={W} height={y(L.bandLow) - y(L.bandHigh)} fill="#4fd1a5" opacity={0.12} />

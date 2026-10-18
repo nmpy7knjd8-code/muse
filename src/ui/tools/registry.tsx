@@ -61,6 +61,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /><path d="M5 3 3 5M19 3l2 2" /></>),
     load: () => import('./PracticeTool'),
   },
+  {
+    id: 'release', title: 'Release finder', sub: 'Where should the tension let go?', group: 'tools',
+    icon: ico(<><path d="M3 17c3-1 5-9 9-9 2.5 0 3 3 4 6" /><path d="M16 14l2 4 3-3" /><path d="M3 21h18" /></>),
+    load: () => import('./ReleaseTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;
