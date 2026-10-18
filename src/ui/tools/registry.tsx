@@ -36,6 +36,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>),
     load: () => import('./HumTool'),
   },
+  {
+    id: 'cadence', title: 'Cadence finder', sub: 'Pick where to land, work backwards', group: 'tools',
+    icon: ico(<><path d="M4 12h12" /><path d="M12 7l5 5-5 5" /><path d="M20 5v14" /></>),
+    load: () => import('./CadenceTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;

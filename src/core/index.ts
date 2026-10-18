@@ -43,3 +43,4 @@ export * from './arc';
 export * from './earTrainer';
 export * from './songAnalysis';
 export * from './hum';
+export * from './cadence';

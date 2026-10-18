@@ -1942,3 +1942,8 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .hum-note { fill: #81D4FA; }
 .hum-results { display: flex; flex-direction: column; gap: 10px; }
 .hum-card h4 { text-transform: none; font-size: 16px; letter-spacing: 0; }
+.tool-label { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
+.cad-head { display: flex; align-items: center; gap: 8px; }
+.cad-head h4 { text-transform: none; letter-spacing: 0; font-size: 16px; }
+.cad-best { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); }
+.cad-card.best { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
