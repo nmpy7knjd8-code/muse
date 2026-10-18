@@ -107,7 +107,20 @@ export function spectrum(midi: number[], o: SpectrumOpts = {}): Array<[number, n
 /** Hutchinson & Knopoff (1978) roughness, Mashinter's parametrisation as implemented in the dycon R package:
  *  R = sum_{i<j} A_i A_j g(y_ij) / sum_i A_i^2, y = |f_i - f_j| / CBW, CBW = 1.72 * fmean^0.65,
  *  g(y) = ((y/0.25) * e^(1 - y/0.25))^2 for y <= 1.2, else 0. */
+// Self-contained (this module stays import-free / portable): bounded memo, cleared when it fills.
+const roughMemo = new Map<string, number>();
+/** Memoised: the same voicing is scored many times per tap (every candidate × tension curve). */
 export function hkRoughness(midi: number[], o: SpectrumOpts = {}): number {
+  const key = `${midi.join(',')}|${o.harmonics ?? ''}|${o.rolloff ?? ''}`;
+  let v = roughMemo.get(key);
+  if (v === undefined) {
+    v = hkRoughnessRaw(midi, o);
+    if (roughMemo.size >= 4000) roughMemo.clear();
+    roughMemo.set(key, v);
+  }
+  return v;
+}
+function hkRoughnessRaw(midi: number[], o: SpectrumOpts): number {
   const p = spectrum(midi, o);
   let num = 0, den = 0;
   for (const [, a] of p) den += a * a;

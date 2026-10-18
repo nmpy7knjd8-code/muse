@@ -2,7 +2,7 @@
 // and melodic steel-drum accents that sit in the same scale as chords/melody/bass.
 import { Key, MODE_BY_ID, scalePcs, spellInKey } from './scales';
 import { mod, noteName, pc } from './notes';
-import type { DrumVoiceId } from './drums';
+import type { DrumHit, DrumVoiceId } from './drums';
 
 /** Fold a pitch class into a MIDI octave window. */
 export function midiInRange(pitchClass: number, lo: number, hi: number): number {
@@ -132,3 +132,12 @@ export function voiceTuneLabel(voice: DrumVoiceId, tuning: DrumKeyTuning): strin
 
 /** Voices that carry pitch from the session key. */
 export const PITCHED_DRUM_VOICES: DrumVoiceId[] = ['BD', 'BDp', 'FT', 'T2', 'T1', 'Rb', 'Cs'];
+
+/** Stamp key MIDI onto pitched hits that lack an explicit midi (e.g. loaded patterns). */
+export function applyKeyTuning(hits: DrumHit[], tuning: DrumKeyTuning): DrumHit[] {
+  return hits.map((h) => {
+    if (h.midi != null) return h;
+    const midi = defaultMidiForVoice(h.voice, tuning);
+    return midi != null ? { ...h, midi } : h;
+  });
+}

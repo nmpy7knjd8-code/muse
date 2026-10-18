@@ -724,6 +724,9 @@ svg.staff-card .staff-name {
 }
 .card { display: flex; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-left: 5px solid; border-radius: 12px; padding: 9px 10px; margin-bottom: 7px; cursor: pointer; }
 .card.sel { background: #262333; border-color: #5a5470; }
+/* Off-screen suggestion cards skip layout/paint until scrolled near (no visual change). */
+.card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+.lazy-loading { padding: 12px 4px; }
 .card-main { flex: 1; min-width: 0; }
 .card-top { display: flex; align-items: baseline; gap: 2px 8px; flex-wrap: wrap; min-width: 0; }
 .card-top .sym { font-size: 19px; font-weight: 800; }

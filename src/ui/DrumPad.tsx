@@ -6,7 +6,7 @@ import {
   DrumArtic, DrumHit, DrumKitId, DrumVoiceId,
   cycleDrumArtic, defaultMidiForVoice, drumRoleHint, drumTabAscii, drumTuningForKey, drumVel,
   keyName, toggleDrumHit, voiceTuneLabel,
-  type DrumKeyTuning, type Key,
+  type Key,
 } from '../core';
 
 interface Props {
@@ -241,11 +241,4 @@ export function DrumPad({
   );
 }
 
-/** Stamp key MIDI onto pitched hits that lack an explicit midi (e.g. loaded patterns). */
-export function applyKeyTuning(hits: DrumHit[], tuning: DrumKeyTuning): DrumHit[] {
-  return hits.map((h) => {
-    if (h.midi != null) return h;
-    const midi = defaultMidiForVoice(h.voice, tuning);
-    return midi != null ? { ...h, midi } : h;
-  });
-}
+export { applyKeyTuning } from '../core';

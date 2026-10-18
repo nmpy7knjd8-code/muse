@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
@@ -20,22 +20,30 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
-  SESSION_KEY, deserializeSession, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn,
+  SESSION_KEY, deserializeSession, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
 } from '../core';
-import { applyKeyTuning } from './DrumPad';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
 import { CircleOfFifths, GuitarDiagram, MoodMap, PianoViz, ScaleLegend, StaffChordViz, TonnetzViz, VoiceLeadingViz, VoiceLegend, CURRENT_COLOR } from './visuals';
-import { ArtistLens } from './ArtistLens';
-import { Guide } from './Guide';
 import { FitExplainer } from './FitExplainer';
 import { NextPickBoard } from './NextPickBoard';
 import { TensionCurve, type TensionMelNote } from './TensionCurve';
-import { MoodChordRef } from './MoodChordRef';
 import { ChordConnections } from './ChordConnections';
 import { PlaybackRibbon, ribbonNotesFromEvents } from './PlaybackRibbon';
+import { createPlayClock, usePlaySec, type PlayClock } from './playClock';
+
+/** Only the ribbon follows the playhead every frame. */
+function LiveRibbon({ clock, ...rest }: { clock: PlayClock } & Omit<React.ComponentProps<typeof PlaybackRibbon>, 'playSec'>) {
+  const playSec = usePlaySec(clock);
+  return <PlaybackRibbon {...rest} playSec={playSec} />;
+}
 import { PartMeterPanel } from './PartMeterPanel';
-import { DrumPad } from './DrumPad';
+// Code-split: drawer pages and the drum pad load on first use (keeps the first paint lean).
+const ArtistLens = lazy(() => import('./ArtistLens').then((m) => ({ default: m.ArtistLens })));
+const Guide = lazy(() => import('./Guide').then((m) => ({ default: m.Guide })));
+const MoodChordRef = lazy(() => import('./MoodChordRef').then((m) => ({ default: m.MoodChordRef })));
+const DrumPad = lazy(() => import('./DrumPad').then((m) => ({ default: m.DrumPad })));
+const LazyFallback = () => <p className="small muted lazy-loading" role="status">Loading…</p>;
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
@@ -226,7 +234,17 @@ function Composer({ data }: { data: LoadedData }) {
   const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
   const transportRef = useRef(transport);
   transportRef.current = transport;
-  const [playSec, setPlaySec] = useState(0);
+  const playClock = useRef(createPlayClock()).current;
+  /** Changes only when the sounding chord / notes / hits change — drives highlights without per-frame renders. */
+  const [activeSig, setActiveSig] = useState('');
+  const activeSigRef = useRef('');
+  const setPlaySec = (sec: number) => {
+    playClock.set(sec);
+    const t = transportRef.current;
+    const a = t ? activeAt(t.events, sec) : null;
+    const sig = a ? JSON.stringify([a.chordIndex, a.melodies, a.basses, a.drums]) : '';
+    if (sig !== activeSigRef.current) { activeSigRef.current = sig; setActiveSig(sig); }
+  };
   /** Session practice groove — edited on the Drums pad; independent of timeline until Add to notes. */
   const [grooveHits, setGrooveHits] = useState<DrumHit[]>(() => savedSession?.grooveHits ?? []);
   /** `groove` = drums-only Loop; `timeline` = full ▶ Play (chords/melody/bass/drums). */
@@ -418,8 +436,9 @@ function Composer({ data }: { data: LoadedData }) {
     return (m: number) => midiName(m, f(m)).replace('#', '♯').replace(/b(?=\d)/, '♭');
   };
 
-  const chordSugs: ChordSuggestion[] = useMemo(() => {
-    if (tab !== 'chords') return [];
+  // Only what the engine actually reads (chords + melody per chorded bar + pending harmonisation) —
+  // so locking a bar, editing drums/bass or re-rendering never re-runs the engine.
+  const sugInputs = useMemo(() => {
     const progression = pendingHarm ? chordsOf(slots.slice(0, chordTarget)) : chords;
     // Same per-bar melody stretch the Tension curve sees — so Best fit won’t resolve before recent notes earn it.
     const chorded = (pendingHarm ? slots.slice(0, chordTarget) : slots).filter((s) => s.chord);
@@ -428,10 +447,23 @@ function Composer({ data }: { data: LoadedData }) {
     const harmonize = pendingHarm
       ? pendingHarm.notes.flatMap((n, i) => (isSounding(n) ? [{ midi: n.midi, beat: n.beat, dur: durs[i] }] : []))
       : undefined;
-    return engine.suggestChords({
-      key: k, progression, profile, adventure, limit: 28, tensionStyle: tStyle, tensionMelody, harmonize,
+    const sig = JSON.stringify([progression.map((c) => chordSymbol(c)), tensionMelody, harmonize ?? null]);
+    return { progression, tensionMelody, harmonize, sig };
+  }, [slots, chords, chordTarget, melBeats]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sugCache = useRef(new Map<string, ChordSuggestion[]>());
+  const chordSugs: ChordSuggestion[] = useMemo(() => {
+    if (tab !== 'chords') return [];
+    const key = [sugInputs.sig, keyName(k), k.mode, JSON.stringify(profile), adventure, tStyle].join('§');
+    const hit = sugCache.current.get(key);
+    if (hit) return hit;
+    const out = engine.suggestChords({
+      key: k, progression: sugInputs.progression, profile, adventure, limit: 28, tensionStyle: tStyle,
+      tensionMelody: sugInputs.tensionMelody, harmonize: sugInputs.harmonize,
     });
-  }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, slots, profile, adventure, tStyle, beats]); // eslint-disable-line react-hooks/exhaustive-deps
+    sugCache.current.set(key, out);
+    if (sugCache.current.size > 40) sugCache.current.delete(sugCache.current.keys().next().value as string);
+    return out;
+  }, [engine, tab, k.tonic.letter, k.tonic.acc, k.mode, sugInputs.sig, profile, adventure, tStyle]); // eslint-disable-line react-hooks/exhaustive-deps
   const chordedSlotIndices = useMemo(
     () => slots.map((s, i) => (s.chord ? i : -1)).filter((i) => i >= 0),
     [slots],
@@ -940,7 +972,10 @@ function Composer({ data }: { data: LoadedData }) {
     };
   }, [transport]);
 
-  const playActive = transport ? activeAt(transport.events, playSec) : null;
+  const playActive = useMemo(
+    () => (transport ? activeAt(transport.events, playClock.get()) : null),
+    [transport, activeSig], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   useEffect(() => {
     if (!playActive || playActive.chordIndex === null) return;
     const el = barRefs.current.get(playActive.chordIndex);
@@ -2079,9 +2114,9 @@ function Composer({ data }: { data: LoadedData }) {
           ))}
         </div>
         {transport && ribbonBits && (
-          <PlaybackRibbon
+          <LiveRibbon
+            clock={playClock}
             events={transport.events}
-            playSec={playSec}
             notes={ribbonBits.notes}
             chords={ribbonBits.chords}
           />
@@ -2387,7 +2422,7 @@ function Composer({ data }: { data: LoadedData }) {
             <FitExplainer mode="bass" keyInfo={k} underChord={bassChord} />
           </div>
         ) : (
-          <DrumPad
+          <Suspense fallback={<LazyFallback />}><DrumPad
             hits={grooveHits}
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
@@ -2405,7 +2440,7 @@ function Composer({ data }: { data: LoadedData }) {
             onChooseKit={chooseDrumKit}
             onLoopGroove={toggleGrooveLoop}
             onApplyToNotes={applyGrooveToNotes}
-          />
+          /></Suspense>
         )}
         </>
         )}
@@ -2756,12 +2791,12 @@ function Composer({ data }: { data: LoadedData }) {
             )}
             {drawer === 'moods' && (
               <div className="drawer-body">
-                <MoodChordRef kb={data.kb} lex={lex} />
+                <Suspense fallback={<LazyFallback />}><MoodChordRef kb={data.kb} lex={lex} /></Suspense>
               </div>
             )}
             {drawer === 'guide' && (
               <div className="drawer-body">
-                <Guide onJump={(t) => {
+                <Suspense fallback={<LazyFallback />}><Guide onJump={(t) => {
                   if (t === 'artists') { setDrawer('artists'); return; }
                   if (t === 'moods') { setDrawer('moods'); return; }
                   setDrawer(null);
@@ -2769,12 +2804,12 @@ function Composer({ data }: { data: LoadedData }) {
                   if (t === 'bass' && bassInst === 'off') chooseBassInst('bass');
                   setSelectedId(null);
                   window.scrollTo({ top: 0 });
-                }} />
+                }} /></Suspense>
               </div>
             )}
             {drawer === 'artists' && data.artists && (
               <div className="drawer-body">
-                <ArtistLens
+                <Suspense fallback={<LazyFallback />}><ArtistLens
                   key={focusArtist ?? 'all'}
                   initial={focusArtist}
                   data={data.artists}
@@ -2782,7 +2817,7 @@ function Composer({ data }: { data: LoadedData }) {
                   kbIndex={data.kbIndex}
                   onTryIt={(t, a) => { tryIt(t, a); setDrawer(null); }}
                   onPreview={previewTryIt}
-                />
+                /></Suspense>
               </div>
             )}
           </aside>

@@ -1,4 +1,5 @@
 // Piano voicings (voice-led), right/left-hand fingerings and voice-leading analysis.
+import { LruMemo } from './memo';
 import { Chord, chordNotes, QUALITY_BY_ID } from './chords';
 import { mod, pc } from './notes';
 
@@ -69,8 +70,10 @@ export function closeVoicings(chord: Chord, opts: VoicingOptions = {}): number[]
 }
 
 /** Total semitone movement between two voicings using the optimal voice assignment. */
+const vlCostMemo = new LruMemo<number>(4000);
+/** Memoised: pianoVoicing tries every candidate against the previous chord on each render. */
 export function voiceLeadingCost(a: number[], b: number[]): number {
-  return voiceLeading(a, b).reduce((s, l) => s + Math.abs(l.delta), 0);
+  return vlCostMemo.get(`${a.join(',')}|${b.join(',')}`, () => voiceLeading(a, b).reduce((s, l) => s + Math.abs(l.delta), 0));
 }
 
 /**
