@@ -2019,3 +2019,15 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 /* Keyboard play on the tap piano: focus ring on the key shape (SVG <g> can't show an outline everywhere) */
 svg.piano .pkey { outline: none; }
 svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke-width: 3.5; }
+/* Bigger tap areas, no visual change (review fixes): hit boxes extend past the drawn shape. */
+.tutorial-launch, .linkish { position: relative; }
+.tutorial-launch::after { content: ''; position: absolute; inset: -11px -3px; }
+.linkish::after { content: ''; position: absolute; inset: -14px -6px; }
+.t-bpm select { padding: 12px 0 22px; margin: -12px 0 -22px; }
+/* Meter / BPM selects: the visible box is drawn by the wrapper; the select itself is taller but transparent. */
+.hit-sel { position: relative; display: inline-flex; isolation: isolate; }
+.hit-sel::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; pointer-events: none; }
+.meter-pick .hit-sel select { -webkit-appearance: none; appearance: none; background: transparent; border-color: transparent; padding: 0 22px 0 10px; height: 43px; margin: -9px 0; }
+.meter-pick .hit-sel select option { background: var(--panel2); color: var(--text); }
+/* Same drawn chevron as the Mode picker (deterministic on iOS/WebKit, where native selects ignore the transparent fill) */
+.hit-sel::after { content: ''; position: absolute; right: 8px; top: 50%; width: 5px; height: 5px; margin-top: -5px; border-right: 2px solid var(--text); border-bottom: 2px solid var(--text); transform: rotate(45deg); pointer-events: none; }

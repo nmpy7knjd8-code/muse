@@ -1979,6 +1979,7 @@ function Composer({ data }: { data: LoadedData }) {
         <span className="muted"> · </span>
         <label className="meter-pick">
           <span className="muted">Meter</span>
+          <span className="hit-sel">
           <select
             aria-label="Time signature"
             value={timeSigLabel(timeSig)}
@@ -1991,10 +1992,12 @@ function Composer({ data }: { data: LoadedData }) {
               <option key={p.label} value={p.label}>{p.label}{p.hint ? ` (${p.hint})` : ''}</option>
             ))}
           </select>
+          </span>
         </label>
         <span className="muted"> · </span>
         <label className="meter-pick">
           <span className="muted">BPM</span>
+          <span className="hit-sel">
           <select
             aria-label="Tempo"
             value={bpm}
@@ -2007,6 +2010,7 @@ function Composer({ data }: { data: LoadedData }) {
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
+          </span>
         </label>
         {detected && auto && <span className="muted"> · detected ({Math.round(detected.confidence * 100)}%)</span>}
         {data.kb.meta.isSeed && <span className="warn"> · using seed theory data</span>}
