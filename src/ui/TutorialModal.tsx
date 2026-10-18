@@ -1,5 +1,6 @@
 // Popup player for the bundled feature-intro tutorial video.
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useFocusTrap } from './focusTrap';
 import { CloseIcon } from './icons';
 
 interface Props {
@@ -12,6 +13,9 @@ export const TUTORIAL_SRC = `${import.meta.env.BASE_URL}tutorial.mp4`;
 
 export function TutorialModal({ open, onClose }: Props): ReactNode {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  // Focus moves to the close button, Tab stays inside, focus returns to the opener (or ☰ if it's gone).
+  useFocusTrap(panelRef, open, { returnFocus: true, fallback: () => document.querySelector<HTMLElement>('.menu-btn') });
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +44,7 @@ export function TutorialModal({ open, onClose }: Props): ReactNode {
       aria-label="Tutorial"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="tutorial-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="tutorial-panel" ref={panelRef} onClick={(e) => e.stopPropagation()}>
         <div className="tutorial-head">
           <div>
             <div className="tutorial-title">Tutorial</div>

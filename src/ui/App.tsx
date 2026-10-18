@@ -70,6 +70,7 @@ class LazyBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 import { TutorialModal } from './TutorialModal';
+import { useFocusTrap } from './focusTrap';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
 import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, ShareIcon, StopIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
@@ -247,7 +248,7 @@ function Composer({ data }: { data: LoadedData }) {
       if (cur == null) return;
       const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       setDrawerClosing(true);
-      drawerTimer.current = window.setTimeout(() => { setDrawerRaw(null); setDrawerClosing(false); menuBtnRef.current?.focus(); }, reduce ? 0 : 260);
+      drawerTimer.current = window.setTimeout(() => { setDrawerRaw(null); setDrawerClosing(false); if (!document.querySelector('.tutorial-root')) menuBtnRef.current?.focus(); }, reduce ? 0 : 260);
       return;
     }
     setDrawerClosing(false);
@@ -351,22 +352,8 @@ function Composer({ data }: { data: LoadedData }) {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
-  useEffect(() => {
-    if (!drawer || drawerClosing) return;
-    const el = drawerRef.current;
-    const focusables = () => Array.from(el?.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') ?? []).filter((n) => !n.hasAttribute('disabled'));
-    if (el && !el.contains(document.activeElement)) (focusables()[0] ?? el).focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); setDrawer(null); return; }
-      if (e.key !== 'Tab') return;
-      const f = focusables(); if (!f.length) return;
-      const first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [drawer, drawerClosing, setDrawer]);
+  const closeDrawerEsc = useCallback(() => setDrawer(null), [setDrawer]);
+  useFocusTrap(drawerRef, !!drawer && !drawerClosing, { onEscape: closeDrawerEsc });
   // Swipe left on the open drawer closes it.
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const onDrawerTouchStart = (e: import('react').TouchEvent) => { const t = e.touches[0]; swipe.current = t ? { x: t.clientX, y: t.clientY } : null; };
