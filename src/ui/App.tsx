@@ -1505,6 +1505,33 @@ function Composer({ data }: { data: LoadedData }) {
     close: () => setDrawer(null),
     openTool: (id) => setDrawer(`tool:${id}`),
     openArtist: (id) => { setFocusArtist(id); setDrawer('artists'); },
+    melody: slots.flatMap((s, i) => s.notes.filter(isSounding).map((n) => ({
+      midi: n.midi, beat: i * melBeats + n.beat / melMeter.subdiv, dur: (n.dur ?? melMeter.subdiv) / melMeter.subdiv,
+    }))),
+    useBars: (bars, label) => {
+      if (!bars.length) return;
+      stopPlayback(); snapshot();
+      const cap = melBeats * melMeter.subdiv;
+      const incoming: TimelineSlot[] = bars.map((b) => ({
+        chord: b.chord, bass: [], locked: false,
+        notes: (b.notes ?? [])
+          .map((n) => ({ midi: n.midi, beat: Math.round(n.beat * melMeter.subdiv * 2) / 2, dur: Math.max(0.5, Math.round(n.dur * melMeter.subdiv * 2) / 2) }))
+          .filter((n) => n.beat >= 0 && n.beat < cap)
+          .map((n) => ({ ...n, dur: Math.min(n.dur, cap - n.beat) })),
+      }));
+      setSlots(replaceKeepingLocked(slots, incoming));
+      setMeterNote(null); setSelectedId(null); setTab('chords'); setDrawer(null);
+      flash(`${label} — undo to go back`);
+    },
+    audio: {
+      origin: () => { synth.unlock(); return synth.scheduleOrigin(); },
+      now: () => synth.audioTime(),
+      chord: (c, at, dur, origin) => playChordParts(c, pianoVoicing(c), { at, dur, vel: 0.7, origin }),
+      note: (midi, at, dur, origin) => synth.playNotes([midi], { at, dur, vel: 0.8, instrument: melodyInst, origin }),
+      click: (at, accent, origin) => synth.playDrum(accent ? 'RS' : 'HH', { at, vel: accent ? 0.9 : 0.55, origin }),
+      stop: () => synth.stopAll(),
+      isPlaying: () => synth.isPlaying(),
+    },
   };
 
   const moodFilterLabel = profile

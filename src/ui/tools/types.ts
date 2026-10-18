@@ -1,5 +1,5 @@
 // Shared contract between App and the lazy-loaded tool pages in the drawer.
-import type { ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
+import type { BeatNote, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
 
 export type ToolId =
   | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release';
@@ -29,6 +29,20 @@ export interface ToolProps {
   flash: (msg: string) => void;
   close: () => void;
   openTool: (id: ToolId) => void;
+  /** Timeline melody as absolute beats (bar i starts at i * beatsPerBar). */
+  melody: BeatNote[];
+  /** Replace the timeline with chords + optional melody per bar (beats relative to the bar). */
+  useBars: (bars: Array<{ chord: Chord; notes?: BeatNote[] }>, label: string) => void;
+  /** Low-level scheduling for tools that play in time (hum, practice). Times are seconds after `origin`. */
+  audio: {
+    origin: () => number;
+    now: () => number | null;
+    chord: (c: Chord, at: number, dur: number, origin?: number) => void;
+    note: (midi: number, at: number, dur: number, origin?: number) => void;
+    click: (at: number, accent: boolean, origin?: number) => void;
+    stop: () => void;
+    isPlaying: () => boolean;
+  };
   /** Open Artist Lens focused on one artist. */
   openArtist: (id: string) => void;
 }

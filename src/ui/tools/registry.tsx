@@ -31,6 +31,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /><path d="M9 13h7M9 17h4" /></>),
     load: () => import('./SongTool'),
   },
+  {
+    id: 'hum', title: 'Hum to harmony', sub: 'Three moods for your tune', group: 'tools',
+    icon: ico(<><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>),
+    load: () => import('./HumTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;

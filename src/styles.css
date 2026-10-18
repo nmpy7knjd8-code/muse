@@ -1920,3 +1920,25 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .song-artist-name { font-weight: 700; font-size: 15px; }
 .song-artist-bar { height: 5px; border-radius: 999px; background: #2a2836; overflow: hidden; }
 .song-artist-bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.hum-rec { align-items: flex-start; }
+.hum-mic { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 22px; border-radius: 999px; font-size: 16px; font-weight: 700; }
+.hum-dot { width: 12px; height: 12px; border-radius: 50%; background: #E53935; }
+.hum-mic.on { border-color: #E53935; }
+.hum-mic.on .hum-dot { animation: hum-pulse 1s infinite; }
+@keyframes hum-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .hum-mic.on .hum-dot { animation: none; } }
+.hum-live { display: flex; align-items: center; gap: 10px; min-height: 24px; width: 100%; }
+.hum-live b { font-size: 20px; min-width: 44px; }
+.hum-level { flex: 1; height: 6px; border-radius: 999px; background: #2a2836; overflow: hidden; }
+.hum-level i { display: block; height: 100%; background: #81C784; transition: width 0.08s; }
+.hum-keys { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; }
+.hum-key { min-height: 64px; padding: 0; display: flex; align-items: flex-end; justify-content: center; border-radius: 6px; font-size: 10px; background: #24222d; touch-action: manipulation; }
+.hum-key.in { background: #3a3550; }
+.hum-key.blk { min-height: 52px; background: #15141a; }
+.hum-key.blk.in { background: #2c2840; }
+.hum-key span { padding-bottom: 4px; color: var(--muted); }
+.hum-key:active { background: var(--accent); }
+.hum-roll { width: 100%; height: auto; }
+.hum-note { fill: #81D4FA; }
+.hum-results { display: flex; flex-direction: column; gap: 10px; }
+.hum-card h4 { text-transform: none; font-size: 16px; letter-spacing: 0; }
