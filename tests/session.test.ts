@@ -11,9 +11,9 @@ describe('session autosave (audit #1)', () => {
     const slots: TimelineSlot[] = [
       bar('C', { notes: [{ midi: 72, beat: 0 }, { midi: null, beat: 2, dur: 1 }], locked: true }),
       bar('Bb/D', { bass: [{ midi: 38, beat: 0 }] }),
-      { chord: null, notes: [{ midi: 74, beat: 1 }], drums: [{ voice: 'kick', beat: 0, vel: 0.9 }] },
+      { chord: null, notes: [{ midi: 74, beat: 1 }], drums: [{ voice: 'BD', beat: 0, vel: 0.9 }] },
     ];
-    const grooveHits = [{ voice: 'snare' as const, beat: 1 }];
+    const grooveHits = [{ voice: 'SD' as const, beat: 1 }];
     const partMeters = defaultPartMeters({ num: 3, den: 4 });
     const back = deserializeSession(serializeSession({ slots, grooveHits, partMeters }, 123));
     expect(back).not.toBeNull();
