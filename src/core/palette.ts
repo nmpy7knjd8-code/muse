@@ -84,8 +84,9 @@ export function colourPaletteChords(k: Key): Chord[] {
     k,
     fam === 'major'
       ? ['bVII', 'bVI', 'iv', 'bIII', 'bII']
-      // IV / V / VII = modal & harmonic colour; bII = Neapolitan; I = Picardy; VI = Dorian lift
-      : ['IV', 'V', 'VII', 'bII', 'I', 'VI'],
+      // Roman numerals are major-scale relative (parseRoman), so minor-key degrees need explicit flats.
+      // IV = Dorian lift; V / vii° = harmonic-minor pull; bII = Neapolitan; I = Picardy third.
+      : ['IV', 'V', 'vii°', 'bII', 'I'],
   );
 }
 
@@ -99,7 +100,8 @@ export function secondaryPaletteChords(k: Key): Chord[] {
     k,
     fam === 'major'
       ? ['V7/V', 'V7/vi', 'V7/ii', 'V7/IV', 'V7/iii']
-      : ['V7/V', 'V7/III', 'V7/iv', 'V7/VI'],
+      // V7/♭III and V7/♭VI — plain III/VI would resolve against the parallel major (G♯7 / C♯7 in A minor).
+      : ['V7/V', 'V7/bIII', 'V7/iv', 'V7/bVI'],
   );
 }
 

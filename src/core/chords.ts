@@ -164,3 +164,19 @@ export function qualityFromIntervals(intervals: number[]): QualityId | null {
   };
   return table[key] ?? null;
 }
+
+/**
+ * Chord-aware note spelling: a pitch that is a tone (or slash bass) of one of `chords` takes that chord's
+ * spelling (A7 → C♯, not D♭, even in C major); otherwise `fallback` (usually key spelling) decides.
+ * Earlier chords win when two chords spell the same pitch class differently.
+ */
+export function spellWithChords(chords: Array<Chord | null | undefined>, fallback: (pitch: number) => NoteName): (pitch: number) => NoteName {
+  const map = new Map<number, NoteName>();
+  for (const c of chords) {
+    if (!c) continue;
+    const tones = chordNotes(c);
+    if (c.bass) tones.unshift(c.bass);
+    for (const n of tones) if (!map.has(pc(n))) map.set(pc(n), n);
+  }
+  return (pitch: number) => map.get(mod(pitch, 12)) ?? fallback(pitch);
+}

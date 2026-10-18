@@ -2,7 +2,7 @@
 import { useMemo, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
 import {
   Chord, GuitarShape, VoiceLine, asTriad, defaultSpelling, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsMovePlain, fifthsStepTag,
-  midiOctave, mod, parseNote, pc as pcOf, tonnetzPc, layoutMoodMap, type NoteName,
+  midiOctave, mod, parseNote, pc as pcOf, tonnetzPc, layoutMoodMap, staffStep, trebleY, type NoteName,
 } from '../core';
 
 const isBlack = (m: number) => [1, 3, 6, 8, 10].includes(mod(m, 12));
@@ -129,12 +129,6 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
   );
 }
 
-/** Diatonic staff step: C0=0, D0=1, … B0=6, C1=7, … (E4 = bottom treble line = 30). */
-function staffStep(midi: number, spelling?: NoteName): number {
-  const n = spelling ?? defaultSpelling(midi);
-  return n.letter + midiOctave(midi) * 7;
-}
-
 function noteFromSpell(midi: number, spell: (m: number) => string): NoteName {
   const raw = spell(midi).replace(/♯/g, '#').replace(/♭/g, 'b').replace(/\d+$/, '');
   return parseNote(raw) ?? defaultSpelling(midi);
@@ -177,14 +171,15 @@ export function StaffChordViz({
     n: noteFromSpell(m, spell),
     step: staffStep(m, noteFromSpell(m, spell)),
   }));
-  const TREBLE_BOTTOM = staffStep(64, { letter: 2, acc: 0 }); // E4
   const gap = 5; // px between staff lines
   const staffTop = 10;
-  const yOf = (step: number) => staffTop + (TREBLE_BOTTOM - step) * (gap / 2);
+  // y of a step, with staffTop = top line (F5) and E4 on the bottom line.
+  const yOf = (step: number) => staffTop + trebleY(step, gap);
   const minY = Math.min(...spelled.map((s) => yOf(s.step)));
   const maxY = Math.max(...spelled.map((s) => yOf(s.step)));
   const padTop = Math.max(0, staffTop - minY + 6);
-  const padBot = Math.max(0, maxY - (staffTop + 4 * gap) + 8);
+  // Always leave a row under the lowest notehead / bottom line for the note-name labels.
+  const padBot = Math.max(0, maxY - (staffTop + 4 * gap)) + 10;
   const H = staffTop + 4 * gap + padTop + padBot + 2;
   const clefX = 4;
   const startX = 28;

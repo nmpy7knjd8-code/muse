@@ -24,14 +24,34 @@ export function voicePcs(chord: Chord, maxVoices = 4): number[] {
   return [...new Set(tones.map((t) => t.pc))];
 }
 
+/** Pitch classes that are upper extensions (9ths, 11ths, 13ths — written more than an octave above the root). */
+export function extensionPcs(chord: Chord): Set<number> {
+  const def = QUALITY_BY_ID[chord.quality];
+  const notes = chordNotes(chord).map(pc);
+  return new Set(def.tones.map((t, i) => (t[1] > 12 ? notes[i] : -1)).filter((p) => p >= 0));
+}
+
 /** All close-position voicings (each inversion) whose notes fit in [low, high]. */
 export function closeVoicings(chord: Chord, opts: VoicingOptions = {}): number[][] {
   const low = opts.low ?? 52;
   const high = opts.high ?? 79;
-  const pcs = voicePcs(chord, opts.maxVoices ?? 4);
+  let pcs = voicePcs(chord, opts.maxVoices ?? 4);
+  // Bottom-voice rules: a slash chord keeps its written bass lowest; otherwise never put a colour
+  // extension (9 / ♯11 / 13) at the bottom — Fadd9 must not read as F/G, nor Cmaj7♯11 as F♯-something.
+  let allowBottom: Set<number>;
+  if (chord.bass) {
+    const b = pc(chord.bass);
+    if (!pcs.includes(b)) pcs = [b, ...pcs];
+    allowBottom = new Set([b]);
+  } else {
+    const ext = extensionPcs(chord);
+    allowBottom = new Set(pcs.filter((p) => !ext.has(p)));
+    if (!allowBottom.size) allowBottom = new Set(pcs);
+  }
   const out: number[][] = [];
   for (let inv = 0; inv < pcs.length; inv++) {
     const order = pcs.slice(inv).concat(pcs.slice(0, inv));
+    if (!allowBottom.has(order[0])) continue;
     for (let base = low; base < low + 12; base++) {
       if (mod(base, 12) !== order[0]) continue;
       for (let oct = 0; oct < 3; oct++) {

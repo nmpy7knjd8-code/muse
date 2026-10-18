@@ -30,7 +30,8 @@ describe('palette extras', () => {
   it('gives minor Extra colour non-diatonic options (not just V / VII)', () => {
     const cs = colourPaletteChords(key('Eb', 'minor')).map((c) => chordSymbol(c));
     // natural-minor ♭VI/♭VII are already In this key — Extra should add real colour
-    expect(cs).toEqual(expect.arrayContaining(['Ab', 'Bb', 'D'])); // IV, V, VII
+    expect(cs).toEqual(expect.arrayContaining(['Ab', 'Bb', 'Ddim'])); // IV, V, vii° (harmonic minor)
+    expect(cs).not.toContain('D'); // not a D major triad (that was a parallel-major mis-read)
     expect(cs.some((s) => s === 'Fb' || s === 'E')).toBe(true); // bII Neapolitan
     expect(cs).toContain('Eb'); // Picardy I
     expect(cs).not.toContain('Db'); // diatonic bVII stays in In this key

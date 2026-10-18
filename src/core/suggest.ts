@@ -1,6 +1,6 @@
 // Suggestion engine: ranks next chords / next melody notes and labels each with mood evidence
 // drawn from the theory KB. Framework-free so it can be ported to Swift later.
-import { Chord, QualityId, chordPcs, chordSymbol, chordsEqual, triadClass } from './chords';
+import { Chord, QUALITY_BY_ID, QualityId, chordPcs, chordSymbol, chordsEqual, triadClass } from './chords';
 import { CONSENSUS_WEIGHT, Consensus, KbChordMove, KbMelodicMove, TheoryKB, kbModeToModeId } from './kb';
 import { MoodLexicon, MoodWeight, mergeMoods } from './moods';
 import { degreeLabel, intervalName, midiName, mod, pc, spell } from './notes';
@@ -175,6 +175,40 @@ function qualityMatches(kbQ: QualityId, q: QualityId): boolean {
 }
 function rarityOf(c: number): Rarity {
   return c >= 0.55 ? 'common' : c >= 0.3 ? 'colorful' : 'adventurous';
+}
+
+/** "Why" copy for an opening chord (empty progression) — describes the starting point, not a motion. */
+export function startingChordWhy(chord: Chord, rn: { offset: number; diatonic: boolean }, roman: string, k: Key): string {
+  const minorFam = MODE_BY_ID[k.mode].family === 'minor';
+  const off = rn.offset;
+  let line: string;
+  if (off === 0) line = 'start at home — the tonic sets the key clearly';
+  else if ((!minorFam && off === 9) || (minorFam && off === 3)) line = minorFam ? 'start on the relative major — same notes, a brighter home' : 'start on the relative minor — same notes, a moodier home';
+  else if (off === 5) line = 'start away from home — the subdominant opens out and asks to come back';
+  else if (off === 7) line = 'start on the dominant — tension from the first beat that wants home';
+  else if (off === 2) line = 'start on a soft pre-dominant — the phrase leans forward';
+  else if (off === 4 || (minorFam && off === 7)) line = 'start on a hazy, ambiguous colour';
+  else line = rn.diatonic ? 'start inside the key, off the tonic' : 'start outside the key — a bold colour opening';
+  const q = QUALITY_BY_ID[chord.quality];
+  const plain = chord.quality === 'maj' || chord.quality === 'min';
+  return `${roman}: ${line}${plain ? '' : ` (${q.name} colour)`}.`;
+}
+
+/** Extra colour carried by the chord quality itself (extensions / alterations read less common). */
+const QUALITY_COLOUR: Partial<Record<QualityId, number>> = {
+  '9': 0.12, maj9: 0.12, m9: 0.12, madd9: 0.06, '7sus4': 0.06, mMaj7: 0.2, aug: 0.2,
+  '7b9': 0.28, '7#9': 0.28, 'maj7#11': 0.28, aug7: 0.28, dim7: 0.15,
+};
+/**
+ * Rarity badge: root-motion commonness, minus the colour of the quality. Plain diatonic triads/7ths
+ * never read as "colorful" (Am in C is common even as a first chord); Cmaj7♯11 never reads "common".
+ */
+export function chordRarity(commonness: number, quality: QualityId, diatonic: boolean): Rarity {
+  const colour = QUALITY_COLOUR[quality] ?? 0;
+  let c = commonness - colour;
+  if (diatonic && colour === 0) c = Math.max(c, 0.55);
+  if (colour >= 0.25) c = Math.min(c, 0.54);
+  return rarityOf(c);
 }
 
 type AddChord = (c: Chord, ev?: Evidence) => void;
@@ -1067,9 +1101,15 @@ export class SuggestionEngine {
         withholdHome: withholdHome
           && !!tension?.reasons.includes('too early to resolve — keep the build going'),
       });
-      const kbBit = top
-        ? `${top.strength === 'direct' ? '' : `${roman}: `}${firstSentence(top.description)}`
-        : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
+      const topSentence = top ? firstSentence(top.description) : '';
+      // Don't prefix "vi9: " when the KB text already opens with that numeral ("vi9 — …").
+      const restatesRoman = !!top && topSentence.replace(/[♭]/g, 'b').replace(/[♯]/g, '#').startsWith(roman.replace(/[♭]/g, 'b').replace(/[♯]/g, '#'));
+      const kbBit = !prog.length
+        // First chord: no previous chord, so cadence/motion copy ("leading tone rises…") would be wrong.
+        ? startingChordWhy(chord, rn, roman, k)
+        : top
+          ? `${top.strength === 'direct' || restatesRoman ? '' : `${roman}: `}${topSentence}`
+          : `${rn.diatonic ? 'In this key' : 'Outside the plain key'}: ${roman} in ${keyName(k)}.`;
       // Sequence relation is the headline; keep a short KB clause only when it adds a different angle.
       let why = seqWhy
         ? (kbBit && !kbLooksLikeMoodTag(kbBit) && !seqWhy.includes(firstSentence(kbBit).slice(0, 18))
@@ -1097,7 +1137,7 @@ export class SuggestionEngine {
         evidence: allEv,
         score,
         commonness,
-        rarity: rarityOf(commonness),
+        rarity: chordRarity(commonness, chord.quality, rn.diatonic),
         diatonic: rn.diatonic,
         commonTones: ct,
         voicing,

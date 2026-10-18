@@ -78,7 +78,11 @@ export function moodJourney(engine: SuggestionEngine, k: Key, from: MoodSpec, to
         const sym = chordSymbol(s.chord);
         const seen = b.chords.filter((c) => chordSymbol(c) === sym).length;
         const prevRoot = pc(b.chords[b.chords.length - 1].root);
-        let score = b.score + s.score - seen * 0.8 - (pc(s.chord.root) === prevRoot ? 0.6 : 0);
+        const sameRoot = pc(s.chord.root) === prevRoot;
+        // A journey should travel: quality-only variants on one root (C → Cadd9 → C7 …) read as standing still.
+        const rootRun = sameRoot && b.chords.length >= 2 && pc(b.chords[b.chords.length - 2].root) === prevRoot;
+        const rootUses = b.chords.filter((c) => pc(c.root) === pc(s.chord.root)).length;
+        let score = b.score + s.score - seen * 0.8 - (sameRoot ? 1.4 : 0) - (rootRun ? 2 : 0) - Math.max(0, rootUses - 1) * 0.5;
         if (i === n - 1) score += (s.match?.total ?? 0) * 1.5; // land firmly in the target mood
         next.push({ chords: [...b.chords, s.chord], sugs: [...b.sugs, s], score });
       }

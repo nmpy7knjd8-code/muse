@@ -3,7 +3,7 @@ import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
   midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
-  spellInKey, tonicChoices, voiceProgression, type Key,
+  spellInKey, spellWithChords, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
   INSTRUMENTS, INSTRUMENT_IDS, bassLineMidi, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
   TimelineSlot, activeBassSlotIndex, activeSlotIndex, applyGrooveToSlots, bassOf, chordTargetIndex, chordsOf, clearSlotChord,
@@ -371,6 +371,15 @@ function Composer({ data }: { data: LoadedData }) {
   const prevVoicing = timelineVoicings[timelineVoicings.length - 1];
   const spell = (m: number) => noteName(spellInKey(k, m), true);
   const spellMidi = (m: number) => midiName(m, spellInKey(k, m)).replace('#', '♯').replace(/b(?=\d)/, '♭');
+  /** Chord-aware spelling for chord graphics (A7 shows C♯ even in C major); key spelling otherwise. */
+  const spellFor = (...cs: Array<Chord | null | undefined>) => {
+    const f = spellWithChords(cs, (p) => spellInKey(k, p));
+    return (m: number) => noteName(f(m), true);
+  };
+  const spellMidiFor = (...cs: Array<Chord | null | undefined>) => {
+    const f = spellWithChords(cs, (p) => spellInKey(k, p));
+    return (m: number) => midiName(m, f(m)).replace('#', '♯').replace(/b(?=\d)/, '♭');
+  };
 
   const chordSugs: ChordSuggestion[] = useMemo(() => {
     if (tab !== 'chords') return [];
@@ -1430,7 +1439,7 @@ function Composer({ data }: { data: LoadedData }) {
                     suggested={midis}
                     fingers={[]}
                     color={color}
-                    spell={spell}
+                    spell={cs ? spellFor(cs.chord, cur) : spell}
                     height={44}
                     label={cs ? cs.symbol : (ns as NoteSuggestion).name}
                   />
@@ -1481,7 +1490,7 @@ function Composer({ data }: { data: LoadedData }) {
             fingers={[]}
             melody={line.slice(-8)}
             color={selColor}
-            spell={spell}
+            spell={spellFor(underChord)}
             minLow={tab === 'bass' ? 28 : 55}
             minHigh={tab === 'bass' ? 55 : 84}
             label={`${tab === 'bass' ? 'Bass' : 'Melody'} · plays on ${INSTRUMENTS[partId].label}`}
@@ -1551,7 +1560,7 @@ function Composer({ data }: { data: LoadedData }) {
     const piano = (
       <div className="vis-section" key="piano">
         {all && <h4>Piano · right hand</h4>}
-        <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={cur ? prevVoicing : []} suggested={selChord.voicing} fingers={fingers} melody={melody.slice(-6)} color={selColor} spell={spell} minLow={53} minHigh={79} label={`Piano: ${selChord.symbol}`} />
+        <PianoViz scalePcs={scale} tonicPc={pc(k.tonic)} current={cur ? prevVoicing : []} suggested={selChord.voicing} fingers={fingers} melody={melody.slice(-6)} color={selColor} spell={spellFor(selChord.chord, cur)} minLow={53} minHigh={79} label={`Piano: ${selChord.symbol}`} />
         <div className="legend">
           {cur && <span><i style={{ background: CURRENT_COLOR }} />now: {chordSymbol(cur, true)}</span>}
           <span><i style={{ background: selColor }} />next: {selChord.symbol}</span>
@@ -1586,7 +1595,7 @@ function Composer({ data }: { data: LoadedData }) {
     const voices = (
       <div className="vis-section" key="voices">
         {all && <h4>How notes move</h4>}
-        <VoiceLeadingViz lines={selChord.voiceLines} fromLabel={cur ? chordSymbol(cur, true) : ''} toLabel={selChord.symbol} spell={spellMidi} color={selColor} />
+        <VoiceLeadingViz lines={selChord.voiceLines} fromLabel={cur ? chordSymbol(cur, true) : ''} toLabel={selChord.symbol} spell={spellMidiFor(selChord.chord, cur)} color={selColor} />
         {selChord.voiceLines.length > 0 && <VoiceLegend />}
         {cur && <p className="small muted">{selChord.commonTones} shared note{selChord.commonTones === 1 ? '' : 's'} · fingers move {selChord.voiceLines.reduce((a, l) => a + Math.abs(l.delta), 0)} half-step{selChord.voiceLines.reduce((a, l) => a + Math.abs(l.delta), 0) === 1 ? '' : 's'} total</p>}
         {!all && cofBlock({ title: true })}
@@ -1816,7 +1825,7 @@ function Composer({ data }: { data: LoadedData }) {
                           suggested={barMidis}
                           fingers={[]}
                           color={barColor}
-                          spell={spell}
+                          spell={spellFor(s.chord, chordedIdx > 0 ? chords[chordedIdx - 1] : null)}
                           height={40}
                           label={chordSymbol(s.chord, true)}
                         />
@@ -1828,7 +1837,7 @@ function Composer({ data }: { data: LoadedData }) {
                           midis={barMidis}
                           priorMidis={priorMidis}
                           color={barColor}
-                          spell={spell}
+                          spell={spellFor(s.chord, chordedIdx > 0 ? chords[chordedIdx - 1] : null)}
                           scalePcs={scale}
                           tonicPc={pc(k.tonic)}
                           label={chordSymbol(s.chord, true)}
