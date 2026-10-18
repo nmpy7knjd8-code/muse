@@ -46,3 +46,4 @@ export * from './hum';
 export * from './cadence';
 export * from './sections';
 export * from './styleBlend';
+export * from './smooth';

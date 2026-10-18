@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, type ReactNode, useCallback, useEffect, useM
 import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
-  midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs,
+  midiName, noteName, parseChord, parseNote, pc, pianoFingering, pianoVoicing, romanOf, scalePcs, smoothInversions,
   spellInKey, spellWithChords, tonicChoices, voiceProgression, type Key,
   chordFeatures, moodJourney, findLore, type JourneyStep,
   INSTRUMENTS, INSTRUMENT_IDS, bassLineMidi, chordMidis, fitMidiToInstrument, type InstrumentId, loadTryIt, progressionTension, moodTarget, type TensionStyleId, type ArtistTryIt, type Artist,
@@ -1096,6 +1096,26 @@ function Composer({ data }: { data: LoadedData }) {
   /** Start a fresh session (everything, locked bars too). Undo brings the bars back. */
   /** Changing the tonic with chords on the timeline → offer to move them to the new key (audit: bigger UI). */
   const [transposeOffer, setTransposeOffer] = useState<{ from: NoteName; to: NoteName } | null>(null);
+  // "Smooth it" (idea 8): auto-inversions with a before/after voice-leading score + undo.
+  const [smoothOffer, setSmoothOffer] = useState<{ before: number; after: number; line: string; changed: number } | null>(null);
+  const smoothTimer = useRef<number | undefined>(undefined);
+  const smoothIt = () => {
+    const r = smoothInversions(chords);
+    window.clearTimeout(smoothTimer.current);
+    if (!r.changed.length) {
+      flash(`Already smooth — voice leading ${r.before}/100`);
+      return;
+    }
+    snapshot();
+    let ci = 0;
+    setSlots((ss) => ss.map((sl) => {
+      if (!sl.chord) return sl;
+      const next = r.chords[ci++];
+      return sl.locked || !next ? sl : { ...sl, chord: next };
+    }));
+    setSmoothOffer({ before: r.before, after: r.after, line: r.bassLine.join(' → '), changed: r.changed.length });
+    smoothTimer.current = window.setTimeout(() => setSmoothOffer(null), 6000);
+  };
   const offerTimer = useRef<number | undefined>(undefined);
   const pickTonic = (t: string) => {
     const from = k.tonic;
@@ -1979,6 +1999,12 @@ function Composer({ data }: { data: LoadedData }) {
               >
                 Staff
               </button>
+              {chords.length >= 3 && (
+                <button type="button" className="pill smooth-it" onClick={smoothIt} aria-label="Smooth it: choose inversions so the bass walks and voices move less" title="Smooth it — choose inversions so the bass walks and voices move less">
+                  <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 17c4 0 5-10 9-10s5 10 9 10" /></svg>
+                  <span className="smooth-label">Smooth</span>
+                </button>
+              )}
             </div>
             {chords.length > 1 && (
               <div className="card-note-legend small muted" aria-hidden="true">
@@ -2985,7 +3011,14 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       )}
       {toast && <div className="toast">{toast}</div>}
-      {transposeOffer && !toast && (
+      {smoothOffer && !toast && (
+        <div className="toast toast-offer smooth-offer" role="status">
+          <span>Smoother: {smoothOffer.before} → <b>{smoothOffer.after}</b>/100 · bass {smoothOffer.line}</span>
+          <button type="button" className="pill" onClick={() => { undo(); setSmoothOffer(null); }}>Undo</button>
+          <button type="button" className="pill on" onClick={() => setSmoothOffer(null)}>Keep</button>
+        </div>
+      )}
+      {transposeOffer && !toast && !smoothOffer && (
         <div className="toast toast-offer" role="status">
           <span>Key is now {noteName(transposeOffer.to, true)}. Move your bars too?</span>
           <button type="button" className="pill on" onClick={acceptTranspose}>Transpose</button>

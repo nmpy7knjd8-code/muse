@@ -1966,3 +1966,6 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .polbar .track .marker.ghost { opacity: 0.35; transform: translate(-50%, -50%) scale(0.75); }
 .blend-legend { margin-top: 4px; }
 .blend-tool .polbar .pole { width: 74px; max-width: none; }
+.pill.smooth-it { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px 2px 7px; font-size: 12px; font-weight: 600; }
+@media (max-width: 420px) { .card-note-legend { gap: 6px 9px; } .pill.smooth-it { padding: 2px 8px; } .smooth-label { display: none; } }
+.smooth-offer span { min-width: 0; }
