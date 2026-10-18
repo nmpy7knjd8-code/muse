@@ -235,6 +235,17 @@ function Composer({ data }: { data: LoadedData }) {
   const chooseLoop = (on: boolean) => {
     setLoopPlay(on);
     try { localStorage.setItem('muse.loop', on ? '1' : '0'); } catch { /* private mode */ }
+    // Loop turned off mid-play: finish the CURRENT cycle (not "elapsed since the first cycle", which
+    // stopped instantly after cycle 1) and drop cycles that were already primed ahead.
+    const t = transportRef.current, now = synth.audioTime();
+    if (!on && t && now !== null && playModeRef.current === 'timeline' && t.events.total > 0) {
+      const period = t.events.total;
+      const cycles = Math.floor((now - playOriginRef.current) / period);
+      if (cycles > 0) playOriginRef.current += cycles * period;
+      synth.stopTransport(playOriginRef.current + period - 1e-3);
+      nextPrimeOriginRef.current = playOriginRef.current + period; // re-enabling Loop primes from here
+      setTransport({ ...t, origin: playOriginRef.current });
+    }
   };
   const loopPlayRef = useRef(loopPlay);
   loopPlayRef.current = loopPlay;
@@ -542,8 +553,9 @@ function Composer({ data }: { data: LoadedData }) {
   };
   // While ▶ Play / Loop is running, only mute pitched parts so the drum groove keeps going
   // (auditioning or adding a chord must not call stopAll and kill the kit).
+  /** Before an audition: cut the previous preview only — a running ▶ Play / Loop keeps playing. */
   const silenceForPreview = () => {
-    if (transportRef.current) synth.stopTonal();
+    if (transportRef.current) synth.stopPreview();
     else synth.stopAll();
   };
   const previewPart = (id: InstrumentId, part: 'chords' | 'melody' | 'bass') => {
@@ -730,19 +742,12 @@ function Composer({ data }: { data: LoadedData }) {
       nextPrimeOriginRef.current = nextLoopOrigin(o, period);
     }
   };
-  const playAll = () => {
-    synth.unlock();
-    // New epoch for this run (also disarms any prior rAF via stopPlayback semantics).
-    if (playRafRef.current) {
-      cancelAnimationFrame(playRafRef.current);
-      playRafRef.current = 0;
-    }
-    const epoch = playbackEpochRef.current + 1;
-    playbackEpochRef.current = epoch;
-    synth.stopAll();
-    for (const id of activeParts) void synth.ensureLoaded(id);
-    // ▶ Play from the selected bar (if any); otherwise from the start.
-    const startIndex = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? 0) : 0;
+  /** Bar the current ▶ Play started from (kept stable across live re-schedules). */
+  const playStartIndexRef = useRef(0);
+  /** Beat length the running transport was scheduled with (tempo edits rescale the playhead). */
+  const playBeatSecRef = useRef(beatSec);
+  /** Build one ▶ Play pass from the current state; `minAt` skips events already heard this cycle. */
+  const buildTimelinePass = (epoch: number, startIndex: number) => {
     const ev = timelineEvents(slots, { timeSig, beatSec, startIndex, partMeters });
     // Full progression for voice-leading; only schedule events from startIndex onward.
     const withC = slots.map((s, i) => ({ s, i })).filter((x) => x.s.chord);
@@ -752,81 +757,109 @@ function Composer({ data }: { data: LoadedData }) {
     const composedBassBars = new Set(ev.bass.map((b) => b.index));
     const drumTune = drumTuningForKey(k);
     /** Queue one full pass at a fixed audio-clock origin (shared by playhead + every voice). */
-    const schedulePass = (origin: number) => {
+    const schedulePass = (origin: number, minAt = 0) => {
       if (playbackEpochRef.current !== epoch) return;
-      ev.chords.forEach((c) => playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
+      const keep = (at: number) => at >= minAt - 1e-6;
+      ev.chords.forEach((c) => keep(c.at) && playChordParts(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), {
         at: c.at, dur: c.dur, vel: 0.7, origin,
         // Prefer composed bass notes for that bar; otherwise keep auto root when Bass is on.
         autoBass: !composedBassBars.has(c.index),
       }));
       if (playbackEpochRef.current !== epoch) return;
-      ev.notes.forEach((n) => synth.playNotes([fitMidi(n.midi)], {
+      ev.notes.forEach((n) => keep(n.at) && synth.playNotes([fitMidi(n.midi)], {
         at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.85, instrument: melodyInst, origin,
       }));
       if (bassInstId) {
-        ev.bass.forEach((n) => synth.playNotes([fitMidi(n.midi, bassInstId)], {
+        ev.bass.forEach((n) => keep(n.at) && synth.playNotes([fitMidi(n.midi, bassInstId)], {
           at: n.at, dur: n.dur, vel: n.beat === 0 ? 0.95 : 0.88, instrument: bassInstId, origin,
         }));
       }
       // Drum kit: same `at` across voices = simultaneous; pitched voices use key MIDI.
-      ev.drums.forEach((d) => synth.playDrum(d.voice, {
-        at: d.at,
-        vel: d.vel,
-        artic: d.artic,
-        midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune),
-        melodic: true,
-        origin,
+      ev.drums.forEach((d) => keep(d.at) && synth.playDrum(d.voice, {
+        at: d.at, vel: d.vel, artic: d.artic, midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune), melodic: true, origin,
       }));
     };
-    schedulePassRef.current = schedulePass;
-    const origin = synth.scheduleOrigin();
-    playOriginRef.current = origin;
-    schedulePass(origin);
-    nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
-    // With Loop on, keep ≥1 extra cycle in the AudioContext queue before the first seam.
-    if (loopPlayRef.current && ev.total > 0) {
-      primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
-    }
-    setPlayMode('timeline');
-    setTransport({ origin, events: ev });
-    setPlaySec(0);
+    return { ev, schedulePass };
   };
-  /** Practice the session groove alone (no chords/melody); always loops until Stop. */
-  const playGrooveLoop = () => {
-    if (!grooveHits.length) return;
+  const buildGroovePass = (epoch: number) => {
+    const drumTune = drumTuningForKey(k);
+    const ev = grooveEvents(grooveHits, { timeSig, beatSec, partMeters });
+    const schedulePass = (origin: number, minAt = 0) => {
+      if (playbackEpochRef.current !== epoch) return;
+      ev.drums.forEach((d) => d.at >= minAt - 1e-6 && synth.playDrum(d.voice, {
+        at: d.at, vel: d.vel, artic: d.artic, midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune), melodic: true, origin,
+      }));
+    };
+    return { ev, schedulePass };
+  };
+  /**
+   * Start (or live-restart) the transport. With `live`, the playhead keeps its place in the cycle:
+   * not-yet-played voices from the old schedule are cancelled and the edited pass is queued from the
+   * current position, so edits / tempo changes are heard immediately without a gap.
+   */
+  const launchTransport = (mode: 'timeline' | 'groove', live = false) => {
     synth.unlock();
     if (playRafRef.current) {
       cancelAnimationFrame(playRafRef.current);
       playRafRef.current = 0;
     }
+    const prev = transportRef.current;
+    const now = synth.audioTime();
+    const looping = mode === 'groove' || loopPlayRef.current;
+    let pos = 0;
+    if (live && prev && now !== null) {
+      const elapsed = now - playOriginRef.current;
+      pos = looping && prev.events.total > 0 ? loopPlayhead(elapsed, prev.events.total) : elapsed;
+      pos *= beatSec / (playBeatSecRef.current || beatSec); // same musical spot after a tempo change
+    } else {
+      live = false;
+      if (mode === 'timeline') playStartIndexRef.current = tensionPick !== null ? (chordedSlotIndices[tensionPick] ?? 0) : 0;
+    }
     const epoch = playbackEpochRef.current + 1;
     playbackEpochRef.current = epoch;
-    synth.stopAll();
-    const drumTune = drumTuningForKey(k);
-    const ev = grooveEvents(grooveHits, { timeSig, beatSec, partMeters });
-    const schedulePass = (origin: number) => {
-      if (playbackEpochRef.current !== epoch) return;
-      ev.drums.forEach((d) => synth.playDrum(d.voice, {
-        at: d.at,
-        vel: d.vel,
-        artic: d.artic,
-        midi: d.midi ?? defaultMidiForVoice(d.voice, drumTune),
-        melodic: true,
-        origin,
-      }));
-    };
-    schedulePassRef.current = schedulePass;
-    const origin = synth.scheduleOrigin();
+    if (live && now !== null) synth.stopTransport(now + 0.02);
+    else synth.stopAll();
+    if (mode === 'timeline') for (const id of activeParts) void synth.ensureLoaded(id);
+    const startIndex = Math.min(playStartIndexRef.current, Math.max(0, slots.length - 1));
+    const { ev, schedulePass } = mode === 'timeline' ? buildTimelinePass(epoch, startIndex) : buildGroovePass(epoch);
+    if (ev.total <= 0) { stopPlayback(); return; }
+    if (live && pos >= ev.total) {
+      if (!looping) { stopPlayback(); return; }
+      pos = pos % ev.total;
+    }
+    const lead = 0.03;
+    const origin = live && now !== null ? now + lead - pos : synth.scheduleOrigin();
+    schedulePassRef.current = (o) => schedulePass(o);
     playOriginRef.current = origin;
-    schedulePass(origin);
+    playBeatSecRef.current = beatSec;
+    schedulePass(origin, live ? pos + lead : 0);
     nextPrimeOriginRef.current = nextLoopOrigin(origin, ev.total);
-    // Groove practice always loops; keep the Loop control in sync and prime ahead of the seam.
-    if (!loopPlayRef.current) chooseLoop(true);
-    if (ev.total > 0) primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
-    setPlayMode('groove');
+    // With Loop on, keep ≥1 extra cycle in the AudioContext queue before the first seam.
+    if (looping) primeLoopAhead(synth.audioTime() ?? origin, ev.total, epoch);
+    setPlayMode(mode);
     setTransport({ origin, events: ev });
-    setPlaySec(0);
+    if (!live) setPlaySec(0);
   };
+  const playAll = () => launchTransport('timeline');
+  /** Practice the session groove alone (no chords/melody); always loops until Stop. */
+  const playGrooveLoop = () => {
+    if (!grooveHits.length) return;
+    // Groove practice always loops; keep the Loop control in sync.
+    if (!loopPlayRef.current) chooseLoop(true);
+    launchTransport('groove');
+  };
+  // Live edits: re-schedule the running transport when what it plays changes (chords, notes, tempo,
+  // meter, instruments, key-tuned drums). Skips the initial mount.
+  const liveMounted = useRef(false);
+  useEffect(() => {
+    if (!liveMounted.current) { liveMounted.current = true; return; }
+    if (!transportRef.current) return;
+    const mode = playModeRef.current ?? 'timeline';
+    if (mode === 'timeline' && !slots.length) { stopPlayback(); return; }
+    if (mode === 'groove' && !grooveHits.length) { stopPlayback(); return; }
+    launchTransport(mode, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slots, beatSec, timeSig, partMeters, chordInst, melodyInst, bassInst, grooveHits, k.tonic.letter, k.tonic.acc, k.mode]);
   const togglePlay = () => {
     if (transport) stopPlayback();
     else playAll();

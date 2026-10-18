@@ -163,7 +163,8 @@ function connectMetalAmp(ctx: BaseAudioContext, source: AudioNode, vel: number):
 }
 
 type VoiceKind = 'tonal' | 'drum';
-interface Voice { stop(at: number): void; end: number; kind: VoiceKind }
+/** `transport` = scheduled by ▶ Play / Loop (has an explicit origin); previews / taps leave it unset. */
+interface Voice { stop(at: number): void; end: number; kind: VoiceKind; transport?: boolean; start?: number }
 
 export class AudioEngine {
   ctx: BaseAudioContext | null = null;
@@ -173,6 +174,9 @@ export class AudioEngine {
   private buffers = new Map<InstrumentId, Map<number, { buf: AudioBuffer; norm: number }>>();
   private load = new Map<InstrumentId, LoadState>();
   private loading = new Map<InstrumentId, Promise<void>>();
+  /** performance.now() of the last failed load per instrument (retry backoff). */
+  private failedAt = new Map<InstrumentId, number>();
+  static RETRY_MS = 20000;
   private listeners = new Set<() => void>();
   private busyUntil = 0;
   private rand: () => number = Math.random;
@@ -190,6 +194,8 @@ export class AudioEngine {
       if (kit === 'acoustic' || kit === 'electronic' || kit === 'fusion') this.drumKit = kit;
     }
     this.remember = !!opts.remember;
+    // Back online → allow an immediate retry of anything that failed.
+    if (typeof window !== 'undefined') window.addEventListener('online', () => this.failedAt.clear());
   }
   private remember: boolean;
 
@@ -279,13 +285,17 @@ export class AudioEngine {
     if (!this.ctx) return Promise.resolve();
     const existing = this.loading.get(id);
     if (existing) return existing;
+    // After a failed load (offline / flaky network) wait before retrying, instead of re-fetching the
+    // whole instrument on every note (that used to fire hundreds of requests per second).
+    const failed = this.failedAt.get(id);
+    if (failed !== undefined && performance.now() - failed < AudioEngine.RETRY_MS) return Promise.resolve();
     const ctx = this.ctx;
     const notes = sampleNotes(INSTRUMENTS[id]);
     let done = 0;
     this.load.set(id, { state: 'loading', progress: 0 });
     this.emit();
     const map = new Map<number, { buf: AudioBuffer; norm: number }>();
-    const p = Promise.all(notes.map(async (m) => {
+    const p = Promise.allSettled(notes.map(async (m) => {
       const buf = await decode(ctx, await fetchBytes(sampleUrl(id, m)));
       // normalise each sample's peak so loudness is even across the keyboard
       let peak = 0;
@@ -294,14 +304,20 @@ export class AudioEngine {
       done++;
       this.load.set(id, { state: 'loading', progress: done / notes.length });
       if (done % 4 === 0) this.emit();
-    })).then(() => {
+    })).then((results) => {
       if (this.ctx !== ctx) return;
-      this.buffers.set(id, map);
-      this.load.set(id, { state: 'ready', progress: 1 });
-      this.emit();
-    }).catch(() => {
-      this.load.set(id, { state: 'error', progress: 0 });
-      this.loading.delete(id);
+      const missing = results.filter((r) => r.status === 'rejected').length;
+      // One bad file shouldn't sink the instrument: nearby samples are pitch-shifted to cover gaps.
+      if (map.size && missing <= notes.length / 2) {
+        this.buffers.set(id, map);
+        this.load.set(id, { state: 'ready', progress: 1 });
+        this.failedAt.delete(id);
+        if (missing) { this.loading.delete(id); this.failedAt.set(id, performance.now()); } // top up later
+      } else {
+        this.load.set(id, { state: 'error', progress: 0 });
+        this.loading.delete(id);
+        this.failedAt.set(id, performance.now());
+      }
       this.emit();
     });
     this.loading.set(id, p);
@@ -337,7 +353,9 @@ export class AudioEngine {
   }
 
   /** Track a voice; drop only finished ones so queued loop hits stay stoppable (Clear / Stop). */
-  private trackVoice(v: Voice): void {
+  private trackVoice(v: Voice, transport = false, start?: number): void {
+    if (transport) v.transport = true;
+    if (start !== undefined) v.start = start;
     this.voices.push(v);
     if (this.voices.length < 96 || !this.ctx) return;
     const t = this.ctx.currentTime;
@@ -350,6 +368,42 @@ export class AudioEngine {
     for (const v of this.voices) v.stop(t);
     this.voices = [];
     this.busyUntil = Math.min(this.busyUntil, performance.now() + 450);
+  }
+
+  /**
+   * Stop only auditions / taps (anything not scheduled by ▶ Play / Loop). Used while the transport runs so
+   * hearing a chord never silences the queued loop — previews just layer on top and cut each other off.
+   */
+  stopPreview(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const keep: Voice[] = [];
+    for (const v of this.voices) {
+      if (v.transport) keep.push(v);
+      else v.stop(t);
+    }
+    this.voices = keep;
+  }
+
+  /**
+   * Cancel ▶ Play / Loop voices that haven't started by `from` (default: now) — live edits re-schedule
+   * from here. Notes already sounding ring out naturally, and previews are untouched.
+   */
+  stopTransport(from?: number): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const cut = from ?? t;
+    const keep: Voice[] = [];
+    for (const v of this.voices) {
+      if (v.transport && (v.start ?? 0) >= cut - 1e-4) v.stop(t); // not started yet → never sounds
+      else keep.push(v);
+    }
+    this.voices = keep;
+  }
+
+  /** Voices currently tracked (tests / diagnostics). */
+  voiceCount(filter: 'all' | 'transport' | 'preview' = 'all'): number {
+    return this.voices.filter((v) => filter === 'all' || (filter === 'transport') === !!v.transport).length;
   }
 
   /**
@@ -374,7 +428,7 @@ export class AudioEngine {
   private now() { return this.ctx ? this.ctx.currentTime + 0.03 : 0; }
 
   /** One note: sampled when the instrument is loaded, otherwise the fallback synth. */
-  private voice(midi: number, start: number, dur: number, vel: number, def: InstrumentDef = this.def) {
+  private voice(midi: number, start: number, dur: number, vel: number, def: InstrumentDef = this.def, transport = false) {
     const ctx = this.ctx, input = this.input;
     if (!ctx || !input) return;
     const set = this.buffers.get(def.id);
@@ -417,11 +471,16 @@ export class AudioEngine {
       const stopAt = Math.min(natural, off + def.release * 6);
       src.start(start);
       src.stop(stopAt + 0.01);
-      v = { end: stopAt, kind: 'tonal', stop: (t) => { g.cancelScheduledValues(t); g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ } } };
+      v = { end: stopAt, kind: 'tonal', stop: (t) => {
+        g.cancelScheduledValues(t);
+        // Not started yet: hold silent (the cancelled ramp would otherwise leave the gain at 1 for a blip).
+        if (start > t) { g.setValueAtTime(0, t); try { src.stop(t); } catch { /* ok */ } return; }
+        g.setTargetAtTime(0, t, 0.04); try { src.stop(t + 0.3); } catch { /* already stopped */ }
+      } };
     } else {
       v = this.fallbackVoice(midi, start, vel, out, off, def);
     }
-    this.trackVoice(v);
+    this.trackVoice(v, transport, start);
     this.markBusy(v.end);
   }
 
@@ -522,6 +581,7 @@ export class AudioEngine {
       kind: 'tonal',
       stop: (t) => {
         g.cancelScheduledValues(t);
+        if (start > t) { g.setValueAtTime(0, t); oscs.forEach((o) => { try { o.stop(t); } catch { /* ok */ } }); return; }
         g.setTargetAtTime(0, t, 0.04);
         oscs.forEach((o) => { try { o.stop(t + 0.3); } catch { /* ok */ } });
       },
@@ -543,14 +603,14 @@ export class AudioEngine {
     const fitted = midis.map((m) => fitMidiToInstrument(m, def));
     const t = this.absTime(opts.at ?? 0, opts.origin);
     for (const e of chordEvents(fitted, t, opts.dur ?? 1.1, opts.vel ?? 0.75, def, this.rand)) {
-      this.voice(e.midi, e.time, e.dur, e.vel, def);
+      this.voice(e.midi, e.time, e.dur, e.vel, def, opts.origin !== undefined);
     }
   }
 
   /** Play note-groups one after another (e.g. previous chord → suggestion). */
   playSequence(groups: number[][], step = 0.9, dur = 0.85, instrument?: InstrumentId): void {
     if (!this.ctx) return;
-    this.stopAll();
+    this.stopPreview();
     groups.forEach((g, i) => this.playNotes(g, {
       at: i * step, dur, vel: i === groups.length - 1 ? 0.78 : 0.7, instrument,
     }));
@@ -581,7 +641,7 @@ export class AudioEngine {
       melodic: opts.melodic,
       kit: opts.kit ?? this.drumKit,
     });
-    this.trackVoice({ end, stop, kind: 'drum' });
+    this.trackVoice({ end, stop, kind: 'drum' }, opts.origin !== undefined, start);
     this.markBusy(end);
   }
 }
