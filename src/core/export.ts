@@ -8,7 +8,7 @@ import { bassNote } from './voicing';
 import {
   DEFAULT_TIME_SIG, PartMeters, TimeSig, beatsPerBar, defaultPartMeters, midiTimeSigBytes, timeSigLabel,
 } from './meter';
-import { drumTabAscii } from './drums';
+import { DrumHit, DrumVoiceId, drumTabAscii } from './drums';
 import { TimelineSlot, isSounding, labelSlot, noteDurations, slotBass, slotDrums } from './timeline';
 
 export function progressionText(k: Key, chords: Chord[], melody: number[] = []): string {
@@ -41,10 +41,24 @@ function track(events: Array<{ tick: number; bytes: number[] }>): number[] {
   return [0x4d, 0x54, 0x72, 0x6b, ...u32(data.length), ...data];
 }
 
+/** General MIDI percussion keys (channel 10) for Muse's kit voices. Key-tuned hits keep their GM key —
+ *  GM drums are fixed-pitch, so the tuning lives only in Muse's own playback. */
+export const GM_DRUM: Record<DrumVoiceId, number> = {
+  CC: 49, Cs: 55, Rd: 51, Rb: 53, HH: 42, HHs: 46, HO: 46, Hf: 44,
+  SD: 38, RS: 37, T1: 50, T2: 47, FT: 43, BD: 36, BDp: 35,
+};
+const ARTIC_VEL: Record<string, number> = { ghost: 0.28, accent: 0.95, normal: 0.78, open: 0.8, closed: 0.78 };
+export function drumVelocity(h: DrumHit): number {
+  const v = h.vel ?? ARTIC_VEL[h.artic ?? 'normal'] ?? 0.78;
+  return Math.max(1, Math.min(127, Math.round(v * 127)));
+}
+
 /**
  * MIDI of the unified timeline:
  * track 1 = chords (voice-led; low root omitted when a composed bass lane exists on that bar),
- * track 2 = melody, track 3 = composed bass (when any bar has bass notes).
+ * track 2 = melody, track 3 = composed bass (when any bar has bass notes),
+ * last track = drums on channel 10 (GM keys) from the drum lane — or, when the lane is empty, the session
+ * groove (`opts.groove`, one bar) repeated under every bar, the same way “Add to notes” stamps it.
  * Chordless (N.C.) bars keep their melody/bass. Beat unit follows the time-signature denominator.
  */
 export function toMidiTimeline(
@@ -52,6 +66,7 @@ export function toMidiTimeline(
   bpm = 90,
   timeSig: TimeSig = DEFAULT_TIME_SIG,
   partMeters?: PartMeters,
+  opts: { groove?: DrumHit[] } = {},
 ): Uint8Array<ArrayBuffer> {
   const PPQ = 480;
   const beats = beatsPerBar(timeSig);
@@ -103,6 +118,25 @@ export function toMidiTimeline(
       });
     });
     tracks.push(track(t3));
+  }
+  const drumBeats = beatsPerBar(parts.drums.timeSig);
+  const drumTick = barTicks / drumBeats;
+  const laneHits = slots.some((s) => slotDrums(s).length > 0);
+  const groove = !laneHits && opts.groove?.length ? opts.groove.filter((h) => h.beat < drumBeats) : [];
+  if (laneHits || groove.length) {
+    const name = [...'Drums'].map((c) => c.charCodeAt(0));
+    const t4: Array<{ tick: number; bytes: number[] }> = [{ tick: 0, bytes: [0xff, 0x03, name.length, ...name] }];
+    const len = Math.max(20, Math.round(PPQ / 8));
+    slots.forEach((s, i) => {
+      for (const h of laneHits ? slotDrums(s) : groove) {
+        const key = GM_DRUM[h.voice];
+        if (key === undefined || !(h.beat >= 0)) continue;
+        const start = Math.round(i * barTicks + h.beat * drumTick);
+        t4.push({ tick: start, bytes: [0x99, key, drumVelocity(h)] });
+        t4.push({ tick: start + len, bytes: [0x89, key, 0] });
+      }
+    });
+    tracks.push(track(t4));
   }
   const header = [0x4d, 0x54, 0x68, 0x64, ...u32(6), ...u16(1), ...u16(tracks.length), ...u16(PPQ)];
   return new Uint8Array([...header, ...tracks.flat()]);

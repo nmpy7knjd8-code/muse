@@ -1362,7 +1362,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   loadSharedRef.current = loadShared;
   const downloadMidi = () => {
-    const bytes = toMidiTimeline(slots, bpm, timeSig, partMeters);
+    const bytes = toMidiTimeline(slots, bpm, timeSig, partMeters, { groove: grooveHits });
     const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'audio/midi' }));
     const a = document.createElement('a');
     a.href = url;
