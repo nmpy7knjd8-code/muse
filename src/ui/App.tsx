@@ -20,7 +20,7 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
-  SESSION_KEY, deserializeSession, decodeShare, readShareHash, shareUrl, type SharePayload, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
+  SESSION_KEY, deserializeSession, decodeShare, exportFileName, readShareHash, shareUrl, type SharePayload, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -51,7 +51,7 @@ const MoodChordRef = lazy(() => loadMoodChordRef().then((m) => ({ default: m.Moo
 const DrumPad = lazy(() => loadDrumPad().then((m) => ({ default: m.DrumPad })));
 /** Warm the split chunks once the app is idle so the service worker caches them for offline use. */
 function prefetchLazyChunks() {
-  for (const f of [loadDrumPad, loadGuide, loadArtistLens, loadMoodChordRef]) f().catch(() => { /* offline: retried on use */ });
+  for (const f of [loadDrumPad, loadGuide, loadArtistLens, loadMoodChordRef, () => import('./renderTimeline')]) f().catch(() => { /* offline: retried on use */ });
   prefetchTools();
 }
 const LazyFallback = () => <p className="small muted lazy-loading" role="status">Loading…</p>;
@@ -73,7 +73,7 @@ import { TutorialModal } from './TutorialModal';
 import { useFocusTrap } from './focusTrap';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, ShareIcon, StopIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, ShareIcon, StopIcon, WaveIcon, LinkIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
@@ -1345,6 +1345,57 @@ function Composer({ data }: { data: LoadedData }) {
     try { await navigator.clipboard.writeText(url); flash('Share link copied — anyone with it opens this progression'); }
     catch { window.prompt('Copy this share link', url); }
   };
+  // ---- Share menu: link · audio (WAV) [· QR] (review fixes #12/#13) ----
+  const [shareMenu, setShareMenu] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement | null>(null);
+  const shareBtnRef = useRef<HTMLButtonElement | null>(null);
+  type WavState = { stage: 'load' | 'render' | 'encode'; p: number } | { ready: Uint8Array; name: string } | { error: string };
+  const [wav, setWav] = useState<WavState | null>(null);
+  useEffect(() => {
+    if (!shareMenu) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (shareMenuRef.current?.contains(t) || shareBtnRef.current?.contains(t)) return;
+      setShareMenu(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setShareMenu(false); shareBtnRef.current?.focus(); } };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    shareMenuRef.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [shareMenu]);
+  useEffect(() => { if (wav && 'ready' in wav) setWav(null); }, [slots, bpm, timeSig, chordInst, melodyInst, bassInst, drumKit]); // stale render
+  const wavBusy = !!wav && 'stage' in wav;
+  const exportWav = async () => {
+    if (wavBusy) return;
+    if (wav && 'ready' in wav) { await saveWav(wav.ready, wav.name); return; }
+    setWav({ stage: 'load', p: 0 });
+    try {
+      const { renderTimelineWav } = await import('./renderTimeline');
+      const { wav: bytes } = await renderTimelineWav({
+        slots, timeSig, beatSec, partMeters, k, chordInst, melodyInst, bassInst, drumKit,
+        onProgress: (stage, p) => setWav({ stage, p }),
+      });
+      const name = exportFileName(keyName(k), chords.map((c) => chordSymbol(c, true)), 'wav');
+      // Phones need a fresh tap to open the share sheet (the render took a few seconds) → offer a Save button.
+      if (window.matchMedia('(pointer: coarse)').matches) setWav({ ready: bytes, name });
+      else { await saveWav(bytes, name); setWav({ ready: bytes, name }); }
+    } catch (e) {
+      setWav({ error: (e as Error).message || 'Couldn’t render audio' });
+    }
+  };
+  const saveWav = async (bytes: Uint8Array, name: string) => {
+    const { deliverFile } = await import('./renderTimeline');
+    const how = await deliverFile(bytes, name, 'audio/wav');
+    if (how === 'downloaded') flash(`Saved ${name}`);
+    if (how !== 'cancelled') setShareMenu(false);
+  };
+  const wavLabel = (() => {
+    if (!wav) return { title: 'Audio file (WAV)', sub: 'Everything you hear on Play' };
+    if ('error' in wav) return { title: 'Audio file (WAV)', sub: wav.error };
+    if ('ready' in wav) return { title: window.matchMedia('(pointer: coarse)').matches ? 'Save audio file' : 'Download again', sub: `${wav.name} · ${(wav.ready.length / 1048576).toFixed(1)} MB` };
+    return { title: wav.stage === 'load' ? 'Loading sounds…' : wav.stage === 'render' ? 'Rendering…' : 'Finishing…', sub: '' };
+  })();
   const loadShared = (sp: SharePayload) => {
     snapshot();
     setTonic(sp.tonic); setMode(sp.mode); setAuto(false);
@@ -2351,7 +2402,21 @@ function Composer({ data }: { data: LoadedData }) {
         <div className={'transport-export' + (slots.length ? '' : ' idle')}>
           <button type="button" className="t-chip" onClick={copyText} disabled={!slots.length} aria-label="Copy chords as text"><CopyIcon /> Copy</button>
           <button type="button" className="t-chip" onClick={downloadMidi} disabled={!slots.length} aria-label="Download MIDI file"><DownloadIcon /> MIDI</button>
-          <button type="button" className="t-chip" onClick={shareLink} disabled={!slots.length} aria-label="Share a link to this progression"><ShareIcon /> Share</button>
+          <span className="share-wrap">
+            <button type="button" ref={shareBtnRef} className={'t-chip' + (shareMenu ? ' on' : '')} onClick={() => setShareMenu((v) => !v)} disabled={!slots.length} aria-haspopup="menu" aria-expanded={shareMenu} aria-label="Share or export"><ShareIcon /> Share</button>
+            {shareMenu && (
+              <div className="share-menu" role="menu" ref={shareMenuRef} aria-label="Share or export">
+                <button type="button" role="menuitem" onClick={() => { setShareMenu(false); void shareLink(); }}>
+                  <LinkIcon /><span><b>Share link</b><small>Opens this progression in Muse</small></span>
+                </button>
+                <button type="button" role="menuitem" onClick={() => void exportWav()} aria-busy={wavBusy} className={wav && 'error' in wav ? 'err' : ''}>
+                  <WaveIcon /><span><b>{wavLabel.title}</b>{wavLabel.sub && <small>{wavLabel.sub}</small>}
+                    {wavBusy && wav && 'stage' in wav && <i className="share-progress" role="progressbar" aria-label="Rendering audio" aria-valuemin={0} aria-valuemax={1} aria-valuenow={wav.stage === 'load' ? wav.p * 0.3 : wav.stage === 'render' ? 0.3 + wav.p * 0.65 : 0.97}><em style={{ width: `${(wav.stage === 'load' ? wav.p * 0.3 : wav.stage === 'render' ? 0.3 + wav.p * 0.65 : 0.97) * 100}%` }} /></i>}
+                  </span>
+                </button>
+              </div>
+            )}
+          </span>
         </div>
         {slots.length === 0 ? (
           <details className="instr-collapsed">

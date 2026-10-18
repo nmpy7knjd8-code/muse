@@ -51,3 +51,4 @@ export * from './taste';
 export * from './practice';
 export * from './share';
 export * from './release';
+export * from './wav';

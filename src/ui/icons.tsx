@@ -139,6 +139,33 @@ export function ShareIcon({ className }: IconProps) {
   );
 }
 
+export function WaveIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function QrIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+        <rect x="4" y="4" width="6" height="6" rx="1.2" /><rect x="14" y="4" width="6" height="6" rx="1.2" /><rect x="4" y="14" width="6" height="6" rx="1.2" />
+      </g>
+      <path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 18.5h1.5V20H14zM18.5 14H20v1.5h-1.5z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function LinkIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function CopyIcon({ className }: IconProps) {
   return (
     <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
