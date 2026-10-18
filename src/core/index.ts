@@ -39,3 +39,4 @@ export * from './drumTuning';
 export * from './staff';
 export * from './session';
 export * from './contrast';
+export * from './arc';

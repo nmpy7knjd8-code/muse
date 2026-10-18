@@ -1,0 +1,30 @@
+// Drawer tools: metadata + lazy loaders (each tool is its own chunk; prefetched when idle for offline).
+import { lazy, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
+import type { ToolId, ToolProps } from './types';
+
+export interface ToolDef {
+  id: ToolId;
+  title: string;
+  sub: string;
+  group: 'tools' | 'practice';
+  icon: ReactNode;
+  load: () => Promise<{ default: ComponentType<ToolProps> }>;
+}
+
+const ico = (d: ReactNode) => (
+  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+
+export const TOOLS: ToolDef[] = [
+  {
+    id: 'arc', title: 'Tension arc', sub: 'Draw a curve, get chords', group: 'tools',
+    icon: ico(<><path d="M3 18c3 0 4-10 8-10s5 7 10 4" /><path d="M3 21h18" /></>),
+    load: () => import('./ArcTool'),
+  },
+];
+
+export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;
+export const TOOL_COMPONENTS = Object.fromEntries(TOOLS.map((t) => [t.id, lazy(t.load)])) as Record<ToolId, LazyExoticComponent<ComponentType<ToolProps>>>;
+export function prefetchTools(): void {
+  for (const t of TOOLS) t.load().catch(() => { /* offline: loads on use */ });
+}

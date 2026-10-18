@@ -31,6 +31,8 @@ import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { ChordConnections } from './ChordConnections';
 import { PlaybackRibbon, ribbonNotesFromEvents } from './PlaybackRibbon';
 import { createPlayClock, usePlaySec, type PlayClock } from './playClock';
+import { TOOLS, TOOL_BY_ID, TOOL_COMPONENTS, prefetchTools } from './tools/registry';
+import type { ToolId, ToolProps } from './tools/types';
 
 /** Only the ribbon follows the playhead every frame. */
 function LiveRibbon({ clock, ...rest }: { clock: PlayClock } & Omit<React.ComponentProps<typeof PlaybackRibbon>, 'playSec'>) {
@@ -50,6 +52,7 @@ const DrumPad = lazy(() => loadDrumPad().then((m) => ({ default: m.DrumPad })));
 /** Warm the split chunks once the app is idle so the service worker caches them for offline use. */
 function prefetchLazyChunks() {
   for (const f of [loadDrumPad, loadGuide, loadArtistLens, loadMoodChordRef]) f().catch(() => { /* offline: retried on use */ });
+  prefetchTools();
 }
 const LazyFallback = () => <p className="small muted lazy-loading" role="status">Loading…</p>;
 /** A chunk that fails to load (offline before it was cached) shows a retry instead of blanking the app. */
@@ -74,7 +77,7 @@ import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIc
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
 /** Left drawer pages — Guide / Artist Lens / mood reference live off the main strip. */
-type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists';
+type DrawerPage = 'menu' | 'moods' | 'guide' | 'artists' | `tool:${ToolId}`;
 type VisTab = 'piano' | 'guitar' | 'voices' | 'circle' | 'tonnetz' | 'map';
 /** Timeline (and card) note graphic: piano keys (default) or staff. */
 type NoteViz = 'piano' | 'staff';
@@ -1475,6 +1478,33 @@ function Composer({ data }: { data: LoadedData }) {
   const shape = shapes[Math.min(shapeIdx, shapes.length - 1)];
   const chips = profile ? describeProfile(profile, lex) : [];
   const kbBadge = data.kb.meta.isSeed ? 'seed' : '';
+  const barsOf = (cs: Chord[]): TimelineSlot[] => cs.map((chord) => ({ chord, notes: [], bass: [], locked: false }));
+  const toolProps: ToolProps = {
+    engine, k, lex, chords, slots, artists: data.artists ?? null, profile, adventure, tStyle, beatSec, timeSig,
+    playChord: (c) => playChord(c),
+    playChords: (cs, step = beatSec * 2) => { synth.unlock(); playChordSequence(cs, step, step * 0.94); },
+    useChords: (cs, label) => {
+      if (!cs.length) return;
+      stopPlayback(); snapshot();
+      setSlots(replaceKeepingLocked(slots, barsOf(cs)));
+      setMeterNote(null); setSelectedId(null); setTab('chords'); setDrawer(null);
+      flash(`${label} — undo to go back`);
+    },
+    appendChords: (cs, label) => {
+      if (!cs.length) return;
+      snapshot();
+      setSlots((s) => [...s, ...barsOf(cs)]);
+      setTab('chords'); setDrawer(null);
+      flash(`${label} — undo to go back`);
+    },
+    setKey: (t, m) => {
+      setTonic(t); setMode(m); setAuto(false);
+      try { localStorage.setItem('muse.tonic', t); localStorage.setItem('muse.mode', m); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+    },
+    flash,
+    close: () => setDrawer(null),
+    openTool: (id) => setDrawer(`tool:${id}`),
+  };
 
   const moodFilterLabel = profile
     ? Object.entries(profile.moods).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => lex.label(id).toLowerCase()).join(' · ')
@@ -2777,7 +2807,10 @@ function Composer({ data }: { data: LoadedData }) {
           >
             <div className="drawer-head">
               {drawer !== 'menu' ? (
-                <button type="button" className="ticon" aria-label="Back to menu" onClick={() => setDrawer('menu')}><BackIcon /></button>
+                <span className="drawer-head-left">
+                  <button type="button" className="ticon" aria-label="Back to menu" onClick={() => setDrawer('menu')}><BackIcon /></button>
+                  {drawer?.startsWith('tool:') && <span className="drawer-title">{TOOL_BY_ID[drawer.slice(5) as ToolId]?.title}</span>}
+                </span>
               ) : (
                 <span className="drawer-brand"><BrandMark /><span className="brand-name">Muse</span></span>
               )}
@@ -2814,8 +2847,28 @@ function Composer({ data }: { data: LoadedData }) {
                   <span className="drawer-row-text"><b>Artist Lens</b><span>Styles, techniques, Try-its</span></span>
                 </button>
                 </>)}
+                {(['tools', 'practice'] as const).map((g) => TOOLS.some((t) => t.group === g) && (
+                  <div key={g} className="drawer-group" role="group" aria-label={g === 'tools' ? 'Tools' : 'Practice'}>
+                    <div className="drawer-section">{g === 'tools' ? 'Tools' : 'Practice'}</div>
+                    {TOOLS.filter((t) => t.group === g).map((t) => (
+                      <button key={t.id} type="button" className="drawer-row" onClick={() => setDrawer(`tool:${t.id}`)}>
+                        {t.icon}
+                        <span className="drawer-row-text"><b>{t.title}</b><span>{t.sub}</span></span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
               </nav>
             )}
+            {drawer?.startsWith('tool:') && (() => {
+              const id = drawer.slice(5) as ToolId;
+              const Tool = TOOL_COMPONENTS[id];
+              return Tool ? (
+                <div className="drawer-body tool-body" key={id}>
+                  <LazyBoundary><Suspense fallback={<LazyFallback />}><Tool {...toolProps} /></Suspense></LazyBoundary>
+                </div>
+              ) : null;
+            })()}
             {drawer === 'moods' && (
               <div className="drawer-body">
                 <LazyBoundary><Suspense fallback={<LazyFallback />}><MoodChordRef kb={data.kb} lex={lex} /></Suspense></LazyBoundary>
