@@ -2016,3 +2016,6 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 /* Hum → harmony chord-rate toggle: real side padding so long labels don't touch the pill edges; sits level with ▶ Melody */
 .tool-row .seg.hum-rate { margin-bottom: 0; flex: 0 1 auto; }
 .seg.hum-rate button { flex: 0 0 auto; padding: 7px 12px; min-height: 36px; }
+/* Keyboard play on the tap piano: focus ring on the key shape (SVG <g> can't show an outline everywhere) */
+svg.piano .pkey { outline: none; }
+svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke-width: 3.5; }

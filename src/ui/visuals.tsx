@@ -1,5 +1,5 @@
 // SVG visualisations: piano, guitar diagram, voice leading, circle of fifths, Tonnetz.
-import { useMemo, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent, type ReactElement } from 'react';
 import {
   Chord, GuitarShape, VoiceLine, asTriad, defaultSpelling, fifthsDistance, fifthsIndex, fifthsMoveLabel, fifthsMovePlain, fifthsStepTag,
   midiOctave, mod, parseNote, pc as pcOf, tonnetzPc, layoutMoodMap, staffStep, trebleY, type NoteName,
@@ -86,13 +86,44 @@ export function PianoViz({ scalePcs = [], current = [], suggested = [], fingers 
     );
   };
   const press = (m: number) => onKey?.(m);
+  // Keyboard play (roving tabindex): one key is in the Tab order; ←/→ move a semitone, ↑/↓ an octave,
+  // Home/End jump to the ends, Enter/Space plays/adds the focused key.
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [focusMidi, setFocusMidi] = useState<number | null>(null);
+  const defaultFocus = (() => {
+    const anchor = tonicPc !== undefined ? whites.find((m) => mod(m, 12) === mod(tonicPc, 12) && m >= 60) ?? null : null;
+    return anchor ?? (lo <= 60 && hi >= 60 ? 60 : whites[Math.floor(whites.length / 2)]!);
+  })();
+  const roving = focusMidi !== null && focusMidi >= lo && focusMidi <= hi ? focusMidi : defaultFocus;
+  const moveTo = (m: number) => {
+    const t = Math.max(lo, Math.min(hi, m));
+    setFocusMidi(t);
+    svgRef.current?.querySelector<SVGGElement>(`[data-midi="${t}"]`)?.focus();
+  };
+  const onKeyDown = (m: number) => (e: RKeyboardEvent) => {
+    const k = e.key;
+    if (k === 'Enter' || k === ' ') { e.preventDefault(); press(m); return; }
+    const step = k === 'ArrowRight' ? 1 : k === 'ArrowLeft' ? -1 : k === 'ArrowUp' ? 12 : k === 'ArrowDown' ? -12 : 0;
+    if (step) { e.preventDefault(); moveTo(m + step); return; }
+    if (k === 'Home') { e.preventDefault(); moveTo(lo); } else if (k === 'End') { e.preventDefault(); moveTo(hi); }
+  };
+  const keyName = (m: number) => `${spell(m).replace(/\d+$/, '')}${midiOctave(m)}`;
   const keyProps = (m: number) => ({
     'data-midi': m,
     'data-scale': inScale(m) ? (isTonic(m) ? 'tonic' : 'in') : 'out',
-    ...(onKey ? { onPointerDown: (e: RPointerEvent) => { e.preventDefault(); press(m); }, style: { cursor: 'pointer' } } : {}),
+    ...(onKey ? {
+      onPointerDown: (e: RPointerEvent) => { e.preventDefault(); setFocusMidi(m); press(m); },
+      style: { cursor: 'pointer' },
+      role: 'button',
+      tabIndex: m === roving ? 0 : -1,
+      'aria-label': `${keyName(m)}${inScale(m) && hasScale ? '' : hasScale ? ' (outside the key)' : ''}`,
+      onKeyDown: onKeyDown(m),
+      onFocus: () => setFocusMidi(m),
+      className: 'pkey',
+    } : {}),
   });
   return (
-    <svg className={'piano' + (card ? ' piano-card' : '')} viewBox={`0 0 ${whites.length * W} ${H + 4}`} role="img" aria-label={label ?? 'Piano keyboard'}>
+    <svg ref={svgRef} className={'piano' + (card ? ' piano-card' : '')} viewBox={`0 0 ${whites.length * W} ${H + 4}`} role={onKey ? 'group' : 'img'} aria-label={(label ?? 'Piano keyboard') + (onKey ? ' — arrow keys move, Enter plays' : '')}>
       {whites.map((m) => (
         <g key={m} {...keyProps(m)}>
           <rect x={xOf(m) + 0.5} y={0.5} width={W - 1} height={H} rx={card ? 2 : 3} fill={keyFill(m)} stroke={cur.has(m) && sug.has(m) ? CURRENT_COLOR : '#2a2933'} strokeWidth={cur.has(m) && sug.has(m) ? 4 : 1} />
