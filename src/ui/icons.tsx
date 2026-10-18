@@ -130,6 +130,15 @@ export function TrashIcon({ className }: IconProps) {
   );
 }
 
+export function ShareIcon({ className }: IconProps) {
+  return (
+    <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">
+      <path d="M12 3.5v11M7.5 8 12 3.5 16.5 8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 11.5H6.7a2.2 2.2 0 0 0-2.2 2.2v4.6a2.2 2.2 0 0 0 2.2 2.2h10.6a2.2 2.2 0 0 0 2.2-2.2v-4.6a2.2 2.2 0 0 0-2.2-2.2H16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function CopyIcon({ className }: IconProps) {
   return (
     <svg className={tIcon(className)} viewBox="0 0 24 24" width="16" height="16" aria-hidden focusable="false">

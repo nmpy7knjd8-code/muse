@@ -49,3 +49,4 @@ export * from './styleBlend';
 export * from './smooth';
 export * from './taste';
 export * from './practice';
+export * from './share';

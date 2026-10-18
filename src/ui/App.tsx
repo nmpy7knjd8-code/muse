@@ -20,7 +20,7 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
-  SESSION_KEY, deserializeSession, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
+  SESSION_KEY, deserializeSession, decodeShare, readShareHash, shareUrl, type SharePayload, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -72,7 +72,7 @@ class LazyBoundary extends Component<{ children: ReactNode }, { failed: boolean 
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, StopIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, ShareIcon, StopIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
@@ -1105,6 +1105,23 @@ function Composer({ data }: { data: LoadedData }) {
   // "Smooth it" (idea 8): auto-inversions with a before/after voice-leading score + undo.
   const [smoothOffer, setSmoothOffer] = useState<{ before: number; after: number; line: string; changed: number } | null>(null);
   const smoothTimer = useRef<number | undefined>(undefined);
+  // Share links: #s=… on load (or when the hash changes) → load directly into an empty session, else offer.
+  const [shareOffer, setShareOffer] = useState<SharePayload | null>(null);
+  useEffect(() => {
+    const check = () => {
+      const code = readShareHash(window.location.hash);
+      if (!code) return;
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      const sp = decodeShare(code);
+      if (!sp) { flash('That share link looks broken — nothing was changed'); return; }
+      if (!sessionRef.current.slots.length) loadSharedRef.current(sp);
+      else setShareOffer(sp);
+    };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, []);
+  const loadSharedRef = useRef<(sp: SharePayload) => void>(() => {});
   const smoothIt = () => {
     const r = smoothInversions(chords);
     window.clearTimeout(smoothTimer.current);
@@ -1330,6 +1347,33 @@ function Composer({ data }: { data: LoadedData }) {
     const txt = timelineText(k, slots, timeSig) + (meterNote ? `\nMeter note: ${meterNote}` : '');
     try { await navigator.clipboard.writeText(txt); flash('Copied timeline'); } catch { flash(txt); }
   };
+  // ---- share link (idea 11) ----
+  const shareLink = async () => {
+    const url = shareUrl(window.location.origin + window.location.pathname, { tonic, mode, bpm, timeSig, slots, grooveHits, partMeters });
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void>; canShare?: (d: ShareData) => boolean };
+    const data = { title: 'Muse progression', text: `${chords.map((c) => chordSymbol(c, true)).join(' ')} · ${keyName(k, true)}`, url };
+    if (nav.share && window.matchMedia('(pointer: coarse)').matches && (!nav.canShare || nav.canShare(data))) {
+      try { await nav.share(data); return; } catch (e) { if ((e as Error).name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); flash('Share link copied — anyone with it opens this progression'); }
+    catch { window.prompt('Copy this share link', url); }
+  };
+  const loadShared = (sp: SharePayload) => {
+    snapshot();
+    setTonic(sp.tonic); setMode(sp.mode); setAuto(false);
+    try { localStorage.setItem('muse.tonic', sp.tonic); localStorage.setItem('muse.mode', sp.mode); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+    chooseBpm(sp.bpm);
+    setTimeSig(sp.timeSig);
+    try { localStorage.setItem('muse.timeSig', timeSigLabel(sp.timeSig)); } catch { /* private mode */ }
+    if (sp.partMeters) setPartMeters(sp.partMeters);
+    else setPartMeters(defaultPartMeters(sp.timeSig));
+    setGrooveHits(sp.grooveHits ?? []);
+    setSlots(sp.slots);
+    setTab('chords');
+    setShareOffer(null);
+    flash(`Loaded shared progression (${sp.slots.length} bars) — undo to go back`);
+  };
+  loadSharedRef.current = loadShared;
   const downloadMidi = () => {
     const bytes = toMidiTimeline(slots, bpm, timeSig, partMeters);
     const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'audio/midi' }));
@@ -2316,6 +2360,7 @@ function Composer({ data }: { data: LoadedData }) {
         <div className={'transport-export' + (slots.length ? '' : ' idle')}>
           <button type="button" className="t-chip" onClick={copyText} disabled={!slots.length} aria-label="Copy chords as text"><CopyIcon /> Copy</button>
           <button type="button" className="t-chip" onClick={downloadMidi} disabled={!slots.length} aria-label="Download MIDI file"><DownloadIcon /> MIDI</button>
+          <button type="button" className="t-chip" onClick={shareLink} disabled={!slots.length} aria-label="Share a link to this progression"><ShareIcon /> Share</button>
         </div>
         {slots.length === 0 ? (
           <details className="instr-collapsed">
@@ -3038,7 +3083,14 @@ function Composer({ data }: { data: LoadedData }) {
           <button type="button" className="pill on" onClick={() => setSmoothOffer(null)}>Keep</button>
         </div>
       )}
-      {transposeOffer && !toast && !smoothOffer && (
+      {shareOffer && !toast && !smoothOffer && (
+        <div className="toast toast-offer share-offer" role="status">
+          <span>Open the shared progression ({shareOffer.slots.length} bars, {keyName({ tonic: parseNote(shareOffer.tonic)!, mode: shareOffer.mode }, true)})? Yours stays in undo.</span>
+          <button type="button" className="pill on" onClick={() => loadShared(shareOffer)}>Open</button>
+          <button type="button" className="pill" onClick={() => setShareOffer(null)}>Not now</button>
+        </div>
+      )}
+      {transposeOffer && !toast && !smoothOffer && !shareOffer && (
         <div className="toast toast-offer" role="status">
           <span>Key is now {noteName(transposeOffer.to, true)}. Move your bars too?</span>
           <button type="button" className="pill on" onClick={acceptTranspose}>Transpose</button>
