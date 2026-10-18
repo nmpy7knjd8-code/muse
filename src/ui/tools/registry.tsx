@@ -41,6 +41,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><path d="M4 12h12" /><path d="M12 7l5 5-5 5" /><path d="M20 5v14" /></>),
     load: () => import('./CadenceTool'),
   },
+  {
+    id: 'sections', title: 'Section builder', sub: 'Chorus, bridge… with a contrast meter', group: 'tools',
+    icon: ico(<><rect x="3" y="5" width="7" height="14" rx="2" /><rect x="14" y="5" width="7" height="14" rx="2" /><path d="M10 12h4" /></>),
+    load: () => import('./SectionsTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;

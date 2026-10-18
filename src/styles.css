@@ -1947,3 +1947,15 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .cad-head h4 { text-transform: none; letter-spacing: 0; font-size: 16px; }
 .cad-best { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); }
 .cad-card.best { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.sec-base { gap: 6px; }
+.sec-slider { display: flex; flex-direction: column; gap: 2px; }
+.sec-slider input[type="range"] { width: 100%; accent-color: var(--accent); }
+.contrast-track { position: relative; overflow: visible; }
+.contrast-track i { background: linear-gradient(90deg, #7986CB, #9C7CF4 50%, #F06292); }
+.contrast-target { position: absolute; top: -4px; width: 3px; height: 16px; margin-left: -1.5px; border-radius: 2px; background: #ECEAF4; }
+.sec-words { display: flex; flex-wrap: wrap; gap: 4px; }
+.tool-card.stale { opacity: 0.6; }
+.contrast-poles { position: relative; height: 14px; font-size: 11px; color: var(--muted); }
+.contrast-poles span { position: absolute; top: 0; white-space: nowrap; }
+.contrast-poles span:nth-child(2), .contrast-poles span:nth-child(3) { transform: translateX(-50%); }
+.sec-words .tag { background: var(--panel2); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
