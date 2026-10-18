@@ -2013,3 +2013,6 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .release-tool .tool-card h4 { text-transform: none; letter-spacing: 0; }
 .release-link { background: none; border: 0; padding: 0; min-height: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
 .release-link:hover { text-decoration: underline; }
+/* Hum → harmony chord-rate toggle: real side padding so long labels don't touch the pill edges; sits level with ▶ Melody */
+.tool-row .seg.hum-rate { margin-bottom: 0; flex: 0 1 auto; }
+.seg.hum-rate button { flex: 0 0 auto; padding: 7px 12px; min-height: 36px; }

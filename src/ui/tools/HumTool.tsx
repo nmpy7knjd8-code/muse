@@ -187,7 +187,7 @@ export default function HumTool(p: ToolProps) {
             {notes.map((n, i) => <rect key={i} x={rx(n.beat)} y={ry(n.midi) - 3} width={Math.max(3, rx(n.beat + n.dur) - rx(n.beat) - 2)} height={6} rx={3} className="hum-note" />)}
           </svg>
           <div className="tool-row">
-            <div className="seg small-seg" role="group" aria-label="Chord rate">
+            <div className="seg small-seg hum-rate" role="group" aria-label="Chord rate">
               <button type="button" className={!twoBar ? 'on' : ''} aria-pressed={!twoBar} onClick={() => setTwoBar(false)}>Chord every bar</button>
               <button type="button" className={twoBar ? 'on' : ''} aria-pressed={twoBar} onClick={() => setTwoBar(true)}>Every 2 bars</button>
             </div>
