@@ -49,9 +49,11 @@ const ArtistLens = lazy(() => loadArtistLens().then((m) => ({ default: m.ArtistL
 const Guide = lazy(() => loadGuide().then((m) => ({ default: m.Guide })));
 const MoodChordRef = lazy(() => loadMoodChordRef().then((m) => ({ default: m.MoodChordRef })));
 const DrumPad = lazy(() => loadDrumPad().then((m) => ({ default: m.DrumPad })));
+const loadQrSheet = () => import('./QrSheet');
+const QrSheet = lazy(() => loadQrSheet().then((m) => ({ default: m.QrSheet })));
 /** Warm the split chunks once the app is idle so the service worker caches them for offline use. */
 function prefetchLazyChunks() {
-  for (const f of [loadDrumPad, loadGuide, loadArtistLens, loadMoodChordRef, () => import('./renderTimeline')]) f().catch(() => { /* offline: retried on use */ });
+  for (const f of [loadDrumPad, loadGuide, loadArtistLens, loadMoodChordRef, loadQrSheet, () => import('./renderTimeline')]) f().catch(() => { /* offline: retried on use */ });
   prefetchTools();
 }
 const LazyFallback = () => <p className="small muted lazy-loading" role="status">Loading…</p>;
@@ -73,7 +75,7 @@ import { TutorialModal } from './TutorialModal';
 import { useFocusTrap } from './focusTrap';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
-import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, ShareIcon, StopIcon, WaveIcon, LinkIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
+import { BackIcon, BrandMark, CloseIcon, CopyIcon, DownloadIcon, EarIcon, LockIcon, LoopIcon, MenuIcon, PlayIcon, ReharmIcon, ShareIcon, StopIcon, WaveIcon, QrIcon, LinkIcon, ThumbIcon, TrashIcon, UndoIcon } from './icons';
 
 type Tab = 'chords' | 'melody' | 'bass' | 'drums';
 type InputPane = 'write' | 'meter';
@@ -1335,8 +1337,10 @@ function Composer({ data }: { data: LoadedData }) {
     try { await navigator.clipboard.writeText(txt); flash('Copied timeline'); } catch { flash(txt); }
   };
   // ---- share link (idea 11) ----
+  const currentShareUrl = () => shareUrl(window.location.origin + window.location.pathname, { tonic, mode, bpm, timeSig, slots, grooveHits, partMeters });
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
   const shareLink = async () => {
-    const url = shareUrl(window.location.origin + window.location.pathname, { tonic, mode, bpm, timeSig, slots, grooveHits, partMeters });
+    const url = currentShareUrl();
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void>; canShare?: (d: ShareData) => boolean };
     const data = { title: 'Muse progression', text: `${chords.map((c) => chordSymbol(c, true)).join(' ')} · ${keyName(k, true)}`, url };
     if (nav.share && window.matchMedia('(pointer: coarse)').matches && (!nav.canShare || nav.canShare(data))) {
@@ -2409,6 +2413,9 @@ function Composer({ data }: { data: LoadedData }) {
                 <button type="button" role="menuitem" onClick={() => { setShareMenu(false); void shareLink(); }}>
                   <LinkIcon /><span><b>Share link</b><small>Opens this progression in Muse</small></span>
                 </button>
+                <button type="button" role="menuitem" onClick={() => { setShareMenu(false); setQrUrl(currentShareUrl()); }}>
+                  <QrIcon /><span><b>QR code</b><small>Scan it to open on another phone</small></span>
+                </button>
                 <button type="button" role="menuitem" onClick={() => void exportWav()} aria-busy={wavBusy} className={wav && 'error' in wav ? 'err' : ''}>
                   <WaveIcon /><span><b>{wavLabel.title}</b>{wavLabel.sub && <small>{wavLabel.sub}</small>}
                     {wavBusy && wav && 'stage' in wav && <i className="share-progress" role="progressbar" aria-label="Rendering audio" aria-valuemin={0} aria-valuemax={1} aria-valuenow={wav.stage === 'load' ? wav.p * 0.3 : wav.stage === 'render' ? 0.3 + wav.p * 0.65 : 0.97}><em style={{ width: `${(wav.stage === 'load' ? wav.p * 0.3 : wav.stage === 'render' ? 0.3 + wav.p * 0.65 : 0.97) * 100}%` }} /></i>}
@@ -3155,6 +3162,14 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
       )}
       <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+      {qrUrl && (
+        <LazyBoundary>
+          <Suspense fallback={null}>
+            <QrSheet url={qrUrl} label={`${chords.map((c) => chordSymbol(c, true)).join(' ')} · ${keyName(k, true)}`}
+              onClose={() => setQrUrl(null)} onCopied={flash} returnTo={() => shareBtnRef.current} />
+          </Suspense>
+        </LazyBoundary>
+      )}
     </div>
   );
 }

@@ -2051,3 +2051,14 @@ svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke
 .share-menu .err small { color: #f0a070; }
 .share-progress { display: block; height: 4px; border-radius: 999px; background: #2a2836; overflow: hidden; margin-top: 4px; }
 .share-progress em { display: block; height: 100%; background: var(--accent); transition: width 0.2s; }
+
+/* QR code sheet (review fix #13) — reuses the tutorial modal shell */
+.qr-panel { width: min(100%, 360px); }
+.qr-card {
+  background: #fff; border-radius: 12px; padding: 6px;
+  width: min(100%, 300px); margin: 2px auto 0;
+}
+.qr-card svg { display: block; width: 100%; height: auto; }
+.qr-caption { text-align: center; margin: 0; overflow-wrap: anywhere; }
+.qr-too-long { margin: 6px 2px; }
+.qr-actions { display: flex; justify-content: center; }

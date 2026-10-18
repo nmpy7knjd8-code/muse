@@ -30,7 +30,7 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean
     return () => {
       document.removeEventListener('keydown', onKey);
       if (!opts.current.returnFocus) return;
-      const target = prev && prev.isConnected && prev.getClientRects().length ? prev : opts.current.fallback?.();
+      const target = prev && prev !== document.body && prev.isConnected && prev.getClientRects().length ? prev : opts.current.fallback?.();
       // after unmount so the dialog's own nodes are gone
       window.setTimeout(() => target?.focus(), 0);
     };
