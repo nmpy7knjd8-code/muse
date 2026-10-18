@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Component, lazy, Suspense, type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
@@ -39,11 +39,33 @@ function LiveRibbon({ clock, ...rest }: { clock: PlayClock } & Omit<React.Compon
 }
 import { PartMeterPanel } from './PartMeterPanel';
 // Code-split: drawer pages and the drum pad load on first use (keeps the first paint lean).
-const ArtistLens = lazy(() => import('./ArtistLens').then((m) => ({ default: m.ArtistLens })));
-const Guide = lazy(() => import('./Guide').then((m) => ({ default: m.Guide })));
-const MoodChordRef = lazy(() => import('./MoodChordRef').then((m) => ({ default: m.MoodChordRef })));
-const DrumPad = lazy(() => import('./DrumPad').then((m) => ({ default: m.DrumPad })));
+const loadArtistLens = () => import('./ArtistLens');
+const loadGuide = () => import('./Guide');
+const loadMoodChordRef = () => import('./MoodChordRef');
+const loadDrumPad = () => import('./DrumPad');
+const ArtistLens = lazy(() => loadArtistLens().then((m) => ({ default: m.ArtistLens })));
+const Guide = lazy(() => loadGuide().then((m) => ({ default: m.Guide })));
+const MoodChordRef = lazy(() => loadMoodChordRef().then((m) => ({ default: m.MoodChordRef })));
+const DrumPad = lazy(() => loadDrumPad().then((m) => ({ default: m.DrumPad })));
+/** Warm the split chunks once the app is idle so the service worker caches them for offline use. */
+function prefetchLazyChunks() {
+  for (const f of [loadDrumPad, loadGuide, loadArtistLens, loadMoodChordRef]) f().catch(() => { /* offline: retried on use */ });
+}
 const LazyFallback = () => <p className="small muted lazy-loading" role="status">Loading…</p>;
+/** A chunk that fails to load (offline before it was cached) shows a retry instead of blanking the app. */
+class LazyBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <p className="small muted lazy-loading" role="status">
+        Couldn’t load this part — check your connection.{' '}
+        <button type="button" className="linkish" onClick={() => window.location.reload()}>Reload</button> (your bars are saved)
+      </p>
+    );
+  }
+}
 import { TutorialModal } from './TutorialModal';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
@@ -1062,6 +1084,11 @@ function Composer({ data }: { data: LoadedData }) {
     window.addEventListener('pagehide', flush);
     document.addEventListener('visibilitychange', onHide);
     return () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', onHide); };
+  }, []);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    const id = window.setTimeout(() => (w.requestIdleCallback ? w.requestIdleCallback(prefetchLazyChunks) : prefetchLazyChunks()), 2500);
+    return () => window.clearTimeout(id);
   }, []);
   /** Start a fresh session (everything, locked bars too). Undo brings the bars back. */
   /** Changing the tonic with chords on the timeline → offer to move them to the new key (audit: bigger UI). */
@@ -2422,7 +2449,7 @@ function Composer({ data }: { data: LoadedData }) {
             <FitExplainer mode="bass" keyInfo={k} underChord={bassChord} />
           </div>
         ) : (
-          <Suspense fallback={<LazyFallback />}><DrumPad
+          <LazyBoundary><Suspense fallback={<LazyFallback />}><DrumPad
             hits={grooveHits}
             beats={drumBeats}
             subdiv={drumMeter.subdiv}
@@ -2440,7 +2467,7 @@ function Composer({ data }: { data: LoadedData }) {
             onChooseKit={chooseDrumKit}
             onLoopGroove={toggleGrooveLoop}
             onApplyToNotes={applyGrooveToNotes}
-          /></Suspense>
+          /></Suspense></LazyBoundary>
         )}
         </>
         )}
@@ -2791,12 +2818,12 @@ function Composer({ data }: { data: LoadedData }) {
             )}
             {drawer === 'moods' && (
               <div className="drawer-body">
-                <Suspense fallback={<LazyFallback />}><MoodChordRef kb={data.kb} lex={lex} /></Suspense>
+                <LazyBoundary><Suspense fallback={<LazyFallback />}><MoodChordRef kb={data.kb} lex={lex} /></Suspense></LazyBoundary>
               </div>
             )}
             {drawer === 'guide' && (
               <div className="drawer-body">
-                <Suspense fallback={<LazyFallback />}><Guide onJump={(t) => {
+                <LazyBoundary><Suspense fallback={<LazyFallback />}><Guide onJump={(t) => {
                   if (t === 'artists') { setDrawer('artists'); return; }
                   if (t === 'moods') { setDrawer('moods'); return; }
                   setDrawer(null);
@@ -2804,12 +2831,12 @@ function Composer({ data }: { data: LoadedData }) {
                   if (t === 'bass' && bassInst === 'off') chooseBassInst('bass');
                   setSelectedId(null);
                   window.scrollTo({ top: 0 });
-                }} /></Suspense>
+                }} /></Suspense></LazyBoundary>
               </div>
             )}
             {drawer === 'artists' && data.artists && (
               <div className="drawer-body">
-                <Suspense fallback={<LazyFallback />}><ArtistLens
+                <LazyBoundary><Suspense fallback={<LazyFallback />}><ArtistLens
                   key={focusArtist ?? 'all'}
                   initial={focusArtist}
                   data={data.artists}
@@ -2817,7 +2844,7 @@ function Composer({ data }: { data: LoadedData }) {
                   kbIndex={data.kbIndex}
                   onTryIt={(t, a) => { tryIt(t, a); setDrawer(null); }}
                   onPreview={previewTryIt}
-                /></Suspense>
+                /></Suspense></LazyBoundary>
               </div>
             )}
           </aside>
