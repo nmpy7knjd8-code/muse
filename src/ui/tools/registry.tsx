@@ -46,6 +46,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><rect x="3" y="5" width="7" height="14" rx="2" /><rect x="14" y="5" width="7" height="14" rx="2" /><path d="M10 12h4" /></>),
     load: () => import('./SectionsTool'),
   },
+  {
+    id: 'blend', title: 'Style blend', sub: 'Slide between two artists', group: 'tools',
+    icon: ico(<><circle cx="9" cy="12" r="6" /><circle cx="15" cy="12" r="6" /></>),
+    load: () => import('./BlendTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;
