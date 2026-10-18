@@ -48,3 +48,4 @@ export * from './sections';
 export * from './styleBlend';
 export * from './smooth';
 export * from './taste';
+export * from './practice';

@@ -56,6 +56,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><path d="M7 11v9H4v-9z" /><path d="M7 11l4-7a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" /></>),
     load: () => import('./TasteTool'),
   },
+  {
+    id: 'practice', title: 'Play-along', sub: 'Count-in, loop, mic scoring', group: 'practice',
+    icon: ico(<><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /><path d="M5 3 3 5M19 3l2 2" /></>),
+    load: () => import('./PracticeTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;
