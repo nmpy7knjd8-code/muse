@@ -2,7 +2,7 @@
 // and how chord qualities fall back when no KB move matches.
 import { useMemo, useState, type ReactNode } from 'react';
 import type { TheoryKB } from '../core';
-import { MoodLexicon, QUALITIES, triadClass, type QualityId } from '../core';
+import { MoodLexicon, QUALITIES, inkOn, triadClass, type QualityId } from '../core';
 
 interface Props {
   kb: TheoryKB;
@@ -215,7 +215,7 @@ export function MoodChordRef({ kb, lex }: Props): ReactNode {
               <p className="mref-desc">{m.description}</p>
               <div className="tags">
                 {m.moods.map((id) => (
-                  <span key={id} className="tag" style={{ background: lex.color(id) }}>{lex.label(id).toLowerCase()}</span>
+                  <span key={id} className="tag" style={{ background: lex.color(id), color: inkOn(lex.color(id))  }}>{lex.label(id).toLowerCase()}</span>
                 ))}
               </div>
               <p className="small muted">{m.category} · {m.keyMode} · {m.consensus} consensus</p>
@@ -245,7 +245,7 @@ export function MoodChordRef({ kb, lex }: Props): ReactNode {
                 </div>
                 {fb && (
                   <p className="mref-desc">
-                    Fallback mood: <span className="tag" style={{ background: lex.color(fb.mood) }}>{lex.label(fb.mood).toLowerCase()}</span>
+                    Fallback mood: <span className="tag" style={{ background: lex.color(fb.mood), color: inkOn(lex.color(fb.mood))  }}>{lex.label(fb.mood).toLowerCase()}</span>
                     {' '}{fb.why}
                   </p>
                 )}
@@ -254,7 +254,7 @@ export function MoodChordRef({ kb, lex }: Props): ReactNode {
                     <h4>Often tagged (from chord moves)</h4>
                     <div className="tags">
                       {fromMoves.map(([id]) => (
-                        <span key={id} className="tag" style={{ background: lex.color(id) }}>{lex.label(id).toLowerCase()}</span>
+                        <span key={id} className="tag" style={{ background: lex.color(id), color: inkOn(lex.color(id))  }}>{lex.label(id).toLowerCase()}</span>
                       ))}
                     </div>
                   </div>

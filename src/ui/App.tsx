@@ -20,7 +20,7 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
-  SESSION_KEY, deserializeSession, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName,
+  SESSION_KEY, deserializeSession, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn,
 } from '../core';
 import { applyKeyTuning } from './DrumPad';
 import { loadData, type LoadedData } from './data';
@@ -57,6 +57,10 @@ const PRESET_MOODS = [
   'ominous', 'dramatic', 'uncanny', 'wonder', 'floating', 'surprising', 'bluesy', 'jazzy',
   'earthy', 'playful', 'resolved',
 ];
+const MODE_SHORT: Partial<Record<ModeId, string>> = {
+  major: 'Major', minor: 'Minor', harmonicMinor: 'Harm. min', melodicMinor: 'Mel. min',
+  phrygianDominant: 'Phryg. dom', lydianDominant: 'Lyd. dom', mixolydian: 'Mixolyd.',
+};
 const RARITY_MARK: Record<string, { sym: string; label: string }> = {
   common: { sym: '●', label: 'common' },
   colorful: { sym: '◆', label: 'colorful' },
@@ -271,9 +275,13 @@ function Composer({ data }: { data: LoadedData }) {
   // Left-edge swipe opens the menu (mobile “top-left swipe” affordance).
   useEffect(() => {
     let x0 = 0, y0 = 0, tracking = false;
+    // In a Safari tab the outer ~20px belongs to the browser's back-swipe; start just inside it.
+    // Installed (standalone) has no back-swipe, so the whole edge works there.
+    const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true || window.matchMedia?.('(display-mode: standalone)').matches;
+    const minX = standalone ? 0 : 20, maxX = standalone ? 28 : 44;
     const onStart = (e: TouchEvent) => {
       const t = e.touches[0];
-      if (!t || t.clientX > 28 || drawer) return;
+      if (!t || t.clientX < minX || t.clientX > maxX || drawer) return;
       tracking = true; x0 = t.clientX; y0 = t.clientY;
     };
     const onMove = (e: TouchEvent) => {
@@ -350,6 +358,17 @@ function Composer({ data }: { data: LoadedData }) {
   const [profile, setProfile] = useState<MoodProfile | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState(false);
+  const detailCloseRef = useRef<HTMLButtonElement | null>(null);
+  const detailOpenerRef = useRef<HTMLElement | null>(null);
+  // Details sheet behaves like a dialog: focus moves in, Escape closes, focus returns to the opener.
+  useEffect(() => {
+    if (!detail) { detailOpenerRef.current?.focus?.(); return; }
+    detailOpenerRef.current = document.activeElement as HTMLElement | null;
+    detailCloseRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setDetail(false); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detail]);
   const [typed, setTyped] = useState('');
   const [toast, setToast] = useState<string | null>(null);
   const [shapeIdx, setShapeIdx] = useState(0);
@@ -362,6 +381,7 @@ function Composer({ data }: { data: LoadedData }) {
   const [listen, setListen] = useState<ListenSession | null>(null);
   const [listenStatus, setListenStatus] = useState<ListenStatus | null>(null);
   const [inputSource, setInputSource] = useState<InputSource>('mic');
+  const hasMidi = useMemo(() => midiSupported(), []);
   const [lastHeard, setLastHeard] = useState<string | null>(null);
   useEffect(() => () => listen?.stop(), [listen]);
 
@@ -1162,10 +1182,19 @@ function Composer({ data }: { data: LoadedData }) {
   };
 
   // ---- mood ----
+  const [moodMiss, setMoodMiss] = useState<string | null>(null);
   const interpret = async (text: string) => {
     setMoodText(text);
+    setMoodMiss(null);
     if (!text.trim()) return setProfile(null);
-    setProfile(await interpreter.interpret(text));
+    const p = await interpreter.interpret(text);
+    // Nothing recognised → say so instead of silently doing nothing.
+    if (!Object.keys(p.moods).length && !Object.keys(p.dims).length && !p.modes.length) {
+      setProfile(null);
+      setMoodMiss(text.trim());
+      return;
+    }
+    setProfile(p);
   };
   const togglePreset = (id: string) => {
     synth.unlock();
@@ -1503,7 +1532,7 @@ function Composer({ data }: { data: LoadedData }) {
                 <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
               </div>
               <div className="tags">
-                {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
+                {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id), color: inkOn(lex.color(m.id))  }}>{lex.label(m.id).toLowerCase()}</span>)}
                 {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
                 {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
                 {cs?.breathe && (
@@ -1745,9 +1774,13 @@ function Composer({ data }: { data: LoadedData }) {
           <select aria-label="Tonic" value={tonicChoices(mode).includes(tonic) ? tonic : tonicChoices(mode)[pc(parseNote(tonic)!)]} onChange={(e) => pickTonic(e.target.value)}>
             {tonicChoices(mode).map((t) => <option key={t} value={t}>{t.replace('#', '♯').replace('b', '♭')}</option>)}
           </select>
-          <select aria-label="Mode" value={mode} onChange={(e) => chooseMode(e.target.value as ModeId)}>
-            {MODES.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
+          {/* Closed select shows a short name (full names stay in the list) so it never truncates. */}
+          <span className="mode-pick">
+            <select aria-label="Mode" value={mode} onChange={(e) => chooseMode(e.target.value as ModeId)}>
+              {MODES.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <span className="mode-face" aria-hidden>{MODE_SHORT[mode] ?? MODE_BY_ID[mode].name}</span>
+          </span>
           <button className={'pill' + (auto ? ' on' : '')} onClick={() => chooseAuto(!auto)} title="Detect key from what you enter">Auto</button>
         </div>
       </header>
@@ -1902,6 +1935,15 @@ function Composer({ data }: { data: LoadedData }) {
                         playChord(s.chord);
                         if (chordedIdx >= 0) setTensionPick(chordedIdx);
                       }
+                    }}
+                    // Keyboard: Tab to a bar, Enter/Space to hear it (same as a tap).
+                    tabIndex={s.chord ? 0 : undefined}
+                    aria-label={s.chord ? `Bar ${i + 1}: ${chordSymbol(s.chord, true)} — press to hear` : undefined}
+                    onKeyDown={(e) => {
+                      if (!s.chord || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                      e.preventDefault();
+                      playChord(s.chord);
+                      if (chordedIdx >= 0) setTensionPick(chordedIdx);
                     }}
                   >
                     {s.chord && noteViz === 'piano' && (
@@ -2107,8 +2149,8 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
         {slots.length === 0 && <p className="play-hint">Add a chord to play</p>}
         <div className={'transport-export' + (slots.length ? '' : ' idle')}>
-          <button type="button" className="t-chip" onClick={copyText} disabled={!slots.length}><CopyIcon /> Copy</button>
-          <button type="button" className="t-chip" onClick={downloadMidi} disabled={!slots.length}><DownloadIcon /> MIDI</button>
+          <button type="button" className="t-chip" onClick={copyText} disabled={!slots.length} aria-label="Copy chords as text"><CopyIcon /> Copy</button>
+          <button type="button" className="t-chip" onClick={downloadMidi} disabled={!slots.length} aria-label="Download MIDI file"><DownloadIcon /> MIDI</button>
         </div>
         {slots.length === 0 ? (
           <details className="instr-collapsed">
@@ -2234,10 +2276,13 @@ function Composer({ data }: { data: LoadedData }) {
         <>
         {tab !== 'drums' && (
         <div className={'listen' + (listen ? ' on' : '')}>
+          {/* iPhone/iPad Safari has no Web MIDI — show the source toggle only where MIDI can work. */}
+          {hasMidi && (
           <div className="seg listen-src" role="group" aria-label="Input source">
             <button type="button" className={inputSource === 'mic' ? 'on' : ''} onClick={() => chooseInputSource('mic')} aria-pressed={inputSource === 'mic'}>Mic</button>
-            <button type="button" className={inputSource === 'midi' ? 'on' : ''} onClick={() => chooseInputSource('midi')} aria-pressed={inputSource === 'midi'} title={midiSupported() ? 'USB or Bluetooth MIDI keyboard' : 'Web MIDI not supported in this browser'}>MIDI</button>
+            <button type="button" className={inputSource === 'midi' ? 'on' : ''} onClick={() => chooseInputSource('midi')} aria-pressed={inputSource === 'midi'} aria-label="MIDI keyboard input" title="USB or Bluetooth MIDI keyboard">MIDI</button>
           </div>
+          )}
           <button className={listen ? 'rec' : ''} onClick={() => void toggleListen()} aria-pressed={!!listen}>
             {listen ? '■ Stop' : inputSource === 'midi' ? '🎹 MIDI' : (
               <>
@@ -2378,8 +2423,13 @@ function Composer({ data }: { data: LoadedData }) {
         </div>
         <form onSubmit={(e) => { e.preventDefault(); void interpret(moodText); }} className="moodbar">
           <input value={moodText} onChange={(e) => setMoodText(e.target.value)} onBlur={() => void interpret(moodText)} placeholder="Describe a mood: haunting, victorious but bittersweet…" enterKeyHint="go" />
-          {moodText && <button type="button" className="ghost" onClick={() => { setMoodText(''); setProfile(null); }}>✕</button>}
+          {moodText && <button type="button" className="ghost" onClick={() => { setMoodText(''); setProfile(null); setMoodMiss(null); }} aria-label="Clear mood">✕</button>}
         </form>
+        {moodMiss && (
+          <p className="small mood-miss" role="status">
+            Didn’t recognise “{moodMiss.length > 40 ? moodMiss.slice(0, 38) + '…' : moodMiss}”. Try words like dark, hopeful, tense or dreamy — or tap a mood below.
+          </p>
+        )}
         {profile && (
           <div className="interp">
             <span className="small muted">Make it more:</span>
@@ -2404,7 +2454,7 @@ function Composer({ data }: { data: LoadedData }) {
           {PRESET_MOODS.filter((m) => lex.get(m) || true).map((m) => {
             const on = !!profile?.moods[m];
             return (
-              <button key={m} className={'preset' + (on ? ' on' : '')} style={{ borderColor: lex.color(m), background: on ? lex.color(m) : undefined, color: on ? '#111' : lex.color(m) }} onClick={() => togglePreset(m)}>
+              <button key={m} className={'preset' + (on ? ' on' : '')} style={{ borderColor: lex.color(m), background: on ? lex.color(m) : undefined, color: on ? inkOn(lex.color(m)) : legibleOn(lex.color(m), '#1b1a22') }} onClick={() => togglePreset(m)}>
                 {lex.label(m).toLowerCase()}
               </button>
             );
@@ -2449,7 +2499,7 @@ function Composer({ data }: { data: LoadedData }) {
                 onClick={() => setVisTab(v)}
                 title={v === 'voices' ? 'How each note moves to the next chord' : v === 'tonnetz' ? 'Map of nearby major/minor chords' : v === 'circle' ? 'Circle of fifths' : v === 'map' ? 'Mood map' : undefined}
               >
-                {v === 'voices' ? 'Moves' : v === 'map' ? 'Mood' : v === 'tonnetz' ? 'Map' : v === 'circle' ? 'Circle' : v[0].toUpperCase() + v.slice(1)}
+                {v === 'voices' ? 'Moves' : v === 'map' ? 'Mood map' : v === 'tonnetz' ? 'Tonnetz' : v === 'circle' ? 'Circle' : v[0].toUpperCase() + v.slice(1)}
               </button>
             ))}
           </div>
@@ -2491,9 +2541,9 @@ function Composer({ data }: { data: LoadedData }) {
         {journey && (
           <div className="jchips">
             {journey.map((s, i) => (
-              <div key={i} className="jchip" style={{ background: lex.color(s.moods[0]?.id ?? 'floating') }} onClick={() => playChord(s.chord)}>
+              <button type="button" key={i} className="jchip" style={{ background: lex.color(s.moods[0]?.id ?? 'floating') }} onClick={() => playChord(s.chord)} aria-label={`Hear ${s.symbol}`}>
                 {s.symbol}<small>{s.roman} · {lex.label(s.moods[0]?.id ?? '').toLowerCase()}</small>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -2644,7 +2694,7 @@ function Composer({ data }: { data: LoadedData }) {
       </aside>
       </div>
       <footer className="foot small muted">
-        Works offline · no account · theory: {data.kbFile} v{data.kb.meta.version}{data.featureMapping ? ` · feature map (${data.featureMapping.applied} rules)` : ''} · lexicon {textLex.size} terms{data.moodLexicon ? ' (+ research lexicon)' : ''}
+        Works offline · no account
       </footer>
 
       {drawer && (
@@ -2740,7 +2790,7 @@ function Composer({ data }: { data: LoadedData }) {
       )}
 
       {detail && selChord && tab === 'chords' && (
-        <div className="sheet" role="dialog" aria-label="Suggestion details">
+        <div className="sheet" role="dialog" aria-modal="true" aria-label="Suggestion details">
           <div className="sheet-inner">
             <div className="sheet-head">
               <div>
@@ -2751,10 +2801,10 @@ function Composer({ data }: { data: LoadedData }) {
                   {' · '}{RARITY_MARK[selChord.rarity].label}{selChord.nrt ? ` · ${nrtPathLabel(selChord.nrt)}` : ''}
                 </div>
               </div>
-              <button className="ghost" onClick={() => setDetail(false)}>Close</button>
+              <button className="ghost" ref={detailCloseRef} onClick={() => setDetail(false)}>Close</button>
             </div>
             <div className="tags">
-              {selChord.moods.slice(0, 5).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id) }}>{lex.label(m.id).toLowerCase()}</span>)}
+              {selChord.moods.slice(0, 5).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id), color: inkOn(lex.color(m.id))  }}>{lex.label(m.id).toLowerCase()}</span>)}
               {selChord.moodShift && <span className="shift">{selChord.moodShift.arrow} {selChord.moodShift.text}</span>}
             </div>
             <div className="row gap">

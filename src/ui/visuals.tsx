@@ -520,6 +520,25 @@ function cofNodeStroke(inKey: boolean, t: number, isTonic: boolean, hit: boolean
   return `rgb(${lerpChannel(lo[0], hi[0], u)} ${lerpChannel(lo[1], hi[1], u)} ${lerpChannel(lo[2], hi[2], u)})`;
 }
 
+/** Greedy word wrap for SVG captions (no foreignObject); the last line gets … if text remains. */
+export function wrapWords(text: string, width: number, maxLines: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]!;
+    if (!line) line = w;
+    else if ((line + ' ' + w).length <= width) line += ' ' + w;
+    else {
+      lines.push(line);
+      line = w;
+      if (lines.length === maxLines) { lines[maxLines - 1] = lines[maxLines - 1]!.replace(/\s*\S*$/, '') + '…'; return lines; }
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected, spellPc, onPick, onAddPc }: CircleProps) {
   // Room for the pitch ring + up to 3 radial rim chips per spoke without clipping.
   const outerPad = COF_VARIANT_INNER_GAP + (COF_MAX_VARIANTS_PER_PC - 1) * COF_VARIANT_RADIAL_STEP + 28;
@@ -556,7 +575,7 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
   const toName = selected ? spellPc(selected.pc) : null;
   const showMoveLine = !!selected && (sameRoot || (toName && (currentPc !== undefined ? !sameRoot : Number(selected.pc) !== Number(tonicPc))));
   return (
-    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Circle of fifths — brighter letters and larger rim chips are stronger next picks">
+    <svg className="circle" viewBox={`0 0 ${S} ${S}`} role={onAddPc || onPick ? "group" : "img"} aria-label="Circle of fifths — brighter letters and larger rim chips are stronger next picks">
       <defs>
         <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill={selected?.color ?? '#fff'} />
@@ -573,8 +592,9 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
       {/* Direction legend: clockwise = brighter / homeward; counter-clockwise = opener / relax */}
       <path d={`M ${c + 22} ${c - R + 50} A ${R - 50} ${R - 50} 0 0 1 ${c + R - 50} ${c - 6}`} fill="none" stroke="#7fd0a8" strokeWidth={1.5} markerEnd="url(#arrowhead-cw)" opacity={0.85} />
       <path d={`M ${c - 22} ${c - R + 50} A ${R - 50} ${R - 50} 0 0 0 ${c - R + 50} ${c - 6}`} fill="none" stroke="#f0a070" strokeWidth={1.5} markerEnd="url(#arrowhead-ccw)" opacity={0.85} />
-      <text x={c + 62} y={c - R + 36} className="cdir cw">→ brighter</text>
-      <text x={c - 62} y={c - R + 36} className="cdir ccw">← opens</text>
+      {/* Inside the arcs (not on the node ring) so the F/G nodes never cover them. */}
+      <text x={c + 50} y={c - R + 82} className="cdir cw">brighter →</text>
+      <text x={c - 50} y={c - R + 82} className="cdir ccw">← opens</text>
       {Array.from({ length: 12 }, (_, i) => {
         const p = mod(i * 7, 12);
         const { x, y } = pos(p, R);
@@ -609,6 +629,8 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
             onPointerLeave={() => setPressed(null)}
             style={{ cursor: onAddPc ? 'pointer' : undefined, touchAction: onAddPc ? 'manipulation' : undefined }}
             role={onAddPc ? 'button' : undefined}
+            tabIndex={onAddPc ? 0 : undefined}
+            onKeyDown={(e) => { if (onAddPc && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onAddPc(p); } }}
             aria-label={onAddPc ? `Add ${label}` : label}
           >
             <title>
@@ -624,8 +646,8 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
               stroke={stroke}
               strokeWidth={hit || isTonic || isSel || vis > 0.85 ? 2.6 : vis > 0.55 ? 1.7 : 1.1}
             />
-            <text x={x} y={y + 1} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
-            <text x={x} y={y + 14} className={'cstep ' + tagClass}>{tag}</text>
+            <text x={x} y={y - 2} className={'cname' + (isCur ? ' dark' : '')}>{label}</text>
+            <text x={x} y={y + 11} className={'cstep ' + tagClass + (tag.length > 3 ? ' long' : '')}>{tag}</text>
             {onAddPc && <text x={x} y={y + 30} className="cadd">＋ add</text>}
           </g>
         );
@@ -653,6 +675,8 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
             onPointerLeave={() => setPressedDot(null)}
             style={{ cursor: onPick ? 'pointer' : undefined, touchAction: 'manipulation' }}
             role={onPick ? 'button' : undefined}
+            tabIndex={onPick ? 0 : undefined}
+            onKeyDown={(e) => { if (onPick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(s.id); } }}
             aria-label={`Next pick #${rankLabel}${s.label ? ` ${s.label}` : ''}${isBestLocal ? ' · best for this root' : ''}`}
           >
             <title>
@@ -692,9 +716,9 @@ export function CircleOfFifths({ tonicPc, scalePcs, currentPc, others, selected,
           {movePlain && (
             <>
               <text x={c} y={c + 16} className="ceffect" fill="#e8e4f4">{movePlain.title}</text>
-              <text x={c} y={c + 30} className="ceffect soft" fill="#a9a3bc">
-                {movePlain.hint.length > 44 ? `${movePlain.hint.slice(0, 42)}…` : movePlain.hint}
-              </text>
+              {wrapWords(movePlain.hint, 30, 3).map((line, i) => (
+                <text key={i} x={c} y={c + 30 + i * 13} className="ceffect soft" fill="#a9a3bc">{line}</text>
+              ))}
             </>
           )}
         </g>
@@ -771,7 +795,7 @@ export function MoodMap({ points, selectedId, current, target, onPick }: { point
   const px = (x: number) => pad + ((x + 1) / 2) * (W - 2 * pad);
   const py = (y: number) => H - pad - y * (H - 2 * pad);
   return (
-    <svg className="moodmap" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Mood map of next moves">
+    <svg className="moodmap" viewBox={`0 0 ${W} ${H}`} role={onPick ? 'group' : 'img'} aria-label="Mood map of next moves">
       <rect x={pad} y={pad} width={W - 2 * pad} height={H - 2 * pad} fill="#15141b" stroke="#2c2a36" rx={8} />
       <line x1={px(0)} x2={px(0)} y1={pad} y2={H - pad} stroke="#2c2a36" />
       <line x1={pad} x2={W - pad} y1={py(0.5)} y2={py(0.5)} stroke="#2c2a36" />
@@ -803,7 +827,9 @@ export function MoodMap({ points, selectedId, current, target, onPick }: { point
           const p = byId.get(l.id)!;
           const sel = l.id === selectedId;
           return (
-            <g key={l.id} onClick={() => onPick?.(l.id)} style={{ cursor: onPick ? 'pointer' : undefined }}>
+            <g key={l.id} onClick={() => onPick?.(l.id)} style={{ cursor: onPick ? 'pointer' : undefined }}
+              role={onPick ? 'button' : undefined} tabIndex={onPick ? 0 : undefined} aria-label={onPick ? `Hear ${p.label}` : undefined}
+              onKeyDown={(e) => { if (onPick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(l.id); } }}>
               {current && sel && <line x1={px(current.x)} y1={py(current.y)} x2={l.x} y2={l.y} stroke={p.color} strokeWidth={2} opacity={0.7} />}
               <circle cx={l.x} cy={l.y} r={sel ? 10 : 7} fill={p.color} stroke={sel ? '#fff' : '#111'} strokeWidth={sel ? 2.5 : 1} />
               <circle cx={l.x} cy={l.y} r={14} fill="transparent" />

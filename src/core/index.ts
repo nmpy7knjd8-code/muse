@@ -38,3 +38,4 @@ export * from './drumTension';
 export * from './drumTuning';
 export * from './staff';
 export * from './session';
+export * from './contrast';

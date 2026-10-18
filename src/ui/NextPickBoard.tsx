@@ -103,8 +103,10 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
         <text x={10} y={H - PAD_B} textAnchor="middle" className="nplabel" transform={`rotate(-90 10 ${H - PAD_B})`}>{yAxis[0]}</text>
         <text x={10} y={PAD_T + 8} textAnchor="middle" className="nplabel" transform={`rotate(-90 10 ${PAD_T + 8})`}>{yAxis[1]}</text>
 
-        {laid.map(({ s, px, py, color }) => {
+        {laid.map((l, i) => ({ l, i })).sort((a, b) => Number(a.l.s.id === selected?.id) - Number(b.l.s.id === selected?.id)).map(({ l: { s, px, py, color }, i }) => {
           const on = s.id === selected?.id;
+          // Only the top 3 (and the selected dot) carry text labels so they never pile up; the rest show on hover / in the rank strip.
+          const showLabel = on || i < 3;
           const label = isChord(s) ? s.symbol : s.name.replace('#', '♯').replace(/b(?=\d)/, '♭');
           const root = isChord(s) && fromChord && !harmMode ? rootMotion(fromChord, s.chord) : null;
           const arrow = root && root.dir !== '→' ? root.dir : '';
@@ -112,17 +114,19 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
             <g key={s.id} onClick={() => onSelect(s.id)} style={{ cursor: 'pointer' }}>
               {on && <circle cx={px} cy={py} r={14} fill="none" stroke={color} strokeWidth={2} opacity={0.85} />}
               <circle cx={px} cy={py} r={on ? 7 : 5.5} fill={color} stroke="#121117" strokeWidth={1.5} />
-              <text x={px} y={py - 11} textAnchor="middle" className={'nplabel' + (on ? ' on' : '')} fill={on ? color : '#bdb8d4'}>
-                {arrow ? `${arrow} ${label}` : label}
-              </text>
-              {arrow && <title>{root!.label}</title>}
+              {showLabel && (
+                <text x={px} y={py - 11} textAnchor="middle" className={'nplabel' + (on ? ' on' : '')} fill={on ? color : '#bdb8d4'}>
+                  {arrow ? `${arrow} ${label}` : label}
+                </text>
+              )}
+              <title>{`#${i + 1} ${label}${arrow ? ` · ${root!.label}` : ''}`}</title>
             </g>
           );
         })}
       </svg>
 
       {/* Rank strip — ordered by engine score (best fit first); bar length mirrors that rank */}
-      <div className="nextpick-ranks" role="list" aria-label="Best-fit ranking">
+      <div className="nextpick-ranks" role="group" aria-label="Best-fit ranking">
         {(() => {
           const rows = top.slice(0, 8);
           const scores = rows.map((s) => s.score);
@@ -142,7 +146,7 @@ export function NextPickBoard({ mode, items, selectedId, colorOf, labelOf, onSel
               <button
                 key={s.id}
                 type="button"
-                role="listitem"
+                aria-pressed={on}
                 className={'nprank' + (on ? ' on' : '')}
                 style={{ borderColor: on ? color : undefined }}
                 title={isChord(s) ? undefined : `Best-fit rank #${i + 1}`}

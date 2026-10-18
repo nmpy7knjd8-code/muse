@@ -1,8 +1,8 @@
 import { PlayIcon } from './icons';
 // Artist Lens: how artists use musical polarities, with technique chips linked to Muse's theory KB
 // and "Try it" exercises that load into the progression (pedal / held bass applied).
-import { useState, type FormEvent } from 'react';
-import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, MUSE_REQUEST_MAX, buildMuseRequest, loadTryIt, sendMuseRequest, timeSigLabel, tryItText } from '../core';
+import { useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { Artist, ArtistKbRef, ArtistTechnique, ArtistTryIt, ArtistsFile, MoodLexicon, MUSE_REQUEST_MAX, buildMuseRequest, loadTryIt, sendMuseRequest, timeSigLabel, tryItText, inkOn } from '../core';
 import type { KbItemInfo } from './data';
 
 interface Props {
@@ -21,7 +21,7 @@ function MoodChips({ moods, lex, max = 6 }: { moods: Array<{ mood: string; weigh
   return (
     <div className="tags">
       {moods.slice(0, max).map((m) => (
-        <span key={m.mood} className="tag" style={{ background: lex.color(m.mood), opacity: 0.45 + 0.55 * (m.weight ?? 1) }}>{lex.label(m.mood).toLowerCase()}</span>
+        <span key={m.mood} className="tag" style={{ background: lex.color(m.mood), color: inkOn(lex.color(m.mood)), opacity: 0.45 + 0.55 * (m.weight ?? 1)  }}>{lex.label(m.mood).toLowerCase()}</span>
       ))}
     </div>
   );
@@ -241,13 +241,21 @@ export function ArtistLens(props: Props) {
   const { data, lex } = props;
   const [sel, setSel] = useState<string | null>(props.initial ?? null);
   const artist = sel ? data.artists.find((a) => a.id === sel) : undefined;
+  // The Lens lives inside the drawer's own scroller (.drawer-body), not the window — reset that on every switch.
+  const first = useRef(true);
+  useLayoutEffect(() => {
+    if (first.current && !props.initial) { first.current = false; return; }
+    first.current = false;
+    const scroller = document.querySelector<HTMLElement>('.drawer-body');
+    if (scroller) scroller.scrollTop = 0; else window.scrollTo({ top: 0 });
+  }, [sel]); // eslint-disable-line react-hooks/exhaustive-deps
   if (artist) return <ArtistDetail artist={artist} props={props} onBack={() => setSel(null)} />;
   return (
     <div className="artists">
       <p className="small muted">How artists use tension, darkness, stability and surprise — with techniques you can try in Muse.</p>
       <p className="pol-legend small muted">marker: where the artist sits between each pair of poles</p>
       {data.artists.map((a) => (
-        <button key={a.id} className="artist-card" data-artist={a.id} onClick={() => { setSel(a.id); window.scrollTo({ top: 0 }); }}>
+        <button key={a.id} className="artist-card" data-artist={a.id} onClick={() => setSel(a.id)}>
           <div className="ac-head"><b>{a.name}</b><span className="small muted">{a.genres.slice(0, 2).join(' · ')}</span></div>
           <p className="small">{a.hook}</p>
           <MoodChips moods={a.moodProfile} lex={lex} max={5} />
