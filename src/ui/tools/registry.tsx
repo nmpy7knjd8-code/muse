@@ -21,6 +21,11 @@ export const TOOLS: ToolDef[] = [
     icon: ico(<><path d="M3 18c3 0 4-10 8-10s5 7 10 4" /><path d="M3 21h18" /></>),
     load: () => import('./ArcTool'),
   },
+  {
+    id: 'ear', title: 'Mood ear trainer', sub: 'Which one sounds more…?', group: 'practice',
+    icon: ico(<><path d="M7 15.5c0-6 2-10 6-10a5 5 0 0 1 5 5c0 3-3 3.5-3 6.5a3 3 0 0 1-6 0" /><path d="M11 11.5a2 2 0 0 1 4 0" /></>),
+    load: () => import('./EarTool'),
+  },
 ];
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t])) as Record<ToolId, ToolDef>;

@@ -1888,3 +1888,25 @@ button.rec { background: #c62828; border-color: #c62828; color: #fff; }
 .arc-key { display: inline-block; }
 .arc-key.line { width: 16px; height: 3px; border-radius: 2px; background: #9C7CF4; }
 .arc-key.dot { width: 9px; height: 9px; border-radius: 50%; background: #ECEAF4; margin-left: 8px; }
+.tool .seg button { white-space: nowrap; }
+.tool select { font-size: 15px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; }
+.ear-q { font-size: 17px !important; text-transform: none; letter-spacing: -0.01em; color: var(--text); }
+.ear-both { align-self: flex-start; }
+.ear-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ear-opt { display: flex; flex-direction: column; gap: 8px; align-items: stretch; padding: 10px; border-radius: 12px; background: var(--panel2); border: 1.5px solid var(--line); transition: border-color 0.2s, opacity 0.2s; }
+.ear-opt.right { border-color: #4CAF50; }
+.ear-opt.wrong { border-color: #E57373; }
+.ear-opt.dim { opacity: 0.75; }
+.ear-hear { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; font-size: 22px; font-weight: 700; border-radius: 10px; }
+.ear-pick { min-height: 40px; }
+.ear-reveal { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 40px; }
+.ear-reveal b { font-size: 18px; }
+.ear-moods { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; font-size: 12px; }
+.ear-moods i { font-style: normal; }
+.ear-result { display: flex; flex-direction: column; gap: 8px; }
+.ear-result p { margin: 0; font-size: 14px; line-height: 1.45; }
+.ear-good { color: #A5D6A7; } .ear-bad { color: #EF9A9A; }
+.ear-result .add { align-self: flex-start; min-width: 110px; min-height: 40px; }
+.ear-stats { display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
+.ear-stats b { color: var(--text); font-size: 15px; margin-left: 4px; }
+.ear-reset { align-self: flex-start; }
