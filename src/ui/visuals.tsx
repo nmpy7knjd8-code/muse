@@ -308,7 +308,7 @@ function FingerBadge({ x, y, n, small }: { x: number; y: number; n: number; smal
 }
 
 // ---------------- Guitar ----------------
-export function GuitarDiagram({ shape, color, title }: { shape: GuitarShape; color: string; title?: string }) {
+export function GuitarDiagram({ shape, color, title, stringNames = ['E', 'A', 'D', 'G', 'B', 'e'] }: { shape: GuitarShape; color: string; title?: string; stringNames?: string[] }) {
   const strings = 6, frets = 5;
   const left = 26, top = 34, sw = 22, fh = 28;
   const width = left * 2 + sw * (strings - 1);
@@ -333,7 +333,7 @@ export function GuitarDiagram({ shape, color, title }: { shape: GuitarShape; col
           <text x={xs(s)} y={yf(f) + 0.5} className="gfinger">{shape.fingers[s] ?? ''}</text>
         </g>
       ) : null))}
-      {['E', 'A', 'D', 'G', 'B', 'e'].map((n, s) => <text key={'n' + s} x={xs(s)} y={height - 8} className="sname">{n}</text>)}
+      {stringNames.map((n, s) => <text key={'n' + s} x={xs(s)} y={height - 8} className="sname">{n}</text>)}
     </svg>
   );
 }

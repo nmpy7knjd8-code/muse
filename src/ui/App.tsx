@@ -20,6 +20,7 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
+  STYLES, isStyleId, styleLens, styleFit, styleRerank, TUNINGS, isTuningId, tuningById, tuningStringNames, type StyleLens,
   SESSION_KEY, deserializeSession, decodeShare, exportFileName, readShareHash, shareUrl, type SharePayload, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
 } from '../core';
 import { loadData, type LoadedData } from './data';
@@ -72,6 +73,7 @@ class LazyBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 import { TutorialModal } from './TutorialModal';
+import { ProgressionTips } from './ProgressionTips';
 import { useFocusTrap } from './focusTrap';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
 import { midiErrorMessage, midiSupported, startMidiInput } from './midiInput';
@@ -209,6 +211,10 @@ function Composer({ data }: { data: LoadedData }) {
     try { return deserializeSession(localStorage.getItem(SESSION_KEY)); } catch { return null; }
   });
   const [slots, setSlots] = useState<TimelineSlot[]>(() => savedSession?.slots ?? []);
+  // Style lens + guitar tuning (saved with the session).
+  const [styleId, setStyleId] = useState<string | null>(() => (isStyleId(savedSession?.style) ? savedSession!.style! : null));
+  const [tuningId, setTuningId] = useState<string>(() => (isTuningId(savedSession?.tuning) ? savedSession!.tuning! : 'standard'));
+  const [tuningOfferOff, setTuningOfferOff] = useState<string | null>(null);
   const [history, setHistory] = useState<Snapshot[]>([]);
   const beats = beatsPerBar(timeSig);
   const [tab, setTab] = useState<Tab>('chords');
@@ -1069,13 +1075,13 @@ function Composer({ data }: { data: LoadedData }) {
     });
   };
   // Autosave the session (debounced) so a reload / app switch never loses work.
-  const sessionRef = useRef({ slots, grooveHits, partMeters });
-  sessionRef.current = { slots, grooveHits, partMeters };
+  const sessionRef = useRef({ slots, grooveHits, partMeters, style: styleId, tuning: tuningId });
+  sessionRef.current = { slots, grooveHits, partMeters, style: styleId, tuning: tuningId };
   useEffect(() => {
     const save = () => { try { localStorage.setItem(SESSION_KEY, serializeSession(sessionRef.current)); } catch { /* private mode / quota */ } };
     const id = window.setTimeout(save, 400);
     return () => window.clearTimeout(id);
-  }, [slots, grooveHits, partMeters]);
+  }, [slots, grooveHits, partMeters, styleId, tuningId]);
   useEffect(() => {
     const flush = () => { try { localStorage.setItem(SESSION_KEY, serializeSession(sessionRef.current)); } catch { /* ignore */ } };
     const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
@@ -1591,13 +1597,15 @@ function Composer({ data }: { data: LoadedData }) {
   };
 
   // Ranked suggestions: engine order is score-desc — show that flat list (mood stays as tags).
+  const tuning = tuningById(tuningId);
+  const lens: StyleLens | null = useMemo(() => styleLens(styleId, k, tuning), [styleId, k, tuning]);
   const ranked = useMemo(
-    () => (tab === 'chords' ? tastedChordSugs : noteSugs),
-    [tab, tastedChordSugs, noteSugs],
+    () => (tab === 'chords' ? styleRerank(tastedChordSugs, (x) => x.chord, lens) : noteSugs),
+    [tab, tastedChordSugs, noteSugs, lens],
   );
 
   const selColor = lex.color(tab === 'chords' ? selChord?.primaryMood ?? 'floating' : selNote?.primaryMood ?? 'floating');
-  const shapes = useMemo(() => (selChord ? guitarVoicings(selChord.chord) : []), [selChord]);
+  const shapes = useMemo(() => (selChord ? guitarVoicings(selChord.chord, 4, tuning.strings) : []), [selChord, tuning]);
   const shape = shapes[Math.min(shapeIdx, shapes.length - 1)];
   const chips = profile ? describeProfile(profile, lex) : [];
   const kbBadge = data.kb.meta.isSeed ? 'seed' : '';
@@ -1739,6 +1747,54 @@ function Composer({ data }: { data: LoadedData }) {
     );
   };
 
+  // ---- Style lens + tuning controls (Chords · Write) ----
+  const chooseStyle = (id: string) => { setStyleId(id && isStyleId(id) ? id : null); setTuningOfferOff(null); };
+  const chooseTuning = (id: string) => { if (isTuningId(id)) setTuningId(id); };
+  const loadProgression = (cs: Chord[], name: string) => {
+    snapshot();
+    const locked = slots.some((x) => x.locked);
+    setSlots(replaceKeepingLocked(slots, cs.map((c) => ({ chord: c, notes: [], bass: [], locked: false }))));
+    setSelectedId(null);
+    flash(`Loaded “${name}”${locked ? ' around your locked bars' : ''} — undo to go back`);
+  };
+  const styleControls = () => {
+    const offer = lens?.style.tuning && tuningById(lens.style.tuning).strings.join() !== tuning.strings.join() && tuningOfferOff !== lens.style.id ? tuningById(lens.style.tuning) : null;
+    return (
+      <>
+        <div className="style-row">
+          <label>Style
+            <select value={styleId ?? ''} onChange={(e) => chooseStyle(e.target.value)} aria-label="Music style">
+              <option value="">Any style</option>
+              {(['Genres', 'Artist styles'] as const).map((g) => (
+                <optgroup key={g} label={g}>
+                  {STYLES.filter((x) => x.group === g).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <label>Tuning
+            <select value={tuningId} onChange={(e) => chooseTuning(e.target.value)} aria-label="Guitar tuning">
+              {(['Common', 'Artist presets'] as const).map((g) => (
+                <optgroup key={g} label={g}>
+                  {TUNINGS.filter((t) => t.group === g).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+        </div>
+        {offer && lens && (
+          <div className="style-offer" role="status">
+            <span>{lens.style.name} often uses <b>{offer.name.replace(/^.* — /, '')}</b></span>
+            <button type="button" className="pill" onClick={() => setTuningId(offer.id)}>Use it</button>
+            <button type="button" className="pill" onClick={() => setTuningOfferOff(lens.style.id)}>No thanks</button>
+          </div>
+        )}
+        {tuningId !== 'standard' && <p className="style-note small muted">{tuning.name}: {tuningStringNames(tuning.strings).join(' ')}{tuning.note ? ` — ${tuning.note}` : ''} Guitar diagrams use it.</p>}
+        {lens && <p className="style-note small muted">Highlighted: typical of {lens.style.name} in {keyName(k)}. Everything else still plays.</p>}
+      </>
+    );
+  };
+
   /** Ranked suggestion cards — shown just under the Circle of Fifths. */
   const bestFitBlock = () => (
     <div className="group best-fit-under-cof">
@@ -1763,8 +1819,9 @@ function Composer({ data }: { data: LoadedData }) {
         const midis = cs ? cs.voicing : ns ? [ns.midi] : [];
         // Previous chord tones (voice-led) — same “now” colour as the Piano tab.
         const prior = cs && cur && prevVoicing?.length ? prevVoicing : [];
+        const cardFit = cs ? styleFit(cs.chord, lens) : null;
         return (
-          <div key={s.id} className={'card' + (selected ? ' sel' : '')} style={{ borderLeftColor: color }}
+          <div key={s.id} className={'card' + (selected ? ' sel' : '') + (cardFit === 'other' ? ' style-off' : '')} style={{ borderLeftColor: color }}
             onClick={() => { setSelectedId(s.id); if (isChord) playMove(s as ChordSuggestion); else playNoteMove(s as NoteSuggestion); }}>
             <div className="card-main">
               <div className="card-top">
@@ -1776,6 +1833,8 @@ function Composer({ data }: { data: LoadedData }) {
                 <span className={'rar ' + s.rarity} title={rar.label}>{rar.sym} {rar.label}</span>
               </div>
               <div className="tags">
+                {cardFit === 'typical' && lens && <span className="style-chip" title={`Typical of ${lens.style.name}`}>{lens.style.name}</span>}
+                {cardFit === 'tuning' && <span className="style-chip tuning" title={`Easy in ${tuning.name}`}>{tuning.name.split(' (')[0]}</span>}
                 {s.moods.slice(0, 3).map((m) => <span key={m.id} className="tag" style={{ background: lex.color(m.id), color: inkOn(lex.color(m.id))  }}>{lex.label(m.id).toLowerCase()}</span>)}
                 {cs?.moodShift && <span className="shift">{cs.moodShift.arrow} {cs.moodShift.text}</span>}
                 {profile && <span className="fit" title="fit to your mood">{Math.round((s.match?.total ?? 0) * 100)}% fit</span>}
@@ -1935,10 +1994,11 @@ function Composer({ data }: { data: LoadedData }) {
       <div className="vis-section" key="guitar">
         {all && <h4>Guitar</h4>}
         <div className="guitar-row">
-          {shape ? <GuitarDiagram shape={shape} color={selColor} title={`${selChord.symbol} guitar`} /> : <p className="muted">No playable shape found.</p>}
+          {shape ? <GuitarDiagram shape={shape} color={selColor} title={`${selChord.symbol} guitar${tuningId !== 'standard' ? ` · ${tuning.name}` : ''}`} stringNames={tuningStringNames(tuning.strings)} /> : <p className="muted">No playable shape found.</p>}
           <div className="guitar-meta">
             <div className="big">{selChord.symbol}</div>
             <div className="muted small">{shape?.label}{shape?.partial ? ' (simplified)' : ''}</div>
+            {tuningId !== 'standard' && <div className="muted small">{tuning.name} · {tuningStringNames(tuning.strings).join(' ')}</div>}
             <div className="mono small" title="Frets low→high string (× = mute, 0 = open)">{shape?.frets.map((f) => (f === null ? '×' : f)).join(' ')}</div>
             {shape && <div className="small muted">frets · × mute · 0 open</div>}
             {shapes.length > 1 && (
@@ -2595,6 +2655,7 @@ function Composer({ data }: { data: LoadedData }) {
         )}
         {tab === 'chords' ? (
           <>
+            {styleControls()}
             {(() => {
               const dia = diatonicChords(k, false);
               const sev = diatonicChords(k, true);
@@ -2608,6 +2669,7 @@ function Composer({ data }: { data: LoadedData }) {
                   lex={lex}
                   engine={engine}
                   profile={profile}
+                  lens={lens}
                   onAdd={addChord}
                 />
               );
@@ -2625,6 +2687,7 @@ function Composer({ data }: { data: LoadedData }) {
               <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Type a chord: F#m7, Bb/D…" autoCapitalize="off" autoCorrect="off" spellCheck={false} />
               <button type="submit">Add</button>
             </form>
+            <ProgressionTips keyInfo={k} style={lens?.style ?? null} onPlay={(cs) => { synth.unlock(); playChordSequence(cs, beatSec * 2, beatSec * 1.9); }} onLoad={loadProgression} />
             <FitExplainer mode="chords" keyInfo={k} />
           </>
         ) : tab === 'melody' ? (
@@ -3176,8 +3239,9 @@ function Composer({ data }: { data: LoadedData }) {
 
 /** Palette chip: symbol + Roman (primary) + one mood word. Dims when it clashes with the active mood. */
 function PaletteRow({
-  label, chords, k, lex, engine, profile, onAdd,
+  label, chords, k, lex, engine, profile, lens, onAdd,
 }: {
+  lens: StyleLens | null;
   label: string;
   chords: Chord[];
   k: Key;
@@ -3201,16 +3265,18 @@ function PaletteRow({
           const fit = filtering && profile ? engine.scoreAgainst(profile, c, k, moods) : 1;
           const clash = filtering && fit < 0.32;
           const role = degreeRole(rn.degree);
+          const sfit = styleFit(c, lens);
           const tip = [
             `${chordSymbol(c, true)} · ${roman}${role ? ` (${role})` : ''}`,
             moodId ? lex.label(moodId).toLowerCase() : null,
             clash ? `clashes with mood (${Math.round(fit * 100)}% fit)` : filtering ? `${Math.round(fit * 100)}% mood fit` : null,
+            lens && sfit === 'typical' ? `typical of ${lens.style.name}` : lens && sfit === 'tuning' ? 'easy in this tuning' : null,
           ].filter(Boolean).join(' — ');
           return (
             <button
               key={`${label}:${chordSymbol(c)}`}
               type="button"
-              className={'pal' + (clash ? ' mood-clash' : '')}
+              className={'pal' + (clash ? ' mood-clash' : '') + (sfit === 'typical' ? ' style-fit' : sfit === 'tuning' ? ' style-tuning' : sfit === 'other' ? ' style-off' : '')}
               style={color && !clash ? { borderColor: color } : undefined}
               title={tip}
               aria-disabled={clash || undefined}

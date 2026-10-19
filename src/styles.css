@@ -2062,3 +2062,27 @@ svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke
 .qr-caption { text-align: center; margin: 0; overflow-wrap: anywhere; }
 .qr-too-long { margin: 6px 2px; }
 .qr-actions { display: flex; justify-content: center; }
+
+/* Style lens + progressions explainer */
+.prog-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
+.prog-list li { border-top: 1px solid rgba(143, 168, 200, 0.14); padding-top: 7px; }
+.prog-list li:first-child { border-top: 0; padding-top: 0; }
+.prog-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.prog-rn { font-size: 13px; letter-spacing: 0.01em; }
+.prog-name { font-size: 11.5px; }
+.prog-syms { font-size: 12.5px; color: #cfc8f2; margin: 1px 0 2px; }
+.prog-list .fit-why { margin: 0 0 4px; }
+.prog-actions { display: flex; gap: 6px; }
+.prog-actions .pill { min-height: 30px; padding: 3px 11px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; }
+.style-row { display: flex; gap: 8px; margin: 2px 0 8px; flex-wrap: wrap; }
+.style-row label { flex: 1 1 140px; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.style-row select { flex: 1; min-width: 0; font-size: 13px; padding: 5px 6px; }
+.style-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -2px 0 8px; font-size: 12px; color: var(--muted); }
+.style-offer .pill { min-height: 28px; padding: 2px 10px; font-size: 12px; }
+.style-note { margin: -4px 0 8px; font-size: 11.5px; }
+.pal.style-off, .card.style-off { opacity: 0.55; }
+.pal.style-off:hover, .card.style-off:hover, .pal.style-off:focus-visible { opacity: 0.9; }
+.pal.style-fit { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pal.style-tuning { box-shadow: inset 0 0 0 1.5px rgba(63, 201, 180, 0.7); }
+.style-chip { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); }
+.style-chip.tuning { border-color: rgba(63, 201, 180, 0.7); color: #6fe0cc; }
