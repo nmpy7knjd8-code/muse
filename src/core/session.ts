@@ -13,11 +13,17 @@ export interface SavedSession {
   slots: TimelineSlot[];
   grooveHits: DrumHit[];
   partMeters?: PartMeters;
+  /** Style lens id (styles.ts) — omitted for “Any style”. */
+  style?: string;
+  /** Guitar tuning id (tunings.ts) — omitted for standard. */
+  tuning?: string;
   savedAt?: number;
 }
 
-export function serializeSession(s: { slots: TimelineSlot[]; grooveHits: DrumHit[]; partMeters?: PartMeters }, now = Date.now()): string {
+export function serializeSession(s: { slots: TimelineSlot[]; grooveHits: DrumHit[]; partMeters?: PartMeters; style?: string | null; tuning?: string | null }, now = Date.now()): string {
   const out: SavedSession = { v: SESSION_VERSION, slots: s.slots, grooveHits: s.grooveHits, partMeters: s.partMeters, savedAt: now };
+  if (s.style) out.style = s.style;
+  if (s.tuning && s.tuning !== 'standard') out.tuning = s.tuning;
   return JSON.stringify(out);
 }
 
@@ -75,6 +81,8 @@ export function deserializeSession(raw: string | null | undefined): SavedSession
     slots,
     grooveHits: cleanHits(d.grooveHits) ?? [],
     partMeters: cleanMeters(d.partMeters),
+    ...(typeof d.style === 'string' && d.style.length <= 40 ? { style: d.style } : {}),
+    ...(typeof d.tuning === 'string' && d.tuning.length <= 40 ? { tuning: d.tuning } : {}),
     savedAt: isNum(d.savedAt) ? d.savedAt : undefined,
   };
 }

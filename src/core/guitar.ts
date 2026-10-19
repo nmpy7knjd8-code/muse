@@ -1,7 +1,8 @@
 // Guitar chord voicings for standard tuning: curated open shapes, movable E-/A-shape barres,
 // and an algorithmic search fallback. Every returned shape passes `isPlayable`.
 import { Chord, QUALITY_BY_ID, QualityId, chordNotes, chordSymbol } from './chords';
-import { mod, pc } from './notes';
+import { defaultSpelling, mod, pc } from './notes';
+import { uniformShift } from './tunings';
 
 /** Standard tuning, low E (string 6) to high e (string 1), as MIDI numbers. */
 export const STANDARD_TUNING = [40, 45, 50, 55, 59, 64];
@@ -184,9 +185,9 @@ function requiredTones(chord: Chord, relaxed: boolean): { all: Set<number>; requ
 }
 
 /** Does the shape spell this chord (no foreign notes, essential tones present, right bass)? */
-export function shapeMatchesChord(shape: Pick<GuitarShape, 'frets'>, chord: Chord, relaxed = false): boolean {
+export function shapeMatchesChord(shape: Pick<GuitarShape, 'frets'>, chord: Chord, relaxed = false, tuning = STANDARD_TUNING): boolean {
   const { all, required, bass } = requiredTones(chord, relaxed);
-  const pcs = shapePcs(shape);
+  const pcs = shapePcs(shape, tuning);
   if (pcs.length < 3 && chord.quality !== '5') return false;
   if (!pcs.every((p) => all.has(p))) return false;
   for (const r of required) if (!pcs.includes(r)) return false;
@@ -245,12 +246,13 @@ function realiseMovable(m: Movable, r: number, label: string): GuitarShape | nul
 }
 
 /** Brute-force search for a playable voicing with the chord's essential tones. */
-export function generateShapes(chord: Chord, relaxed = false, limit = 3): GuitarShape[] {
+export function generateShapes(chord: Chord, relaxed = false, limit = 3, tuning = STANDARD_TUNING): GuitarShape[] {
+  const alt = tuning.join() !== STANDARD_TUNING.join();
   const { all } = requiredTones(chord, relaxed);
   const results: Array<{ shape: GuitarShape; score: number }> = [];
   const seen = new Set<string>();
   for (let pos = 1; pos <= 12; pos++) {
-    const options: F[][] = STANDARD_TUNING.map((open) => {
+    const options: F[][] = tuning.map((open) => {
       const o: F[] = [null];
       if (all.has(mod(open, 12))) o.push(0);
       for (let f = pos; f <= pos + 3; f++) if (all.has(mod(open + f, 12))) o.push(f);
@@ -268,7 +270,7 @@ export function generateShapes(chord: Chord, relaxed = false, limit = 3): Guitar
         const frets = [...cur];
         const key = frets.join(',');
         if (seen.has(key)) return;
-        if (!shapeMatchesChord({ frets }, chord, relaxed)) return;
+        if (!shapeMatchesChord({ frets }, chord, relaxed, tuning)) return;
         const fing = assignFingers(frets);
         if (!fing) return;
         seen.add(key);
@@ -276,10 +278,13 @@ export function generateShapes(chord: Chord, relaxed = false, limit = 3): Guitar
         const opens = frets.filter((f) => f === 0).length;
         const lowPos = fretted.length ? Math.min(...fretted) : 0;
         const usedFingers = new Set(fing.fingers.filter((g) => g && g > 0)).size;
-        const pcs = shapePcs({ frets });
+        const pcs = shapePcs({ frets }, tuning);
         const hasFifth = pcs.includes(mod(pc(chord.root) + 7, 12));
-        const score = sounding * 1.0 + (lowPos <= 4 ? opens * 0.3 : 0) - lowPos * 0.15 - usedFingers * 0.2
-          + (hasFifth ? 0.4 : 0) - innerMutes * 0.8 - (fing.barre ? 0.3 : 0);
+        // Alternate tunings exist for their open strings and one-finger shapes — reward those harder.
+        const openBonus = alt ? 0.55 : 0.3;
+        const fretSpan = fretted.length ? Math.max(...fretted) - lowPos : 0;
+        const score = sounding * 1.0 + (lowPos <= 4 || alt ? opens * openBonus : 0) - lowPos * 0.15 - usedFingers * 0.2
+          + (hasFifth ? 0.4 : 0) - innerMutes * 0.8 - (fing.barre ? 0.3 : 0) - (alt ? fretSpan * 0.1 : 0);
         results.push({
           shape: { frets, fingers: fing.fingers, barre: fing.barre, baseFret: baseFretFor(frets), label: 'generated', source: 'generated', partial: relaxed || undefined },
           score,
@@ -299,7 +304,8 @@ export function generateShapes(chord: Chord, relaxed = false, limit = 3): Guitar
 }
 
 /** Playable guitar voicings for a chord, easiest first (open → movable barre → generated). */
-export function guitarVoicings(chord: Chord, max = 4): GuitarShape[] {
+export function guitarVoicings(chord: Chord, max = 4, tuning = STANDARD_TUNING): GuitarShape[] {
+  if (tuning.join() !== STANDARD_TUNING.join()) return alternateVoicings(chord, max, tuning);
   const rootPc = pc(chord.root);
   const out: GuitarShape[] = [];
   const add = (s: GuitarShape | null) => {
@@ -353,4 +359,40 @@ export function describeShape(shape: GuitarShape): string {
 
 export function shapeTitle(chord: Chord, shape: GuitarShape): string {
   return `${chordSymbol(chord, true)} — ${shape.label}`;
+}
+
+const transposeName = (n: Chord['root'], d: number) => defaultSpelling(mod(pc(n) + d, 12));
+
+/**
+ * Voicings for a non-standard tuning. Uniformly shifted tunings (E♭, D, C♯ standard…) keep the familiar
+ * standard shapes — you finger the chord a shift above what sounds. Drop/open/modal tunings are re-fretted
+ * from scratch, favouring open strings and one-finger shapes the tuning enables.
+ */
+function alternateVoicings(chord: Chord, max: number, tuning: number[]): GuitarShape[] {
+  const d = uniformShift(tuning);
+  if (d !== null) {
+    const fingered: Chord = { ...chord, root: transposeName(chord.root, -d), ...(chord.bass ? { bass: transposeName(chord.bass, -d) } : {}) };
+    const as = chordSymbol(fingered, true);
+    return guitarVoicings(fingered, max).map((s) => ({ ...s, label: `${s.label} · ${as} shape` }));
+  }
+  const out: GuitarShape[] = [];
+  const add = (s: GuitarShape, relaxed: boolean) => {
+    if (!isPlayable(s) || !shapeMatchesChord(s, chord, relaxed, tuning)) return;
+    if (out.some((o) => o.frets.join() === s.frets.join())) return;
+    const opens = s.frets.filter((f) => f === 0).length;
+    out.push({ ...s, label: opens >= 3 ? 'open-string shape' : s.barre ? 'barre shape' : 'fretted shape' });
+  };
+  // Drop tunings (low 5th between strings 6 and 5, 4th up to string 4): the one-finger power chord comes first.
+  const dropFifth = tuning[1]! - tuning[0]! === 7 && tuning[2]! - tuning[1]! === 5;
+  if (dropFifth && chord.quality === '5' && !chord.bass) {
+    const r = mod(pc(chord.root) - tuning[0]!, 12);
+    const frets: F[] = [r, r, r, x, x, x];
+    const fingers: F[] = r === 0 ? [0, 0, 0, x, x, x] : [1, 1, 1, x, x, x];
+    const shape: GuitarShape = { frets, fingers, baseFret: baseFretFor(frets), label: '', source: 'generated', ...(r ? { barre: { fret: r, from: 0, to: 2, finger: 1 } } : {}) };
+    add(shape, false);
+    if (out.length) out[0]!.label = 'one-finger power chord';
+  }
+  generateShapes(chord, false, max + 2, tuning).forEach((s) => add(s, false));
+  if (!out.length) generateShapes(chord, true, max + 2, tuning).forEach((s) => add(s, true));
+  return out.slice(0, max);
 }
