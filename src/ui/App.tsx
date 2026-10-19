@@ -20,6 +20,7 @@ import {
   type ChordBridge, activeAt, loopOriginsToPrime, loopPlayhead, nextLoopOrigin, type TimelineEvents,
   type DrumHit, type DrumArtic, type DrumKitId, type DrumVoiceId, drumPatternById,
   drumTuningForKey, defaultMidiForVoice, DEFAULT_DRUM_KIT, isDrumKitId,
+  styleCombo, coherence, tuningKeySuggestion, styleProfile,
   STYLES, isStyleId, styleLens, styleFit, styleRerank, TUNINGS, isTuningId, tuningById, tuningStringNames, type StyleLens,
   SESSION_KEY, deserializeSession, decodeShare, exportFileName, readShareHash, shareUrl, type SharePayload, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
 } from '../core';
@@ -665,7 +666,7 @@ function Composer({ data }: { data: LoadedData }) {
     else setVisTab('piano');
     void synth.ensureLoaded(id).then(() => {
       silenceForPreview();
-      synth.playNotes(chordMidis(demo, pianoVoicing(demo), def, { omitBass: bassInst !== 'off' }), { dur: 1.2, instrument: id });
+      synth.playNotes(chordMidis(demo, pianoVoicing(demo), def, { omitBass: bassInst !== 'off', tuning: tuningById(tuningId).strings }), { dur: 1.2, instrument: id });
     });
   };
   const chooseChordInst = (id: InstrumentId) => { setChordInst(id); persistPart('muse.chordInst', id); persistPart('muse.instrument', id); previewPart(id, 'chords'); };
@@ -677,7 +678,7 @@ function Composer({ data }: { data: LoadedData }) {
   };
   const omitBass = bassInst !== 'off';
   /** Chord tones on the chord instrument (no low bass when a bass part is active). */
-  const chordTones = (c: Chord, v: number[]) => chordMidis(c, v, INSTRUMENTS[chordInst], { omitBass });
+  const chordTones = (c: Chord, v: number[]) => chordMidis(c, v, INSTRUMENTS[chordInst], { omitBass, tuning: tuningById(tuningId).strings });
   const playChordParts = (c: Chord, v: number[], opts: {
     at?: number; dur?: number; vel?: number; autoBass?: boolean; origin?: number;
   } = {}) => {
@@ -1383,7 +1384,7 @@ function Composer({ data }: { data: LoadedData }) {
     try {
       const { renderTimelineWav } = await import('./renderTimeline');
       const { wav: bytes } = await renderTimelineWav({
-        slots, timeSig, beatSec, partMeters, k, chordInst, melodyInst, bassInst, drumKit,
+        slots, timeSig, beatSec, partMeters, k, chordInst, melodyInst, bassInst, drumKit, tuning: tuning.strings,
         onProgress: (stage, p) => setWav({ stage, p }),
       });
       const name = exportFileName(keyName(k), chords.map((c) => chordSymbol(c, true)), 'wav');
@@ -1757,8 +1758,21 @@ function Composer({ data }: { data: LoadedData }) {
     setSelectedId(null);
     flash(`Loaded “${name}”${locked ? ' around your locked bars' : ''} — undo to go back`);
   };
+  /** Set tonic + mode together (one tap from a style/tuning offer). */
+  const applyKey = (t: string, m: ModeId) => {
+    setMode(m); setTonic(t); setAuto(false);
+    try { localStorage.setItem('muse.tonic', t); localStorage.setItem('muse.mode', m); localStorage.setItem('muse.auto', '0'); } catch { /* private mode */ }
+  };
+  const combo = styleId ? styleCombo(styleId, tuning) : null;
+  const coh = coherence(styleId, k, tuning);
+  const prof = styleProfile(styleId);
+  const tuningInProfile = !!prof && prof.tunings.some((id) => tuningById(id).strings.join() === tuning.strings.join());
+  // Offer the combo only when the current setup isn't already a typical one for the style.
+  const comboDiffers = !!combo && !(coh && coh.modeFit === 'typical' && coh.tonicFit === 'typical' && tuningInProfile);
+  const keySug = !combo || !comboDiffers ? tuningKeySuggestion(tuning, k) : null;
   const styleControls = () => {
-    const offer = lens?.style.tuning && tuningById(lens.style.tuning).strings.join() !== tuning.strings.join() && tuningOfferOff !== lens.style.id ? tuningById(lens.style.tuning) : null;
+    const showCombo = combo && comboDiffers && tuningOfferOff !== `${styleId}|${combo.label}`;
+    const showKey = keySug && tuningOfferOff !== `key|${tuningId}|${keySug.tonic}`;
     return (
       <>
         <div className="style-row">
@@ -1782,15 +1796,24 @@ function Composer({ data }: { data: LoadedData }) {
             </select>
           </label>
         </div>
-        {offer && lens && (
+        {showCombo && combo && (
           <div className="style-offer" role="status">
-            <span>{lens.style.name} often uses <b>{offer.name.replace(/^.* — /, '')}</b></span>
-            <button type="button" className="pill" onClick={() => setTuningId(offer.id)}>Use it</button>
-            <button type="button" className="pill" onClick={() => setTuningOfferOff(lens.style.id)}>No thanks</button>
+            <span>{combo.label}</span>
+            <button type="button" className="pill" onClick={() => { applyKey(combo.tonic, combo.mode); setTuningId(combo.tuning); }}>Apply</button>
+            <button type="button" className="pill" aria-label="Dismiss suggestion" onClick={() => setTuningOfferOff(`${styleId}|${combo.label}`)}>Not now</button>
           </div>
         )}
-        {tuningId !== 'standard' && <p className="style-note small muted">{tuning.name}: {tuningStringNames(tuning.strings).join(' ')}{tuning.note ? ` — ${tuning.note}` : ''} Guitar diagrams use it.</p>}
-        {lens && <p className="style-note small muted">Highlighted: typical of {lens.style.name} in {keyName(k)}. Everything else still plays.</p>}
+        {showKey && keySug && (
+          <div className="style-offer" role="status">
+            <span>{keySug.label}</span>
+            <button type="button" className="pill" onClick={() => chooseTonic(keySug.tonic)}>Set key</button>
+            <button type="button" className="pill" aria-label="Dismiss suggestion" onClick={() => setTuningOfferOff(`key|${tuningId}|${keySug.tonic}`)}>Not now</button>
+          </div>
+        )}
+        {coh?.note && <p className="style-coh small" role="note">{coh.note}{coh.closestMode && <> <button type="button" className="linkish" onClick={() => chooseMode(coh.closestMode!)}>Switch to {MODE_BY_ID[coh.closestMode].name.replace(/ \(.*\)$/, '')}</button></>}</p>}
+        {coh?.why && <p className="style-why small"><b>Why this fits:</b> {coh.why}</p>}
+        {tuningId !== 'standard' && <p className="style-note small muted">{tuning.name}: {tuningStringNames(tuning.strings).join(' ')}{tuning.note ? ` — ${tuning.note}` : ''} Guitar diagrams and guitar playback use it.</p>}
+        {lens && <p className="style-note small muted">Highlighted: typical of {lens.style.name} in {keyName(k)}{lens.tuningRoots.length ? `, plus chords on ${tuning.name.replace(/^.* — /, '')}’s open low strings` : ''}. Everything else still plays.</p>}
       </>
     );
   };
@@ -2688,7 +2711,7 @@ function Composer({ data }: { data: LoadedData }) {
               <button type="submit">Add</button>
             </form>
             <ProgressionTips keyInfo={k} style={lens?.style ?? null} onPlay={(cs) => { synth.unlock(); playChordSequence(cs, beatSec * 2, beatSec * 1.9); }} onLoad={loadProgression} />
-            <FitExplainer mode="chords" keyInfo={k} />
+            <FitExplainer mode="chords" keyInfo={k} context={coh?.why ?? null} />
           </>
         ) : tab === 'melody' ? (
           <div className="melody-input">

@@ -111,12 +111,12 @@ export function chordMidis(
   chord: Chord,
   upper: number[],
   def: InstrumentDef,
-  opts: { omitBass?: boolean } = {},
+  opts: { omitBass?: boolean; tuning?: number[] } = {},
 ): number[] {
   if (def.voicing === 'guitar') {
-    const shape = guitarVoicings(chord, 1)[0];
+    const shape = guitarVoicings(chord, 1, opts.tuning)[0];
     if (!shape) return [];
-    const midis = shapeMidi(shape).sort((a, b) => a - b);
+    const midis = shapeMidi(shape, opts.tuning).sort((a, b) => a - b);
     // Drop the lowest string when a separate bass line covers the root.
     return opts.omitBass && midis.length > 1 ? midis.slice(1) : midis;
   }

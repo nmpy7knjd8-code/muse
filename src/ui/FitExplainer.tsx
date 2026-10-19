@@ -13,6 +13,8 @@ interface Props {
   keyInfo: Key;
   /** Chord under the active melody/bass bar (or last chord), when known. */
   underChord?: Chord | null;
+  /** Style/tuning-aware line (“why this fits”), recomputed by the parent from key + style + tuning. */
+  context?: string | null;
 }
 
 /** Short how-to-play tips per mode — what to lean on, what colours the sound. */
@@ -97,7 +99,7 @@ function characteristicNames(k: Key): string[] {
   return offs.map((iv) => noteName(spellInKey(k, pc(k.tonic) + iv), true));
 }
 
-export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
+export function FitExplainer({ mode, keyInfo, underChord, context }: Props): ReactNode {
   const keyLabel = keyName(keyInfo);
   const md = MODE_BY_ID[keyInfo.mode];
   const tip = MELODY_TIPS[keyInfo.mode];
@@ -165,6 +167,7 @@ export function FitExplainer({ mode, keyInfo, underChord }: Props): ReactNode {
     <details className="fit-explainer" aria-label="Which chords will work">
       <summary>Chord tips · {keyLabel}</summary>
       <div className="fit-explainer-body">
+        {context && <p className="fit-why fit-context">{context}</p>}
         <p>
           <b>What works here.</b> <b>In this key</b> = family chords in <b>{keyLabel}</b> (tonic / pre-dominant / dominant).
           <b> 7ths</b> = same family, richer colour. <b>Open colour</b> = sus / add9 / 6 texture.

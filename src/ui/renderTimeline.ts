@@ -16,6 +16,8 @@ export interface RenderOpts {
   partMeters: PartMeters;
   k: Key;
   chordInst: InstrumentId;
+  /** Guitar tuning (low→high MIDI) so guitar chords sound the same as ▶ Play. */
+  tuning?: number[];
   melodyInst: InstrumentId;
   bassInst: InstrumentId | 'off';
   drumKit: DrumKitId;
@@ -56,7 +58,7 @@ export async function renderTimelineWav(o: RenderOpts): Promise<{ wav: Uint8Arra
   const keep = (at: number) => at + lead < seconds;
   for (const c of ev.chords) {
     if (!keep(c.at)) continue;
-    eng.playNotes(chordMidis(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), INSTRUMENTS[o.chordInst], { omitBass: !!bassId }), { at: c.at, dur: c.dur, vel: 0.7, instrument: o.chordInst, origin: lead });
+    eng.playNotes(chordMidis(c.chord, vBy.get(c.index) ?? pianoVoicing(c.chord), INSTRUMENTS[o.chordInst], { omitBass: !!bassId, tuning: o.tuning }), { at: c.at, dur: c.dur, vel: 0.7, instrument: o.chordInst, origin: lead });
     if (bassId && !composedBassBars.has(c.index)) {
       eng.playNotes([bassLineMidi(c.chord, INSTRUMENTS[bassId])], { at: c.at, dur: c.dur, vel: 0.7 * 0.92, instrument: bassId, origin: lead });
     }

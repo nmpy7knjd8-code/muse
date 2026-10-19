@@ -60,7 +60,7 @@ export function uniformShift(strings: number[]): number | null {
 
 /** Root pitch classes a tuning makes especially easy (open low strings / the open chord), for style nudges. */
 export function tuningFriendlyRoots(t: Tuning): number[] {
-  if (t.kind === 'standard' || t.kind === 'shifted') return [];
+  if (t.kind === 'standard') return [];
   const low = mod(t.strings[0]!, 12);
   const next = mod(t.strings[1]!, 12);
   return [...new Set([low, next])];
