@@ -1,7 +1,7 @@
 // Idea 10 — play along with the progression: count-in, looping bars, optional mic scoring of chord tones.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PracticeScorer, beatsPerBar, chordSymbol, chordToneHint, midiName, parseChord, practicePos, practiceSchedule, parseRoman,
+  PracticeScorer, beatsPerBar, loopRange, nextTempo, chordSymbol, chordToneHint, midiName, parseChord, practicePos, practiceSchedule, parseRoman,
   type Chord, type NoteClass, type PracticeResult,
 } from '../../core';
 import { listenErrorMessage } from '../listen';
@@ -18,7 +18,12 @@ const CLASS_LABEL: Record<NoteClass, string> = { chord: 'chord tone', scale: 'in
 export default function PracticeTool(p: ToolProps) {
   const bpb = beatsPerBar(p.timeSig);
   const example = useMemo(() => ['I', 'V', 'vi', 'IV'].map((r) => parseRoman(r, p.k) ?? parseChord('C')!), [p.k]);
-  const chords: Chord[] = p.chords.length ? p.chords.slice(0, 16) : example;
+  const all: Chord[] = p.chords.length ? p.chords.slice(0, 16) : example;
+  // Idea 23 — loop a bar range and ramp the tempo between runs.
+  const [range, setRange] = useState<[number | null, number | null]>([null, null]);
+  const { items: chords, from: rFrom, to: rTo } = loopRange(all, range[0], range[1]);
+  const [ramp, setRamp] = useState(false);
+  const [rampNote, setRampNote] = useState<string | null>(null);
   const [speed, setSpeed] = useState<number>(0.75);
   const [loops, setLoops] = useState<number | null>(2);
   const [micOn, setMicOn] = useState(true);
@@ -49,12 +54,21 @@ export default function PracticeTool(p: ToolProps) {
   const finish = () => {
     halt();
     setState('idle');
-    if (scorer.current && scoring.current) { setResult(scorer.current.result()); setWeak(scorer.current.weakest()); }
+    const res = scorer.current && scoring.current ? scorer.current.result() : null;
+    if (res && scorer.current) { setResult(res); setWeak(scorer.current.weakest()); }
+    if (rampRef.current) {
+      const cur = speedRef.current;
+      const nx = nextTempo(cur, res && res.heard > 0 ? res.total / 100 : null);
+      setSpeed(nx);
+      setRampNote(nx > cur ? `Nice — next run at ${Math.round(nx * 100)}%.` : nx < cur ? `Let’s ease off — next run at ${Math.round(nx * 100)}%.` : `Stay at ${Math.round(nx * 100)}% for one more run.`);
+    }
   };
+  const rampRef = useRef(ramp); rampRef.current = ramp;
+  const speedRef = useRef(speed); speedRef.current = speed;
   const stop = () => finish();
 
   const start = async () => {
-    halt(); setErr(null); setResult(null); setWeak(null);
+    halt(); setErr(null); setResult(null); setWeak(null); setRampNote(null);
     scorer.current = new PracticeScorer(chords, p.k);
     setLiveBars(chords.map(() => 0));
     const origin = p.audio.origin();
@@ -113,8 +127,13 @@ export default function PracticeTool(p: ToolProps) {
         One bar of count-in, then the chords loop. With the mic on, Muse listens and scores how often you land on the notes of each chord.
       </ToolIntro>
 
-      <ChordChips chords={chords} k={p.k} active={running && pos.bar >= 0 ? pos.bar : null} onTap={(c) => !running && p.playChord(c)}
-        colorOf={(_, i) => (result && result.bars[i]?.frames ? scoreColor(barScore(result, i)) : undefined)} />
+      <ChordChips chords={all} k={p.k} active={running && pos.bar >= 0 ? pos.bar + rFrom : null}
+        onTap={(c, i) => { if (running) return; p.playChord(c); setResult(null); setRange(range[0] === null || range[1] !== null ? [i, null] : [range[0], i]); }}
+        colorOf={(_, i) => (i < rFrom || i > rTo ? '#2a2733' : range[0] !== null && !result ? '#c4b0ff' : result && result.bars[i - rFrom]?.frames ? scoreColor(barScore(result, i - rFrom)) : undefined)} />
+      <p className="small muted practice-range">
+        {range[0] === null ? 'Tap a chord to loop from there, then another to set the end.' : `Looping bars ${rFrom + 1}–${rTo + 1}. `}
+        {range[0] !== null && <button type="button" className="linkish" onClick={() => setRange([null, null])}>Loop all</button>}
+      </p>
 
       <div className="tool-card practice-controls">
         <div className="practice-row"><span className="tool-label">Speed</span>
@@ -127,6 +146,14 @@ export default function PracticeTool(p: ToolProps) {
             {LOOPS.map((s) => <button key={s.label} type="button" role="radio" aria-checked={loops === s.v} className={loops === s.v ? 'on' : ''} onClick={() => setLoops(s.v)}>{s.label}</button>)}
           </div>
         </div>
+        <div className="practice-row"><span className="tool-label">Tempo</span>
+          <div className="tool-actions">
+            <button type="button" aria-label="Slower" onClick={() => setSpeed(Math.max(0.4, Math.round((speed - 0.05) * 100) / 100))}>−5%</button>
+            <span className="practice-pct">{Math.round(speed * 100)}%</span>
+            <button type="button" aria-label="Faster" onClick={() => setSpeed(Math.min(1, Math.round((speed + 0.05) * 100) / 100))}>+5%</button>
+          </div>
+        </div>
+        <label className="tool-check"><input type="checkbox" checked={ramp} onChange={(e) => setRamp(e.target.checked)} /> Speed up as I nail it (between runs)</label>
         <label className="tool-check"><input type="checkbox" checked={micOn} disabled={running} onChange={(e) => setMicOn(e.target.checked)} /> Score me with the mic (headphones help)</label>
         <p className="tool-note">{Math.round(60 / beatSec)} BPM · {bpb} beats per bar</p>
       </div>
@@ -143,7 +170,7 @@ export default function PracticeTool(p: ToolProps) {
               <span className="muted small">aim for {chordToneHint(curChord)}{loops !== 1 ? ` · pass ${pos.loop + 1}${loops ? ` of ${loops}` : ''}` : ''}</span>
             </>
           )}
-          {state === 'idle' && <span className="muted small">{result ? 'Run finished.' : 'Press Start when you’re ready.'}</span>}
+          {state === 'idle' && <span className="muted small">{rampNote ?? (result ? 'Run finished.' : 'Press Start when you’re ready.')}</span>}
         </div>
         {running && (
           <div className="practice-beats" aria-hidden>
@@ -197,7 +224,7 @@ export default function PracticeTool(p: ToolProps) {
             <p className="tool-note">Work on bar {weak + 1} ({chordSymbol(chords[weak]!, true)}): aim for {chordToneHint(chords[weak]!)}.</p>
           )}
           <div className="tool-actions">
-            <button type="button" className="tool-hear" onClick={start}><PlayIcon size={14} /> Again</button>
+            <button type="button" className="tool-hear" onClick={start}><PlayIcon size={14} /> Again{ramp ? ` at ${Math.round(speed * 100)}%` : ''}</button>
             {speed < 1 && result.total >= 80 && <button type="button" onClick={() => setSpeed(speed === 0.5 ? 0.75 : 1)}>Speed up</button>}
           </div>
         </div>

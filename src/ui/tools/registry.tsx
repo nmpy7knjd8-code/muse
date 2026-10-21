@@ -42,6 +42,11 @@ export const TOOLS: ToolDef[] = [
     load: () => import('./HelpersTool'),
   },
   {
+    id: 'songs', title: 'Songs like yours', sub: 'Famous songs with your chords', group: 'tools',
+    icon: ico(<><path d="M4 6h16M4 12h10M4 18h7" /><circle cx="18" cy="17" r="3" /></>),
+    load: () => import('./SongsTool'),
+  },
+  {
     id: 'song', title: 'Song analysis', sub: 'Paste a chord sheet', group: 'tools',
     icon: ico(<><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /><path d="M9 13h7M9 17h4" /></>),
     load: () => import('./SongTool'),
@@ -70,6 +75,11 @@ export const TOOLS: ToolDef[] = [
     id: 'taste', title: 'Your taste', sub: 'What your thumbs taught Muse', group: 'tools',
     icon: ico(<><path d="M7 11v9H4v-9z" /><path d="M7 11l4-7a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" /></>),
     load: () => import('./TasteTool'),
+  },
+  {
+    id: 'tuner', title: 'Tuner', sub: 'Tunes to your selected tuning', group: 'practice',
+    icon: ico(<><path d="M5 18a8 8 0 1 1 14 0" /><path d="M12 14l4-5" /></>),
+    load: () => import('./TunerTool'),
   },
   {
     id: 'practice', title: 'Play-along', sub: 'Count-in, loop, mic scoring', group: 'practice',
