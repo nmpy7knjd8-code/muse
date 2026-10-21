@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BRIGHTNESS, DEGREE_COLORS, GLOSSARY, GUIDE_PEDAGOGY, MODE_BY_ID, STRUMS, chapterDone, chordPcs, chordSymbol, diatonicChords,
-  guideChapters, modeStepNote, noteName, parseGuideProgress, progressionTension, scalePcs, stringLabel, tonicPc,
+  guideChapters, modeDegrees, modeStepNote, noteName, parseGuideProgress, progressionTension, scalePcs, stringLabel, tonicPc,
   type Chord, type GuideChapter, type GuideProgress, type GuideSound, type Key,
 } from '../../core';
 import { ToolIntro } from './common';
@@ -57,12 +57,12 @@ function Fretboard({ p, hi }: { p: ToolProps; hi: number[] }) {
 
 function Ladder({ p }: { p: ToolProps }) {
   const ivs = MODE_BY_ID[p.k.mode].intervals; const t = tonicPc(p.k);
-  const feel = ['home', 'passing', 'colour', 'lifted', 'strong', 'soft', 'leans home'];
+  const feel = modeDegrees(p.k).map((d) => d.feel);
   return (
     <div className="guide-ladder" role="group" aria-label="Scale-step ladder — tap a step">
       {[...ivs].map((iv, i) => ({ iv, i })).reverse().map(({ iv, i }) => (
         <button key={i} type="button" style={{ background: DEGREE_COLORS[i] }} onClick={() => p.audio.note(60 + t + iv, 0, 0.9, p.audio.origin())}>
-          <b>{i + 1}</b><span>{NAMES[(t + iv) % 12]}</span><em>{p.k.mode === 'major' ? feel[i] : ''}</em>
+          <b>{modeDegrees(p.k)[i]!.label.replace('b', '♭').replace('#', '♯')}</b><span>{NAMES[(t + iv) % 12]}</span><em>{feel[i]}</em>
         </button>
       ))}
     </div>
@@ -109,14 +109,14 @@ function TensionCurve({ p, s, playing }: { p: ToolProps; s: GuideSound; playing:
 
 function FunctionMap({ p }: { p: ToolProps }) {
   const k: Key = { ...p.k, mode: 'major' }; const d = diatonicChords(k);
-  const groups: Array<[string, number[]]> = [['Home', [0, 5, 2]], ['Away', [3, 1]], ['Pull home', [4, 6]]];
+  const groups: Array<[string, number[]]> = [['Home', [0]], ['Away', [3, 1]], ['Tension', [4, 6]], ['Shares notes with home', [5, 2]]];
   const RN = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
   return (
     <div className="guide-fmap" role="group" aria-label="Chord-function map">
       {groups.map(([g, ix]) => <div key={g} className="guide-fgroup"><span className="small muted">{g}</span>
         {ix.map((i) => <button key={i} type="button" className="chip" style={{ borderColor: DEGREE_COLORS[i] }} onClick={() => p.playChord(d[i]!)}><b>{RN[i]}</b> {chordSymbol(d[i]!, true)}</button>)}
       </div>)}
-      <span className="small muted">Away → Pull home → Home is the classic loop. Tap to hear.</span>
+      <span className="small muted">Away → Tension → Home is the classic journey. vi (relative) and iii (mediant) share notes with I but aren’t home. Tap to hear.</span>
     </div>
   );
 }
@@ -190,11 +190,13 @@ export default function TheoryGuideTool(p: ToolProps) {
         <span className="small muted">Chapter {ch.n} · {ch.level}</span>
         <h3 id={`gh-${ch.id}`}>{ch.title}</h3>
         <p className="guide-idea">{ch.idea}</p>
+        {ch.listen && <p className="guide-listen"><b>Listen first.</b> {ch.listen}</p>}
         {ch.revisit && <p className="small guide-revisit">↺ Revisit: {ch.revisit}</p>}
         {ch.sounds.length > 0 && <div className="guide-sounds">{ch.sounds.map((s, i) => <button key={i} type="button" className={`chip${playing?.s === s ? ' on' : ''}`} onClick={() => play(s)}>▶ {s.label}</button>)}</div>}
         <Visual ch={ch} p={p} playing={playing} />
         {ch.body.length > 0 && <ul className="guide-body">{ch.body.map((b, i) => <li key={i}>{b}</li>)}</ul>}
         {ch.id === 'glossary' && <dl className="guide-gloss">{GLOSSARY.map((x) => <div key={x.term}><dt>{x.term}</dt><dd>{x.def} <button type="button" className="linkish" onClick={() => setCur(x.ch)}>ch. {chapters.find((c) => c.id === x.ch)?.n}</button></dd></div>)}</dl>}
+        {ch.take && <p className="guide-take"><b>Takeaway.</b> {ch.take}</p>}
         {ch.tries.length > 0 && <div className="guide-try">{ch.tries.map((t) => <button key={t.label} type="button" className="add" onClick={() => go(t)}>Try it in Muse: {t.label}</button>)}</div>}
         <Quiz key={ch.id} ch={ch} g={g} setG={setG} play={play} />
         <p className="small muted guide-src">Sources: {ch.sources.join('; ')}</p>

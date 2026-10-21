@@ -2237,3 +2237,6 @@ svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke
 .guide-gloss { display: grid; gap: 6px; margin: 0; }
 .guide-gloss dt { font-weight: 600; } .guide-gloss dd { margin: 0 0 0 10px; }
 .guide-src { margin-top: 10px; }
+.guide-listen, .guide-take { margin: 6px 0; padding: 8px 10px; border-radius: 10px; background: rgba(127,180,255,.10); border-left: 3px solid #7fb4ff; }
+.guide-take { background: rgba(143,209,122,.10); border-left-color: #8fd17a; }
+.guide-fgroup > span { width: auto; min-width: 72px; }

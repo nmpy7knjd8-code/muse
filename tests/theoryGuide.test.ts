@@ -38,11 +38,21 @@ describe('theory guide', () => {
   it('progress: chapter done needs read + every quiz right; feeds Your progress', () => {
     const chs = guideChapters(key('C')); const c = chs[0]!;
     expect(parseGuideProgress('garbage')).toEqual({ read: [], quiz: {} });
-    expect(chapterDone({ read: ['sound'], quiz: { sound: 1 } }, c)).toBe(false);
-    expect(chapterDone({ read: ['sound'], quiz: { sound: 3 } }, c)).toBe(true);
+    expect(chapterDone({ read: ['sound'], quiz: { sound: 7 } }, c)).toBe(false);
+    expect(chapterDone({ read: ['sound'], quiz: { sound: 15 } }, c)).toBe(true);
     const base = { concepts: [], missions: [], gym: EMPTY_GYM, earRounds: 0, modesUsed: [] };
     const node = (g: string[]) => progressMap({ ...base, guide: g }).branches.find((b) => b.id === 'guide')!.nodes[0]!;
     expect(node([]).state).toBe('next');
     expect(node(['sound', 'scales', 'chords']).state).toBe('done');
+  });
+});
+describe('theory guide ↔ PDF sync', () => {
+  const chs = guideChapters(key('C'));
+  it('every concept chapter has a listen-first prompt, takeaway and 4 recall questions like the PDF', () => {
+    for (const c of chs.slice(0, 13)) { expect(c.listen, c.id).toBeTruthy(); expect(c.take, c.id).toBeTruthy(); expect(c.quiz.length, c.id).toBe(4); }
+  });
+  it('chord jobs match palette.ts degreeRole: only I is home', () => {
+    const r = chs.find((c) => c.id === 'roman')!;
+    expect(r.body.join(' ')).toMatch(/only I is home/);
   });
 });

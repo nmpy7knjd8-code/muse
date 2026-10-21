@@ -11,4 +11,4 @@ Interactive web edition of the Muse theory guide (PDF in progress at /workspace/
   - sources
 - **Where the facts come from:** repo data and docs only — scales.ts, earGym.ts, lessons.ts, songwriting.ts, tunings.ts, styleProfiles.ts, research/tension/tension_report.md and docs/style-coherence.md.
 - **Progress:** stored in `muse.guide` as {read, quiz bitmask}. A chapter counts as done once it is read and every quiz question has been answered correctly. Your progress shows this as a "Theory guide" branch with 5 milestones.
-- **TODO:** sync the wording with the PDF's HTML source once it lands.
+- **Synced** with Muse-Theory-Guide.pdf (src/content.py): ledes, listen-first prompts, worked examples, takeaways and the 4 recall questions per chapter (as multiple choice). Chord jobs now follow palette.ts degreeRole (only I is home).
