@@ -2,7 +2,7 @@
 import type { Tuning, BeatNote, TasteState, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
 
 export type ToolId =
-  | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release' | 'gym';
+  | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release' | 'gym' | 'lessons';
 
 export interface ToolProps {
   engine: SuggestionEngine;
@@ -16,6 +16,11 @@ export interface ToolProps {
   tStyle: TensionStyleId;
   /** Current Style (null = any) and guitar tuning — tools must stay coherent with them. */
   styleId: string | null;
+  /** Colour-by-step toggle (#11). */
+  degColors: boolean;
+  setDegColors: (on: boolean) => void;
+  /** Transpose the whole song (chords, melody, bass) to this tonic and set the key (#12). */
+  transposeSong: (tonic: string) => void;
   tuning: Tuning;
   beatSec: number;
   timeSig: TimeSig;

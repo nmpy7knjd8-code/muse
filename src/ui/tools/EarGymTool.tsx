@@ -2,7 +2,7 @@
 // stages). Every question reads the current key/mode, Style and guitar tuning. See docs/dialectic/01–07.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  EMPTY_GYM, GYM_STAGES, bassMidiFor, chordSymbol, degreeItemId, degreeMidi, gymAnswer, gymDue, gymLevel, gymLoop, gymMastery,
+  DEGREE_COLORS, EMPTY_GYM, GYM_STAGES, bassMidiFor, chordSymbol, degreeItemId, degreeMidi, gymAnswer, gymDue, gymLevel, gymLoop, gymMastery,
   gymPick, homeCadence, judgeSung, keyName, makeBass, makeName, makeSwap, modeDegrees, openStringNote, parseGym, prettyDegree,
   resolvePath, romanOf, suggestedStage, type BassQuestion, type Chord, type Degree, type GymStats, type NameQuestion, type SwapQuestion,
 } from '../../core';
@@ -111,7 +111,7 @@ function DegreeGame({ p, stats, record, step, mode }: Ctx & { mode: 'degree' | '
             <button key={d.label} type="button" disabled={!heard}
               className={'gym-choice' + (answer ? (d.label === target.label ? ' right' : d.label === answer.label ? ' wrong' : ' dim') : '')}
               onClick={() => choose(d)}>
-              <b>{pretty(d.label)}</b><small>{d.feel}</small>
+              <b style={p.degColors ? { color: DEGREE_COLORS[d.index] } : undefined}>{pretty(d.label)}</b><small>{d.feel}</small>
             </button>
           ))}
         </div>
@@ -338,7 +338,7 @@ function BassGame({ p, stats, record, step }: Ctx) {
       {!done && (
         <div className="gym-choices" role="group" aria-label="Bass step">
           {q.options.map((d) => (
-            <button key={d.label} type="button" className="gym-choice" onClick={() => choose(d)}><b>{pretty(d.label)}</b><small>{d.feel}</small></button>
+            <button key={d.label} type="button" className="gym-choice" onClick={() => choose(d)}><b style={p.degColors ? { color: DEGREE_COLORS[d.index] } : undefined}>{pretty(d.label)}</b><small>{d.feel}</small></button>
           ))}
         </div>
       )}

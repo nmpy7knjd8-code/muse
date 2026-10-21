@@ -56,3 +56,4 @@ export * from './tunings';
 export * from './styles';
 export * from './styleProfiles';
 export * from './earGym';
+export * from './lessons';

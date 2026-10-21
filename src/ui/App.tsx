@@ -23,6 +23,7 @@ import {
   styleCombo, coherence, tuningKeySuggestion, styleProfile,
   STYLES, isStyleId, styleLens, styleFit, styleRerank, TUNINGS, isTuningId, tuningById, tuningStringNames, type StyleLens,
   SESSION_KEY, deserializeSession, decodeShare, exportFileName, readShareHash, shareUrl, type SharePayload, serializeSession, replaceKeepingLocked, transposeSlots, type NoteName, inkOn, legibleOn, applyKeyTuning,
+  degreeColor, newConcepts, CONCEPT_BY_ID,
 } from '../core';
 import { loadData, type LoadedData } from './data';
 import { synth } from './audio';
@@ -425,6 +426,7 @@ function Composer({ data }: { data: LoadedData }) {
   useEffect(() => () => listen?.stop(), [listen]);
 
   const chords = useMemo(() => chordsOf(slots), [slots]);
+  const [degColors, setDegColors] = useState(() => { try { return localStorage.getItem('muse.degColors') === '1'; } catch { return false; } });
   const melody = useMemo(() => melodyOf(slots), [slots]);
   const bassLine = useMemo(() => bassOf(slots), [slots]);
   const chordTarget = chordTargetIndex(slots);
@@ -441,6 +443,20 @@ function Composer({ data }: { data: LoadedData }) {
   const detected = useMemo(() => (auto && (chords.length >= 2 || melody.length >= 4) ? detectKeys(chords, melody)[0] : null), [auto, slots]); // eslint-disable-line react-hooks/exhaustive-deps
   // auto-detect only chooses between major/minor keys; a modal pick (e.g. Dorian) is kept as-is
   const k: Key = auto && detected && (mode === 'major' || mode === 'minor') ? detected.key : picked;
+  // Idea 10 — theory unlocked: a one-time note the first time an edit introduces a concept.
+  const prevChordsRef = useRef<Chord[] | null>(null);
+  useEffect(() => {
+    const prev = prevChordsRef.current;
+    prevChordsRef.current = chords;
+    if (!prev || chords.length <= prev.length - 2) return;
+    let seen: string[] = [];
+    try { seen = JSON.parse(localStorage.getItem('muse.concepts') ?? '[]'); } catch { /* */ }
+    const fresh = newConcepts(prev, chords, k, Array.isArray(seen) ? seen : []);
+    if (!fresh.length) return;
+    try { localStorage.setItem('muse.concepts', JSON.stringify([...seen, ...fresh])); } catch { /* */ }
+    const id = window.setTimeout(() => flash(`New idea: ${CONCEPT_BY_ID[fresh[0]!].name} — see Lessons › Your theory`, 3600), 1900);
+    return () => window.clearTimeout(id);
+  }, [chords]); // eslint-disable-line react-hooks/exhaustive-deps
   const scale = scalePcs(k);
   const cur = chords[chords.length - 1];
   const timelineVoicings = useMemo(() => voiceProgression(chords), [slots]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -564,10 +580,10 @@ function Composer({ data }: { data: LoadedData }) {
   const selNote = noteSugs.find((s) => s.id === selectedId) ?? noteSugs[0];
   useEffect(() => setShapeIdx(0), [selChord?.id]);
 
-  const flash = (msg: string) => {
+  const flash = (msg: string, ms = 1800) => {
     setToast(msg);
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 1800);
+    toastTimer.current = window.setTimeout(() => setToast(null), ms);
   };
   const snapshot = () => setHistory((h) => [...h.slice(-49), { slots }]);
   const undo = () => {
@@ -1612,7 +1628,8 @@ function Composer({ data }: { data: LoadedData }) {
   const kbBadge = data.kb.meta.isSeed ? 'seed' : '';
   const barsOf = (cs: Chord[]): TimelineSlot[] => cs.map((chord) => ({ chord, notes: [], bass: [], locked: false }));
   const toolProps: ToolProps = {
-    engine, k, lex, chords, slots, artists: data.artists ?? null, profile, adventure, tStyle, beatSec, timeSig, styleId, tuning: tuningById(tuningId),
+    engine, k, lex, chords, slots, artists: data.artists ?? null, profile, adventure, tStyle, beatSec, timeSig, styleId, tuning: tuningById(tuningId), degColors, setDegColors: (on) => { setDegColors(on); try { localStorage.setItem('muse.degColors', on ? '1' : '0'); } catch { /* */ } },
+    transposeSong: (t) => { const to = parseNote(t); if (!to) return; stopPlayback(); snapshot(); setSlots((s) => transposeSlots(s, k.tonic, to)); chooseTonic(t); setAuto(false); setDrawer(null); flash(`Moved to ${noteName(to, true)} — undo to go back`); },
     playChord: (c) => playChord(c),
     playChords: (cs, step = beatSec * 2) => { synth.unlock(); playChordSequence(cs, step, step * 0.94); },
     useChords: (cs, label) => {
@@ -2313,7 +2330,7 @@ function Composer({ data }: { data: LoadedData }) {
                     )}
                     <div className="tchord-body">
                       <div className="sym" title={s.chord ? undefined : 'No chord yet — melody only'}>{s.chord ? chordSymbol(s.chord, true) : 'no chord'}</div>
-                      <div className="rn">{s.chord ? romanOf(s.chord, k) : 'melody only'}</div>
+                      <div className="rn" style={degColors && s.chord ? { color: degreeColor(s.chord, k) ?? undefined } : undefined}>{degColors && s.chord && <i className={'deg-dot' + (degreeColor(s.chord, k) ? '' : ' out')} style={{ background: degreeColor(s.chord, k) ?? undefined }} aria-hidden />}{s.chord ? romanOf(s.chord, k) : 'melody only'}</div>
                     </div>
                     <div className="chip-actions" role="group" aria-label="Bar actions">
                       {s.chord && (

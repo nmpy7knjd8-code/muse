@@ -169,7 +169,7 @@ export interface Coherence {
   why: string;
 }
 
-const MODE_FEEL: Record<ModeId, string> = {
+export const MODE_FEEL: Record<ModeId, string> = {
   major: 'major is bright and settled',
   minor: 'minor is dark and serious',
   dorian: 'Dorian is minor with a hopeful raised 6th',

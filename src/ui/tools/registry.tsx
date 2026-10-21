@@ -27,6 +27,11 @@ export const TOOLS: ToolDef[] = [
     load: () => import('./EarGymTool'),
   },
   {
+    id: 'lessons', title: 'Lessons', sub: 'Fix it, missions, key & mode slides', group: 'practice',
+    icon: ico(<><path d="M4 6l8-3 8 3-8 3z" /><path d="M7 8v5c0 1.5 2.5 3 5 3s5-1.5 5-3V8" /><path d="M20 6v6" /></>),
+    load: () => import('./LessonsTool'),
+  },
+  {
     id: 'ear', title: 'Mood ear trainer', sub: 'Which one sounds more…?', group: 'practice',
     icon: ico(<><path d="M7 15.5c0-6 2-10 6-10a5 5 0 0 1 5 5c0 3-3 3.5-3 6.5a3 3 0 0 1-6 0" /><path d="M11 11.5a2 2 0 0 1 4 0" /></>),
     load: () => import('./EarTool'),

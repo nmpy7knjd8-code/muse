@@ -2117,3 +2117,25 @@ svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke
 .gym-bar:disabled { opacity: 1; cursor: default; }
 .gym-sing { display: flex; flex-direction: column; gap: 6px; }
 .gym-tuning { color: #e8c37a; margin: 0; }
+
+/* Lessons (ideas 8–13) */
+.deg-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.deg-dot.out { background: transparent; box-shadow: inset 0 0 0 1.5px #8a8796; }
+.lesson-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lesson-item { border: 1px solid var(--line, #3a3550); border-radius: 10px; background: var(--panel2); }
+.lesson-item.ok { border-color: #7ad39a; }
+.lesson-item.locked { opacity: 0.75; }
+.lesson-head { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; background: transparent; border: none; padding: 10px; min-height: 44px; }
+.lesson-tick { width: 22px; text-align: center; color: #7ad39a; }
+.lesson-body { padding: 0 10px 10px 40px; }
+.lesson-body p { margin: 0 0 6px; }
+.key-ring { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.key-btn { min-height: 44px; border-radius: 10px; border: 1px solid var(--line, #3a3550); background: var(--panel2); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; font-weight: 600; }
+.key-btn small { font-size: 9.5px; color: var(--muted); font-weight: 400; }
+.key-btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); }
+.key-btn.easy::after, .easy-dot { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #e8c37a; }
+.key-btn.easy::after { position: absolute; top: 5px; right: 5px; }
+.mode-ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 6px; }
+.mode-step { min-height: 44px; border-radius: 10px; border: 1px solid var(--line, #3a3550); background: var(--panel2); font-size: 12.5px; }
+.mode-step.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); }
+.mode-step.cur { box-shadow: inset 0 -2px 0 #e8c37a; }
