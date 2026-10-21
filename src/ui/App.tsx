@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Component, lazy, Suspense, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Chord, ChordSuggestion, MoodProfile, MoodLexicon, ModeId, MODES, MODE_BY_ID, MoodTextLexicon, NoteSuggestion, SuggestionEngine, LexiconInterpreter,
   analyzeRoman, chordSymbol, describeProfile, detectKeys, diatonicChords, guitarVoicings, isEmptyProfile, keyName,
@@ -34,6 +34,7 @@ import { TensionCurve, type TensionMelNote } from './TensionCurve';
 import { ChordConnections } from './ChordConnections';
 import { PlaybackRibbon, ribbonNotesFromEvents } from './PlaybackRibbon';
 import { createPlayClock, usePlaySec, type PlayClock } from './playClock';
+import { navEntry, restoreNav, saveNavScroll, setNavEntry } from './drawerScroll';
 import { TOOLS, TOOL_BY_ID, TOOL_COMPONENTS, prefetchTools } from './tools/registry';
 import type { ToolId, ToolProps } from './tools/types';
 
@@ -246,6 +247,8 @@ function Composer({ data }: { data: LoadedData }) {
   const drawerTimer = useRef<number | undefined>(undefined);
   const drawerRef = useRef<HTMLElement | null>(null);
   const menuBtnRef = useRef<HTMLButtonElement | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
+  const rowCls = (e: string) => 'drawer-row' + (navEntry() === e ? ' active' : '');
   /** Opening is immediate; closing plays the slide-out before unmounting. */
   const drawerCur = useRef<DrawerPage | null>(null);
   drawerCur.current = drawer;
@@ -360,6 +363,7 @@ function Composer({ data }: { data: LoadedData }) {
     return () => { document.body.style.overflow = prev; };
   }, [drawer]);
   const closeDrawerEsc = useCallback(() => setDrawer(null), [setDrawer]);
+  useLayoutEffect(() => { if (drawer === 'menu' && navRef.current) restoreNav(navRef.current); }, [drawer]);
   useFocusTrap(drawerRef, !!drawer && !drawerClosing, { onEscape: closeDrawerEsc });
   // Swipe left on the open drawer closes it.
   const swipe = useRef<{ x: number; y: number } | null>(null);
@@ -3104,9 +3108,9 @@ function Composer({ data }: { data: LoadedData }) {
               <button type="button" className="ticon drawer-close" aria-label="Close menu" onClick={() => setDrawer(null)}><CloseIcon /></button>
             </div>
             {drawer === 'menu' && (
-              <nav className="drawer-nav" aria-label="Menu">
+              <nav className="drawer-nav" aria-label="Menu" ref={navRef} onScroll={(e) => saveNavScroll(e.currentTarget.scrollTop)}>
                 <div className="drawer-section">Write</div>
-                <button type="button" className="drawer-row active" onClick={() => { setDrawer(null); setTab('chords'); setSelectedId(null); }} aria-current="page">
+                <button type="button" className={rowCls('writing')} data-entry="writing" onClick={() => { setNavEntry('writing'); setDrawer(null); setTab('chords'); setSelectedId(null); }} aria-current={navEntry() === 'writing' ? 'page' : undefined}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>
                   <span className="drawer-row-text"><b>Writing</b><span>Chords &amp; melody</span></span>
                 </button>
@@ -3115,23 +3119,23 @@ function Composer({ data }: { data: LoadedData }) {
                   <span className="drawer-row-text"><b>New session</b><span>Start over (undo brings it back)</span></span>
                 </button>
                 <div className="drawer-section">Learn</div>
-                <button type="button" className="drawer-row" onClick={() => setDrawer('guide')}>
+                <button type="button" className={rowCls('guide')} data-entry="guide" aria-current={navEntry() === 'guide' ? 'page' : undefined} onClick={() => { setNavEntry('guide'); setDrawer('guide'); }}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M9 9h6M9 13h6"/></svg>
                   <span className="drawer-row-text"><b>Guide</b><span>What to tap and why</span></span>
                 </button>
                 {TOOLS.filter((t) => t.group === 'learn').map((t) => (
-                  <button key={t.id} type="button" className="drawer-row" onClick={() => setDrawer(`tool:${t.id}`)}>
+                  <button key={t.id} type="button" className={rowCls(`tool:${t.id}`)} data-entry={`tool:${t.id}`} aria-current={navEntry() === `tool:${t.id}` ? 'page' : undefined} onClick={() => { setNavEntry(`tool:${t.id}`); setDrawer(`tool:${t.id}`); }}>
                     {t.icon}
                     <span className="drawer-row-text"><b>{t.title}</b><span>{t.sub}</span></span>
                   </button>
                 ))}
-                <button type="button" className="drawer-row" onClick={() => setDrawer('moods')}>
+                <button type="button" className={rowCls('moods')} data-entry="moods" aria-current={navEntry() === 'moods' ? 'page' : undefined} onClick={() => { setNavEntry('moods'); setDrawer('moods'); }}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
                   <span className="drawer-row-text"><b>Moods &amp; chords</b><span>Every mood and its moves</span></span>
                 </button>
                 {data.artists && (<>
                 <div className="drawer-section">Explore</div>
-                <button type="button" className="drawer-row" onClick={() => setDrawer('artists')}>
+                <button type="button" className={rowCls('artists')} data-entry="artists" aria-current={navEntry() === 'artists' ? 'page' : undefined} onClick={() => { setNavEntry('artists'); setDrawer('artists'); }}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/></svg>
                   <span className="drawer-row-text"><b>Artist Lens</b><span>Styles, techniques, Try-its</span></span>
                 </button>
@@ -3140,7 +3144,7 @@ function Composer({ data }: { data: LoadedData }) {
                   <div key={g} className="drawer-group" role="group" aria-label={g === 'tools' ? 'Tools' : 'Practice'}>
                     <div className="drawer-section">{g === 'tools' ? 'Tools' : 'Practice'}</div>
                     {TOOLS.filter((t) => t.group === g).map((t) => (
-                      <button key={t.id} type="button" className="drawer-row" onClick={() => setDrawer(`tool:${t.id}`)}>
+                      <button key={t.id} type="button" className={rowCls(`tool:${t.id}`)} data-entry={`tool:${t.id}`} aria-current={navEntry() === `tool:${t.id}` ? 'page' : undefined} onClick={() => { setNavEntry(`tool:${t.id}`); setDrawer(`tool:${t.id}`); }}>
                         {t.icon}
                         <span className="drawer-row-text"><b>{t.title}</b><span>{t.sub}</span></span>
                       </button>
