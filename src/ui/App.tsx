@@ -74,7 +74,6 @@ class LazyBoundary extends Component<{ children: ReactNode }, { failed: boolean 
     );
   }
 }
-import { TutorialModal } from './TutorialModal';
 import { ProgressionTips } from './ProgressionTips';
 import { useFocusTrap } from './focusTrap';
 import { listenErrorMessage, startListening, type ListenSession, type ListenStatus } from './listen';
@@ -264,8 +263,6 @@ function Composer({ data }: { data: LoadedData }) {
     setDrawerClosing(false);
     setDrawerRaw(v);
   }, []);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
-  const openTutorial = () => { setDrawer(null); setTutorialOpen(true); };
   /** ▶ Play transport: audio-clock origin + scheduled events for the scrolling playhead. */
   const [transport, setTransport] = useState<{ origin: number; events: TimelineEvents } | null>(null);
   const transportRef = useRef(transport);
@@ -2190,9 +2187,7 @@ function Composer({ data }: { data: LoadedData }) {
         {slots.length === 0 ? (
           <p className="muted small">
             Tap chords below to start, or switch to Melody / Bass / Drums — all share this timeline.
-            New here?{' '}
-            <button type="button" className="pill tutorial-launch" onClick={openTutorial}>Tutorial</button>
-            {' '}or open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.
+            New here? Open the <button type="button" className="linkish" onClick={() => setDrawer('guide')}>Guide</button>.
           </p>
         ) : (
           <>
@@ -3063,7 +3058,6 @@ function Composer({ data }: { data: LoadedData }) {
       <details className="about">
         <summary>About &amp; credits</summary>
         <p>Muse suggests next chords and melody notes labelled by mood. It works offline; nothing leaves your device.
-          {' '}<button type="button" className="linkish" onClick={openTutorial}>Tutorial</button> plays a short video intro.
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('guide')}>Open the Guide</button> for how each feature connects to musicality.
           {' '}<button type="button" className="linkish" onClick={() => setDrawer('moods')}>Moods &amp; chords</button> lists every mood tag and the moves that carry it.</p>
         <p><b>Sounds.</b> Piano: <a href="https://github.com/Tonejs/audio/tree/master/salamander" target="_blank" rel="noreferrer">Salamander Grand Piano</a> by Alexander Holm (<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">CC BY 3.0</a>), via the <a href="https://github.com/Tonejs/audio" target="_blank" rel="noreferrer">Tone.js audio</a> repository.
@@ -3121,10 +3115,6 @@ function Composer({ data }: { data: LoadedData }) {
                   <span className="drawer-row-text"><b>New session</b><span>Start over (undo brings it back)</span></span>
                 </button>
                 <div className="drawer-section">Learn</div>
-                <button type="button" className="drawer-row" onClick={openTutorial}>
-                  <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg>
-                  <span className="drawer-row-text"><b>Tutorial</b><span>Short video intro</span></span>
-                </button>
                 <button type="button" className="drawer-row" onClick={() => setDrawer('guide')}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M9 9h6M9 13h6"/></svg>
                   <span className="drawer-row-text"><b>Guide</b><span>What to tap and why</span></span>
@@ -3278,7 +3268,6 @@ function Composer({ data }: { data: LoadedData }) {
           <button type="button" className="pill" onClick={() => setTransposeOffer(null)}>Keep</button>
         </div>
       )}
-      <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
       {qrUrl && (
         <LazyBoundary>
           <Suspense fallback={null}>
