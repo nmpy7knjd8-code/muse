@@ -443,6 +443,14 @@ function Composer({ data }: { data: LoadedData }) {
   const detected = useMemo(() => (auto && (chords.length >= 2 || melody.length >= 4) ? detectKeys(chords, melody)[0] : null), [auto, slots]); // eslint-disable-line react-hooks/exhaustive-deps
   // auto-detect only chooses between major/minor keys; a modal pick (e.g. Dorian) is kept as-is
   const k: Key = auto && detected && (mode === 'major' || mode === 'minor') ? detected.key : picked;
+  // Idea 24 — remember which modes you've actually written in (feeds Your progress).
+  useEffect(() => {
+    if (chords.length < 2) return;
+    try {
+      const used: string[] = JSON.parse(localStorage.getItem('muse.modesUsed') ?? '[]');
+      if (Array.isArray(used) && !used.includes(k.mode)) localStorage.setItem('muse.modesUsed', JSON.stringify([...used, k.mode]));
+    } catch { /* */ }
+  }, [k.mode, chords.length >= 2]); // eslint-disable-line react-hooks/exhaustive-deps
   // Idea 10 — theory unlocked: a one-time note the first time an edit introduces a concept.
   const prevChordsRef = useRef<Chord[] | null>(null);
   useEffect(() => {
@@ -1629,7 +1637,7 @@ function Composer({ data }: { data: LoadedData }) {
   const barsOf = (cs: Chord[]): TimelineSlot[] => cs.map((chord) => ({ chord, notes: [], bass: [], locked: false }));
   const toolProps: ToolProps = {
     engine, k, lex, chords, slots, artists: data.artists ?? null, profile, adventure, tStyle, beatSec, timeSig, styleId, tuning: tuningById(tuningId), degColors, setDegColors: (on) => { setDegColors(on); try { localStorage.setItem('muse.degColors', on ? '1' : '0'); } catch { /* */ } },
-    transposeSong: (t) => { const to = parseNote(t); if (!to) return; stopPlayback(); snapshot(); setSlots((s) => transposeSlots(s, k.tonic, to)); chooseTonic(t); setAuto(false); setDrawer(null); flash(`Moved to ${noteName(to, true)} — undo to go back`); },
+    transposeSong: (t) => { const to = parseNote(t); if (!to) return; stopPlayback(); snapshot(); setSlots((s) => transposeSlots(s, k.tonic, to)); chooseTonic(t); try { const u: string[] = JSON.parse(localStorage.getItem('muse.modesUsed') ?? '[]'); if (!u.includes('transposed')) localStorage.setItem('muse.modesUsed', JSON.stringify([...u, 'transposed'])); } catch { /* */ } setAuto(false); setDrawer(null); flash(`Moved to ${noteName(to, true)} — undo to go back`); },
     playChord: (c) => playChord(c),
     playChords: (cs, step = beatSec * 2) => { synth.unlock(); playChordSequence(cs, step, step * 0.94); },
     useChords: (cs, label) => {

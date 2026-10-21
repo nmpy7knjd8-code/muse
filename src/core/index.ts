@@ -60,3 +60,4 @@ export * from './lessons';
 export * from './songwriting';
 export * from './songCatalog';
 export * from './guitarPractice';
+export * from './progress';

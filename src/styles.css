@@ -2186,3 +2186,16 @@ svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke
 .tuner-read { font-size: 16px; font-weight: 600; text-align: center; margin: 10px 0; }
 .practice-pct { min-width: 48px; text-align: center; font-weight: 700; align-self: center; }
 .practice-range { margin: 4px 0 8px; }
+
+/* Your progress (idea 24) */
+.progress-next { display: flex; flex-direction: column; gap: 4px; border-color: var(--accent); }
+.progress-next .add { align-self: flex-start; margin-top: 4px; }
+.progress-branch { margin-top: 8px; }
+.progress-nodes { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.progress-node { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 6px; border-radius: 8px; }
+.progress-node.done { background: color-mix(in srgb, #7ad39a 10%, transparent); }
+.progress-node.later { opacity: 0.55; }
+.progress-dot { width: 20px; text-align: center; color: #e8c37a; }
+.progress-node.done .progress-dot { color: #7ad39a; }
+.progress-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.progress-text small { color: var(--muted); font-size: 11.5px; }
