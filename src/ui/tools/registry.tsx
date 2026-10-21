@@ -6,7 +6,7 @@ export interface ToolDef {
   id: ToolId;
   title: string;
   sub: string;
-  group: 'tools' | 'practice';
+  group: 'tools' | 'practice' | 'learn';
   icon: ReactNode;
   load: () => Promise<{ default: ComponentType<ToolProps> }>;
 }
@@ -16,6 +16,11 @@ const ico = (d: ReactNode) => (
 );
 
 export const TOOLS: ToolDef[] = [
+  {
+    id: 'theory', title: 'Theory guide', sub: '14 chapters to hear, see & try', group: 'learn',
+    icon: ico(<><path d="M4 5a2 2 0 0 1 2-2h5v17H6a2 2 0 0 0-2 2z" /><path d="M20 5a2 2 0 0 0-2-2h-5v17h5a2 2 0 0 1 2 2z" /></>),
+    load: () => import('./TheoryGuideTool'),
+  },
   {
     id: 'arc', title: 'Tension arc', sub: 'Draw a curve, get chords', group: 'tools',
     icon: ico(<><path d="M3 18c3 0 4-10 8-10s5 7 10 4" /><path d="M3 21h18" /></>),

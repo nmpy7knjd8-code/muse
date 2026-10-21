@@ -4,7 +4,7 @@ import { gymMastery, type GymStats } from './earGym';
 import { CONCEPT_BY_ID, type ConceptId } from './lessons';
 import type { ModeId } from './scales';
 
-export interface ProgressStores { concepts: string[]; missions: string[]; gym: GymStats; earRounds: number; modesUsed: string[] }
+export interface ProgressStores { concepts: string[]; missions: string[]; gym: GymStats; earRounds: number; modesUsed: string[]; guide?: string[] }
 export type NodeState = 'done' | 'next' | 'later';
 export interface ProgressNode { id: string; name: string; theory?: string; state: NodeState; how: string; tool: string; tab?: string; needs: string[] }
 export interface ProgressBranch { id: string; name: string; nodes: ProgressNode[]; share: number }
@@ -18,6 +18,8 @@ const th = (id: ConceptId) => { const n = CONCEPT_BY_ID[id].name; const m = /\((
 const C = (id: ConceptId) => (s: ProgressStores) => s.concepts.includes(id);
 const M = (id: string) => (s: ProgressStores) => s.missions.includes(id);
 const modeUsed = (m: ModeId) => (s: ProgressStores) => s.modesUsed.includes(m);
+
+const G = (...ids: string[]) => (s: ProgressStores) => ids.every((i) => (s.guide ?? []).includes(i));
 
 const TREE: Array<{ id: string; name: string; defs: Def[] }> = [
   { id: 'hearing', name: 'Hearing', defs: [
@@ -43,6 +45,13 @@ const TREE: Array<{ id: string; name: string; defs: Def[] }> = [
     { id: 'w-home2', name: 'Call and answer', how: 'Missions › Come home twice', tool: 'lessons', tab: 'missions', needs: ['w-loop'], done: M('home2') },
     { id: 'w-unfinished', name: 'Leave it hanging', how: 'Missions › Make it sound unfinished', tool: 'lessons', tab: 'missions', needs: [], done: M('unfinished') },
     { id: 'w-keys', name: 'Same song, new key', theory: 'transposition', how: 'Lessons › Key slide', tool: 'lessons', tab: 'keys', needs: ['w-loop'], done: (s) => s.modesUsed.includes('transposed') },
+  ] },
+  { id: 'guide', name: 'Theory guide', defs: [
+    { id: 'g-basics', name: 'Notes, scales & chords', theory: 'chapters 1–3', how: 'Theory guide › chapters 1–3 (read + quiz)', tool: 'theory', tab: 'sound', needs: [], done: G('sound', 'scales', 'chords') },
+    { id: 'g-function', name: 'Chord jobs & endings', theory: 'chapters 4–6', how: 'Theory guide › chapters 4–6', tool: 'theory', tab: 'roman', needs: ['g-basics'], done: G('roman', 'progressions', 'tension') },
+    { id: 'g-colour', name: 'Modes & borrowed colour', theory: 'chapters 7–8', how: 'Theory guide › chapters 7–8', tool: 'theory', tab: 'modes', needs: ['g-function'], done: G('modes', 'borrowed') },
+    { id: 'g-song', name: 'Melody, rhythm & tunings', theory: 'chapters 9–11', how: 'Theory guide › chapters 9–11', tool: 'theory', tab: 'melody', needs: ['g-basics'], done: G('melody', 'rhythm', 'tunings') },
+    { id: 'g-ear', name: 'Styles & ear', theory: 'chapters 12–13', how: 'Theory guide › chapters 12–13', tool: 'theory', tab: 'styles', needs: ['g-colour'], done: G('styles', 'ear') },
   ] },
   { id: 'colours', name: 'Colours (modes)', defs: [
     { id: 'c-major', name: 'Bright (major)', how: 'Write in a major key', tool: 'lessons', tab: 'modes', needs: [], done: modeUsed('major') },

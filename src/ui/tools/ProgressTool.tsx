@@ -1,17 +1,18 @@
 // Your progress (idea 24): a plain-language theory tree built from what you've done in Muse.
 import { useMemo } from 'react';
-import { EMPTY_GYM, parseEarStats, parseGym, progressMap, type ProgressNode } from '../../core';
+import { chapterDone, guideChapters, key, parseGuideProgress, EMPTY_GYM, parseEarStats, parseGym, progressMap, type ProgressNode } from '../../core';
 import { Meter, ToolIntro } from './common';
 import type { ToolId, ToolProps } from './types';
 
 const list = (k: string): string[] => { try { const v = JSON.parse(localStorage.getItem(k) ?? '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
-const TAB_KEY: Record<string, string> = { gym: 'muse.gym.game', lessons: 'muse.lessons.tab' };
+const guideDoneIds = (): string[] => { const g = parseGuideProgress(localStorage.getItem('muse.guide')); return guideChapters(key('C', 'major')).filter((c) => chapterDone(g, c)).map((c) => c.id); };
+const TAB_KEY: Record<string, string> = { gym: 'muse.gym.game', lessons: 'muse.lessons.tab', theory: 'muse.guide.ch' };
 
 export default function ProgressTool(p: ToolProps) {
   const map = useMemo(() => {
     let gym = EMPTY_GYM; let ear = 0;
     try { gym = parseGym(localStorage.getItem('muse.gym')); ear = parseEarStats(localStorage.getItem('muse.ear')).asked; } catch { /* */ }
-    return progressMap({ concepts: list('muse.concepts'), missions: list('muse.missions'), gym, earRounds: ear, modesUsed: list('muse.modesUsed') });
+    return progressMap({ concepts: list('muse.concepts'), missions: list('muse.missions'), gym, earRounds: ear, modesUsed: list('muse.modesUsed'), guide: guideDoneIds() });
   }, [p.chords, p.k]);
   const go = (n: ProgressNode) => {
     if (n.tab && TAB_KEY[n.tool]) { try { localStorage.setItem(TAB_KEY[n.tool]!, n.tab); } catch { /* */ } }

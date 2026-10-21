@@ -3129,6 +3129,12 @@ function Composer({ data }: { data: LoadedData }) {
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M9 9h6M9 13h6"/></svg>
                   <span className="drawer-row-text"><b>Guide</b><span>What to tap and why</span></span>
                 </button>
+                {TOOLS.filter((t) => t.group === 'learn').map((t) => (
+                  <button key={t.id} type="button" className="drawer-row" onClick={() => setDrawer(`tool:${t.id}`)}>
+                    {t.icon}
+                    <span className="drawer-row-text"><b>{t.title}</b><span>{t.sub}</span></span>
+                  </button>
+                ))}
                 <button type="button" className="drawer-row" onClick={() => setDrawer('moods')}>
                   <svg className="drawer-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
                   <span className="drawer-row-text"><b>Moods &amp; chords</b><span>Every mood and its moves</span></span>
