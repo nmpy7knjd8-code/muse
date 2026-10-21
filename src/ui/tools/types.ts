@@ -2,7 +2,7 @@
 import type { Tuning, BeatNote, TasteState, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
 
 export type ToolId =
-  | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release' | 'gym' | 'lessons';
+  | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release' | 'gym' | 'lessons' | 'helpers';
 
 export interface ToolProps {
   engine: SuggestionEngine;

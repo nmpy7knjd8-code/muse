@@ -37,6 +37,11 @@ export const TOOLS: ToolDef[] = [
     load: () => import('./EarTool'),
   },
   {
+    id: 'helpers', title: 'Song helpers', sub: 'Melody coach, strums, hooks, lyrics, key change, layers', group: 'tools',
+    icon: ico(<><path d="M9 18V6l10-2v12" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="16" r="2" /></>),
+    load: () => import('./HelpersTool'),
+  },
+  {
     id: 'song', title: 'Song analysis', sub: 'Paste a chord sheet', group: 'tools',
     icon: ico(<><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /><path d="M9 13h7M9 17h4" /></>),
     load: () => import('./SongTool'),

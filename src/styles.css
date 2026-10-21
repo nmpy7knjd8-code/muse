@@ -2139,3 +2139,34 @@ svg.piano .pkey:focus-visible > rect:first-child { stroke: var(--accent); stroke
 .mode-step { min-height: 44px; border-radius: 10px; border: 1px solid var(--line, #3a3550); background: var(--panel2); font-size: 12.5px; }
 .mode-step.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); }
 .mode-step.cur { box-shadow: inset 0 -2px 0 #e8c37a; }
+
+/* Song helpers (ideas 14–19) */
+.tab-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--panel2); border-radius: 10px; padding: 3px; margin-bottom: 8px; }
+.tab-grid button { border: none; background: transparent; padding: 8px 2px; border-radius: 8px; font-size: 12.5px; min-height: 36px; }
+.tab-grid button.on { background: #3a3550; font-weight: 600; }
+.coach-tip { margin: 0; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, #e8c37a 10%, var(--panel2)); }
+.strum-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+.strum-cell { text-align: center; font-size: 18px; padding: 6px 0; border-radius: 6px; background: var(--panel2); color: var(--muted); }
+.strum-cell.acc { color: var(--text, #fff); font-weight: 800; font-size: 22px; }
+.strum-cell.beat { box-shadow: inset 0 2px 0 var(--accent); }
+.strum-cell.rest { opacity: 0.5; }
+.hook-card { border: 1px solid var(--line, #3a3550); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; background: var(--panel2); }
+.hook-shape { width: 100%; height: 40px; }
+.hook-shape rect { fill: var(--accent); }
+.hook-shape line { stroke: #555; stroke-dasharray: 2 2; stroke-width: 0.4; }
+.lyric-input { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.lyric-input input { font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line, #3a3550); background: var(--panel2); color: inherit; }
+.lyric-grid { display: grid; gap: 2px; }
+.lyric-slot { min-height: 40px; min-width: 0; font-size: 12px; padding: 2px 1px; border: none; border-radius: 6px; background: var(--panel2); color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.lyric-slot.strong { background: color-mix(in srgb, var(--accent) 14%, var(--panel2)); }
+.lyric-slot.stress { color: var(--text, #fff); font-weight: 800; }
+.lyric-slot.clash { box-shadow: inset 0 0 0 1.5px #e8c37a; }
+.mod-targets { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.mod-target { min-height: 56px; border-radius: 10px; border: 1px solid var(--line, #3a3550); background: var(--panel2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; position: relative; }
+.mod-target small { font-size: 10.5px; color: var(--muted); text-align: center; line-height: 1.2; }
+.mod-target.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); }
+.mod-target.easy::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #e8c37a; }
+.layer-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.layer-chip { min-height: 52px; border-radius: 10px; border: 1px solid var(--line, #3a3550); background: var(--panel2); display: flex; flex-direction: column; align-items: flex-start; padding: 6px 10px; text-align: left; }
+.layer-chip small { font-size: 11px; color: var(--muted); }
+.layer-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--panel2)); }

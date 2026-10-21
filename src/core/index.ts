@@ -57,3 +57,4 @@ export * from './styles';
 export * from './styleProfiles';
 export * from './earGym';
 export * from './lessons';
+export * from './songwriting';
