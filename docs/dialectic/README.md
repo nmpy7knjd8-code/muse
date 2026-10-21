@@ -1,0 +1,11 @@
+# Dialectic design log
+
+Each feature has a file with four parts:
+1. **Thesis**: the first design.
+2. **Critique**: an adversarial review, written as a separate pass in three voices: a sceptical music educator, a UX designer, and a mobile designer.
+3. **Synthesis**: the revised design that was built.
+4. **Post-build review**: checked against the live build (Playwright at 390px and desktop), with any fixes.
+
+The critic was emulated in a separate written pass on the box. No external reviewer was used.
+
+Shared wave-1 decision (from the critiques of #1–#7): the seven hearing ideas ship as **one drawer tool, "Ear gym"**, with five games and one shared adaptive engine (#4, #5). They do not get seven new menu rows. The mobile Write view is unchanged.

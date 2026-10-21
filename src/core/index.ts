@@ -55,3 +55,4 @@ export * from './wav';
 export * from './tunings';
 export * from './styles';
 export * from './styleProfiles';
+export * from './earGym';

@@ -1612,7 +1612,7 @@ function Composer({ data }: { data: LoadedData }) {
   const kbBadge = data.kb.meta.isSeed ? 'seed' : '';
   const barsOf = (cs: Chord[]): TimelineSlot[] => cs.map((chord) => ({ chord, notes: [], bass: [], locked: false }));
   const toolProps: ToolProps = {
-    engine, k, lex, chords, slots, artists: data.artists ?? null, profile, adventure, tStyle, beatSec, timeSig,
+    engine, k, lex, chords, slots, artists: data.artists ?? null, profile, adventure, tStyle, beatSec, timeSig, styleId, tuning: tuningById(tuningId),
     playChord: (c) => playChord(c),
     playChords: (cs, step = beatSec * 2) => { synth.unlock(); playChordSequence(cs, step, step * 0.94); },
     useChords: (cs, label) => {

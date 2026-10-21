@@ -22,6 +22,11 @@ export const TOOLS: ToolDef[] = [
     load: () => import('./ArcTool'),
   },
   {
+    id: 'gym', title: 'Ear gym', sub: 'Home notes, swaps, bass, singing', group: 'practice',
+    icon: ico(<><path d="M3 12h2M19 12h2" /><rect x="5" y="8" width="3" height="8" rx="1" /><rect x="16" y="8" width="3" height="8" rx="1" /><path d="M8 12h8" /></>),
+    load: () => import('./EarGymTool'),
+  },
+  {
     id: 'ear', title: 'Mood ear trainer', sub: 'Which one sounds more…?', group: 'practice',
     icon: ico(<><path d="M7 15.5c0-6 2-10 6-10a5 5 0 0 1 5 5c0 3-3 3.5-3 6.5a3 3 0 0 1-6 0" /><path d="M11 11.5a2 2 0 0 1 4 0" /></>),
     load: () => import('./EarTool'),

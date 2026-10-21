@@ -1,8 +1,8 @@
 // Shared contract between App and the lazy-loaded tool pages in the drawer.
-import type { BeatNote, TasteState, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
+import type { Tuning, BeatNote, TasteState, ArtistsFile, Chord, Key, MoodLexicon, MoodProfile, SuggestionEngine, TensionStyleId, TimelineSlot, TimeSig } from '../../core';
 
 export type ToolId =
-  | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release';
+  | 'arc' | 'ear' | 'song' | 'hum' | 'cadence' | 'sections' | 'blend' | 'taste' | 'practice' | 'release' | 'gym';
 
 export interface ToolProps {
   engine: SuggestionEngine;
@@ -14,6 +14,9 @@ export interface ToolProps {
   profile: MoodProfile | null;
   adventure: number;
   tStyle: TensionStyleId;
+  /** Current Style (null = any) and guitar tuning — tools must stay coherent with them. */
+  styleId: string | null;
+  tuning: Tuning;
   beatSec: number;
   timeSig: TimeSig;
   /** Audition one chord (preview voice — never silences ▶ Play). */
